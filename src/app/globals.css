@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+/*
+  Built light-first. Gym lighting is unpredictable, and most fitness apps default
+  dark because it photographs well, not because it reads well.
+
+  The accent is the competition 20 kg plate blue. The full plate palette is
+  reserved for the plate math visualiser, where the colours carry real meaning to
+  anyone who has loaded a bar. Everywhere else stays neutral.
+*/
+:root {
+  --surface: #fbfbfa;
+  --surface-raised: #ffffff;
+  --border: #e4e4e1;
+  --ink: #16171a;
+  --ink-muted: #6b6f76;
+
+  --accent: #1b52a4;
+  --accent-ink: #ffffff;
+
+  /* Two semantic colours beyond the accent. One for a PR, one for a failed
+     save. There is deliberately no third. */
+  --pr: #17795e;
+  --danger: #b4231d;
+
+  /* Heatmap ramp: a single hue from the surface to the accent. Zero volume is
+     flat grey, never red -- a muscle you skipped is not an error. */
+  --band-none: #e8e8e6;
+  --band-low: #b9cbe6;
+  --band-productive: #5b87c7;
+  --band-high: #1b52a4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #101114;
+    --surface-raised: #191b1f;
+    --border: #2a2d33;
+    --ink: #f2f3f5;
+    --ink-muted: #9aa0a8;
+
+    --accent: #6fa2ec;
+    --accent-ink: #0b1220;
+
+    --pr: #4cc79f;
+    --danger: #f0685f;
+
+    --band-none: #23252a;
+    --band-low: #27405f;
+    --band-productive: #3d6cb0;
+    --band-high: #6fa2ec;
+  }
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-pr: var(--pr);
+  --color-danger: var(--danger);
+
+  --font-sans: var(--font-archivo);
+}
+
+body {
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-archivo), system-ui, sans-serif;
+  /* Archivo is loaded with its width axis so set numbers can use the expanded
+     cut. Pin everything else to the normal width, or the variable default
+     leaks a condensed look into body copy. */
+  font-stretch: 100%;
+  /* 100dvh, never 100vh: browser chrome would otherwise eat the action bar. */
+  min-height: 100dvh;
+}
+
+/*
+  Numbers are the whole app, read at a glance from a phone on the floor. Tabular
+  figures stop set rows from jittering as digits swap.
+*/
+.numeric {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/*
+  The second voice: weights and reps in the expanded cut at heavy weight. One
+  family, two clearly different voices, no font pairing to get wrong.
+*/
+.numeric-display {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  font-stretch: 125%;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
