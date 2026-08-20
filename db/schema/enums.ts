@@ -24,11 +24,7 @@ export const prKindEnum = pgEnum("pr_kind", [
   "session_volume",
 ]);
 
-export const friendshipStatusEnum = pgEnum("friendship_status", [
-  "pending",
-  "accepted",
-  "blocked",
-]);
+export const friendshipStatusEnum = pgEnum("friendship_status", ["pending", "accepted", "blocked"]);
 
 export const visibilityFieldEnum = pgEnum("visibility_field", [
   "prs",

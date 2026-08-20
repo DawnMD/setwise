@@ -27,11 +27,7 @@ export type MuscleVolume = {
  * with zeroes rather than omitted, because "you trained this zero times" is the
  * most actionable thing the heatmap says and it cannot be said by an absent row.
  */
-export async function muscleVolume(
-  db: Db,
-  userId: string,
-  days: number,
-): Promise<MuscleVolume[]> {
+export async function muscleVolume(db: Db, userId: string, days: number): Promise<MuscleVolume[]> {
   const rows = await db
     .select({
       slug: muscles.slug,

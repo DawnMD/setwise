@@ -243,7 +243,13 @@ export async function sessionPlan(
  * negative index first is what makes the swap safe, and negatives are otherwise
  * unreachable because every index the app writes is zero or above.
  */
-export async function swapDayOrder(db: DbClient, a: string, b: string, aIndex: number, bIndex: number) {
+export async function swapDayOrder(
+  db: DbClient,
+  a: string,
+  b: string,
+  aIndex: number,
+  bIndex: number,
+) {
   await db.update(routineDays).set({ dayIndex: -1 }).where(eq(routineDays.id, a));
   await db.update(routineDays).set({ dayIndex: aIndex }).where(eq(routineDays.id, b));
   await db.update(routineDays).set({ dayIndex: bIndex }).where(eq(routineDays.id, a));

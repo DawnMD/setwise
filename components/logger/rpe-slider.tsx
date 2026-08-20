@@ -26,12 +26,7 @@ export function RpeSlider({
     <Field>
       <div className="flex items-center justify-between">
         <FieldLabel htmlFor="rpe">RPE</FieldLabel>
-        <Button
-          type="button"
-          variant="link"
-          size="sm"
-          onClick={() => onChange(active ? null : 8)}
-        >
+        <Button type="button" variant="link" size="sm" onClick={() => onChange(active ? null : 8)}>
           {active ? "Clear" : "Add RPE"}
         </Button>
       </div>

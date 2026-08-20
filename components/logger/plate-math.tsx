@@ -17,11 +17,7 @@ export function PlateMath({ targetKg, barKg }: { targetKg: number; barKg: number
   const loading = loadBar(targetKg, barKg);
 
   if (loading === null) {
-    return (
-      <p className="text-xs text-muted-foreground">
-        Under the {formatWeight(barKg)} kg bar.
-      </p>
-    );
+    return <p className="text-xs text-muted-foreground">Under the {formatWeight(barKg)} kg bar.</p>;
   }
 
   if (loading.perSide.length === 0 && loading.remainderKg === 0) {
@@ -53,10 +49,7 @@ export function PlateMath({ targetKg, barKg }: { targetKg: number; barKg: number
       <span className="numeric text-xs text-muted-foreground">
         per side
         {loading.remainderKg > 0 ? (
-          <span className="text-destructive">
-            {" "}
-            · {formatWeight(loading.remainderKg)} kg short
-          </span>
+          <span className="text-destructive"> · {formatWeight(loading.remainderKg)} kg short</span>
         ) : null}
       </span>
     </div>

@@ -65,41 +65,39 @@ export const sessionRouter = {
    * Starts a workout on an id the client generated, for the same reason sets
    * carry one: a retried start is the same workout, not a second empty one.
    */
-  start: sessionProcedure
-    .input(sessionStartInput)
-    .handler(async ({ input, context, errors }) => {
-      const existing = await findSession(context.db, context.userId, input.id);
-      if (existing) return existing;
+  start: sessionProcedure.input(sessionStartInput).handler(async ({ input, context, errors }) => {
+    const existing = await findSession(context.db, context.userId, input.id);
+    if (existing) return existing;
 
-      const [open] = await context.db
-        .select({ id: workoutSessions.id })
-        .from(workoutSessions)
-        .where(and(eq(workoutSessions.userId, context.userId), isNull(workoutSessions.endedAt)))
-        .limit(1);
+    const [open] = await context.db
+      .select({ id: workoutSessions.id })
+      .from(workoutSessions)
+      .where(and(eq(workoutSessions.userId, context.userId), isNull(workoutSessions.endedAt)))
+      .limit(1);
 
-      if (open) {
-        throw errors.SESSION_ALREADY_ACTIVE({ data: { sessionId: open.id } });
-      }
+    if (open) {
+      throw errors.SESSION_ALREADY_ACTIVE({ data: { sessionId: open.id } });
+    }
 
-      // The foreign key only proves the day exists, not that it is the caller's.
-      // Without this check a routine day id guessed from someone else's plan
-      // would attach their template to this workout.
-      if (input.routineDayId && !(await findDay(context.db, context.userId, input.routineDayId))) {
-        throw errors.DAY_NOT_FOUND();
-      }
+    // The foreign key only proves the day exists, not that it is the caller's.
+    // Without this check a routine day id guessed from someone else's plan
+    // would attach their template to this workout.
+    if (input.routineDayId && !(await findDay(context.db, context.userId, input.routineDayId))) {
+      throw errors.DAY_NOT_FOUND();
+    }
 
-      const [row] = await context.db
-        .insert(workoutSessions)
-        .values({
-          id: input.id,
-          userId: context.userId,
-          routineDayId: input.routineDayId,
-          notes: input.notes,
-        })
-        .returning();
+    const [row] = await context.db
+      .insert(workoutSessions)
+      .values({
+        id: input.id,
+        userId: context.userId,
+        routineDayId: input.routineDayId,
+        notes: input.notes,
+      })
+      .returning();
 
-      return row;
-    }),
+    return row;
+  }),
 
   get: sessionProcedure
     .input(z.object({ id: uuid }))
@@ -122,12 +120,7 @@ export const sessionRouter = {
   lastPerformance: sessionProcedure
     .input(z.object({ exerciseId: uuid, excludeSessionId: uuid.nullable().default(null) }))
     .handler(async ({ input, context }) => {
-      return lastPerformance(
-        context.db,
-        context.userId,
-        input.exerciseId,
-        input.excludeSessionId,
-      );
+      return lastPerformance(context.db, context.userId, input.exerciseId, input.excludeSessionId);
     }),
 
   /**
@@ -136,23 +129,21 @@ export const sessionRouter = {
    * The upsert and the PR detection share a transaction, so a record can never
    * be logged against a set that failed to store.
    */
-  logSet: sessionProcedure
-    .input(setInput)
-    .handler(async ({ input, context, errors }) => {
-      const session = await findSession(context.db, context.userId, input.sessionId);
-      if (!session) throw errors.SESSION_NOT_FOUND();
-      if (session.endedAt) throw errors.SESSION_FINISHED();
+  logSet: sessionProcedure.input(setInput).handler(async ({ input, context, errors }) => {
+    const session = await findSession(context.db, context.userId, input.sessionId);
+    if (!session) throw errors.SESSION_NOT_FOUND();
+    if (session.endedAt) throw errors.SESSION_FINISHED();
 
-      if (!(await exerciseIsVisible(context.db, context.userId, input.exerciseId))) {
-        throw errors.EXERCISE_NOT_FOUND();
-      }
+    if (!(await exerciseIsVisible(context.db, context.userId, input.exerciseId))) {
+      throw errors.EXERCISE_NOT_FOUND();
+    }
 
-      return context.db.transaction(async (tx) => {
-        const saved = await upsertSet(tx, input);
-        const records = await recordSetPersonalRecords(tx, context.userId, saved);
-        return { set: saved, records };
-      });
-    }),
+    return context.db.transaction(async (tx) => {
+      const saved = await upsertSet(tx, input);
+      const records = await recordSetPersonalRecords(tx, context.userId, saved);
+      return { set: saved, records };
+    });
+  }),
 
   deleteSet: sessionProcedure
     .input(z.object({ id: uuid, sessionId: uuid }))

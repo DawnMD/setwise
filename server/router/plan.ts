@@ -58,13 +58,11 @@ export const planRouter = {
     return startableDays(context.db, context.userId);
   }),
 
-  get: planProcedure
-    .input(z.object({ id: uuid }))
-    .handler(async ({ input, context, errors }) => {
-      const detail = await getRoutineDetail(context.db, context.userId, input.id);
-      if (!detail) throw errors.ROUTINE_NOT_FOUND();
-      return detail;
-    }),
+  get: planProcedure.input(z.object({ id: uuid })).handler(async ({ input, context, errors }) => {
+    const detail = await getRoutineDetail(context.db, context.userId, input.id);
+    if (!detail) throw errors.ROUTINE_NOT_FOUND();
+    return detail;
+  }),
 
   /**
    * A new routine starts with one day rather than none.

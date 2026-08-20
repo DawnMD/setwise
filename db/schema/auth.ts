@@ -1,34 +1,30 @@
 import { relations, sql } from "drizzle-orm";
-import {
-  pgTable,
-  text,
-  timestamp,
-  boolean,
-  check,
-  index,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, check, index, uniqueIndex } from "drizzle-orm/pg-core";
 
-export const user = pgTable("user", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  emailVerified: boolean("email_verified").default(false).notNull(),
-  image: text("image"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-  unitPref: text("unit_pref").default("kg"),
-  username: text("username"),
-}, (table) => [
-  // Phase 5 addresses people by username, and humans do not preserve case.
-  uniqueIndex("user_username_lower_uq").on(sql`lower(${table.username})`),
-  // Better Auth's additional fields are always text, so the allowed values
-  // are enforced here rather than by an enum type.
-  check("user_unit_pref_ck", sql`${table.unitPref} in ('kg', 'lb')`),
-]);
+export const user = pgTable(
+  "user",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    emailVerified: boolean("email_verified").default(false).notNull(),
+    image: text("image"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+    unitPref: text("unit_pref").default("kg"),
+    username: text("username"),
+  },
+  (table) => [
+    // Phase 5 addresses people by username, and humans do not preserve case.
+    uniqueIndex("user_username_lower_uq").on(sql`lower(${table.username})`),
+    // Better Auth's additional fields are always text, so the allowed values
+    // are enforced here rather than by an enum type.
+    check("user_unit_pref_ck", sql`${table.unitPref} in ('kg', 'lb')`),
+  ],
+);
 
 export const session = pgTable(
   "session",

@@ -212,7 +212,9 @@ export async function recentSessions(
       setCount: sql<number>`count(${sets.id})::int`,
       workingSetCount: sql<number>`(count(${sets.id}) filter (where ${sets.isWarmup} = false))::int`,
       tonnage: sql<number>`coalesce((sum(${sets.weight} * ${sets.reps}) filter (where ${sets.isWarmup} = false)), 0)::float8`,
-      exerciseNames: sql<string[]>`coalesce(array_agg(distinct ${exercises.name}) filter (where ${exercises.name} is not null), '{}'::text[])`,
+      exerciseNames: sql<
+        string[]
+      >`coalesce(array_agg(distinct ${exercises.name}) filter (where ${exercises.name} is not null), '{}'::text[])`,
     })
     .from(workoutSessions)
     .leftJoin(sets, eq(sets.sessionId, workoutSessions.id))

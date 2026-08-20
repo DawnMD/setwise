@@ -30,15 +30,15 @@ npm run dev
 
 ## Scripts
 
-| Script | What it does |
-|---|---|
-| `npm run dev` | Dev server on :3000 |
-| `npm run db:generate` | Generate a migration from schema changes |
-| `npm run db:migrate` | Apply migrations (uses the unpooled endpoint) |
-| `npm run db:seed` | Seed muscles and the exercise catalogue. Idempotent. |
-| `npm test` | Run all Vitest integration tests once |
-| `npm run test:watch` | Re-run Vitest integration tests as files change |
-| `npm run db:studio` | Drizzle Studio |
+| Script                 | What it does                                             |
+| ---------------------- | -------------------------------------------------------- |
+| `npm run dev`          | Dev server on :3000                                      |
+| `npm run db:generate`  | Generate a migration from schema changes                 |
+| `npm run db:migrate`   | Apply migrations (uses the unpooled endpoint)            |
+| `npm run db:seed`      | Seed muscles and the exercise catalogue. Idempotent.     |
+| `npm test`             | Run all Vitest integration tests once                    |
+| `npm run test:watch`   | Re-run Vitest integration tests as files change          |
+| `npm run db:studio`    | Drizzle Studio                                           |
 | `npm run svg:generate` | Redraw the body SVGs from `scripts/generate-body-svg.ts` |
 
 The integration tests use the database in `.env.local`. Migrate and seed it

@@ -82,8 +82,7 @@ export function useRestTimer() {
   const now = useNow(rest === null ? null : TICK_MS);
   const notifiedFor = useRef<number | null>(null);
 
-  const remaining =
-    rest === null || now === null ? 0 : Math.max(0, (rest.endsAt - now) / 1000);
+  const remaining = rest === null || now === null ? 0 : Math.max(0, (rest.endsAt - now) / 1000);
   const running = rest !== null;
   const done = running && now !== null && remaining <= 0;
 

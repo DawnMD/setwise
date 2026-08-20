@@ -1,5 +1,13 @@
 import { relations, sql } from "drizzle-orm";
-import { index, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  index,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { user } from "./auth";
 import { friendshipStatusEnum, visibilityFieldEnum, visibilityLevelEnum } from "./enums";

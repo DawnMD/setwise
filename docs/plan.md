@@ -2,17 +2,17 @@
 
 ## Stack
 
-| Layer | Pick | Why |
-|---|---|---|
-| DB | Postgres (Neon) | Window functions for the weekly rollups, branching for schema work |
-| Schema/queries | Drizzle | Migrations in TypeScript, no codegen step |
-| API | oRPC | End-to-end types with no codegen, and it emits an OpenAPI spec for free when you build a native app later |
-| Auth | Better Auth | Sessions in your own Postgres, no vendor lock |
-| Client state | TanStack Query | oRPC ships a first-party integration, so `orpc.sets.log.mutationOptions()` is the whole wiring |
-| Components | shadcn/ui on Base UI | Base UI became shadcn's default in July 2026, so `npx shadcn create` gets you there with no flags. Running on preset `b2eYKQAHg1`: style lyra, zinc, lucide, medium radius |
-| Styling | Tailwind | Comes with shadcn, and mobile-first breakpoints are the default direction |
-| Charts | Visx or Recharts | Recharts is faster to write, Visx looks better. shadcn's `Chart` wraps Recharts, which settles it |
-| Theme | next-themes | The shadcn tokens key off a `.dark` class, so system preference needs a provider to apply it |
+| Layer          | Pick                 | Why                                                                                                                                                                        |
+| -------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DB             | Postgres (Neon)      | Window functions for the weekly rollups, branching for schema work                                                                                                         |
+| Schema/queries | Drizzle              | Migrations in TypeScript, no codegen step                                                                                                                                  |
+| API            | oRPC                 | End-to-end types with no codegen, and it emits an OpenAPI spec for free when you build a native app later                                                                  |
+| Auth           | Better Auth          | Sessions in your own Postgres, no vendor lock                                                                                                                              |
+| Client state   | TanStack Query       | oRPC ships a first-party integration, so `orpc.sets.log.mutationOptions()` is the whole wiring                                                                             |
+| Components     | shadcn/ui on Base UI | Base UI became shadcn's default in July 2026, so `npx shadcn create` gets you there with no flags. Running on preset `b2eYKQAHg1`: style lyra, zinc, lucide, medium radius |
+| Styling        | Tailwind             | Comes with shadcn, and mobile-first breakpoints are the default direction                                                                                                  |
+| Charts         | Visx or Recharts     | Recharts is faster to write, Visx looks better. shadcn's `Chart` wraps Recharts, which settles it                                                                          |
+| Theme          | next-themes          | The shadcn tokens key off a `.dark` class, so system preference needs a provider to apply it                                                                               |
 
 Swap in PocketBase if you want one binary instead of five services. Everything below still applies, just with collections instead of tables.
 

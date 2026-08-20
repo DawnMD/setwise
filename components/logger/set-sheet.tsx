@@ -230,7 +230,7 @@ function FieldButton({
       onClick={onSelect}
       aria-pressed={selected}
       className={cn(
-        "h-auto flex-col items-start gap-0 px-3 py-2 text-left touch-manipulation",
+        "h-auto touch-manipulation flex-col items-start gap-0 px-3 py-2 text-left",
         selected && "border-ring bg-muted",
       )}
     >

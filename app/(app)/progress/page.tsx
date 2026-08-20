@@ -1,12 +1,7 @@
 import { ChartNoAxesColumn } from "lucide-react";
 import type { Metadata } from "next";
 
-import {
-  Empty,
-  EmptyDescription,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
+import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 
 export const metadata: Metadata = { title: "Progress · Setwise" };
 

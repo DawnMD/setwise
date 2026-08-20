@@ -21,18 +21,7 @@ import { Spinner } from "@/components/ui/spinner";
  * bottom half of the screen, and a field that ends up underneath it is a field
  * nobody can see what they are typing into.
  */
-export function RoutineNameForm({
-  open,
-  onOpenChange,
-  title,
-  description,
-  label = "Name",
-  placeholder,
-  initialValue = "",
-  saveLabel,
-  pending = false,
-  onSave,
-}: {
+type RoutineNameFormProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
@@ -43,58 +32,69 @@ export function RoutineNameForm({
   saveLabel: string;
   pending?: boolean;
   onSave: (name: string) => void;
-}) {
-  const [value, setValue] = React.useState(initialValue);
+};
 
-  // Seeded per opening rather than per mount: this drawer is reused for every
-  // rename on the screen, so it has to forget the last one.
-  React.useEffect(() => {
-    if (open) setValue(initialValue);
-  }, [open, initialValue]);
+export function RoutineNameForm({ open, onOpenChange, ...form }: RoutineNameFormProps) {
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      {open ? <OpenRoutineNameForm {...form} /> : null}
+    </Drawer>
+  );
+}
+
+function OpenRoutineNameForm({
+  title,
+  description,
+  label = "Name",
+  placeholder,
+  initialValue = "",
+  saveLabel,
+  pending = false,
+  onSave,
+}: Omit<RoutineNameFormProps, "open" | "onOpenChange">) {
+  const [value, setValue] = React.useState(initialValue);
 
   const trimmed = value.trim();
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="mx-auto max-w-[520px]">
-        <DrawerHeader>
-          <DrawerTitle>{title}</DrawerTitle>
-          {description ? <DrawerDescription>{description}</DrawerDescription> : null}
-        </DrawerHeader>
+    <DrawerContent className="mx-auto max-w-[520px]">
+      <DrawerHeader>
+        <DrawerTitle>{title}</DrawerTitle>
+        {description ? <DrawerDescription>{description}</DrawerDescription> : null}
+      </DrawerHeader>
 
-        <form
-          className="p-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (trimmed.length > 0 && !pending) onSave(trimmed);
-          }}
-        >
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="routine-name">{label}</FieldLabel>
-              <Input
-                id="routine-name"
-                value={value}
-                onChange={(event) => setValue(event.target.value)}
-                placeholder={placeholder}
-                autoComplete="off"
-                autoFocus
-                className="h-11 text-base"
-              />
-            </Field>
+      <form
+        className="p-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (trimmed.length > 0 && !pending) onSave(trimmed);
+        }}
+      >
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="routine-name">{label}</FieldLabel>
+            <Input
+              id="routine-name"
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              placeholder={placeholder}
+              autoComplete="off"
+              autoFocus
+              className="h-11 text-base"
+            />
+          </Field>
 
-            <Button
-              type="submit"
-              size="touch"
-              className="w-full"
-              disabled={trimmed.length === 0 || pending}
-            >
-              {pending ? <Spinner data-icon="inline-start" /> : null}
-              {saveLabel}
-            </Button>
-          </FieldGroup>
-        </form>
-      </DrawerContent>
-    </Drawer>
+          <Button
+            type="submit"
+            size="touch"
+            className="w-full"
+            disabled={trimmed.length === 0 || pending}
+          >
+            {pending ? <Spinner data-icon="inline-start" /> : null}
+            {saveLabel}
+          </Button>
+        </FieldGroup>
+      </form>
+    </DrawerContent>
   );
 }

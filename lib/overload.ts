@@ -8,10 +8,7 @@
 
 export type Ghost = { weight: number; reps: number; rpe: number | null } | null;
 
-export type Overload =
-  | { kind: "weight"; delta: number }
-  | { kind: "reps"; delta: number }
-  | null;
+export type Overload = { kind: "weight"; delta: number } | { kind: "reps"; delta: number } | null;
 
 /**
  * Strict on purpose. More weight beats last time; the same weight for more reps
@@ -19,10 +16,7 @@ export type Overload =
  * fewer reps — is a trade, not a win, and calling it one would make the accent
  * colour mean nothing.
  */
-export function overloadDelta(
-  current: { weight: number; reps: number },
-  ghost: Ghost,
-): Overload {
+export function overloadDelta(current: { weight: number; reps: number }, ghost: Ghost): Overload {
   if (ghost === null) return null;
 
   if (current.weight > ghost.weight) {

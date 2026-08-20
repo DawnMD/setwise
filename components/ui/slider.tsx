@@ -1,6 +1,6 @@
-import { Slider as SliderPrimitive } from "@base-ui/react/slider"
+import { Slider as SliderPrimitive } from "@base-ui/react/slider";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 function Slider({
   className,
@@ -13,13 +13,13 @@ function Slider({
 }: SliderPrimitive.Root.Props & {
   // Added to the preset's scale: the default thumb is 12px, and anything a
   // chalky hand has to hit mid-set needs a 44px target.
-  size?: "default" | "touch"
+  size?: "default" | "touch";
 }) {
   const _values = Array.isArray(value)
     ? value
     : Array.isArray(defaultValue)
       ? defaultValue
-      : [min, max]
+      : [min, max];
 
   return (
     <SliderPrimitive.Root
@@ -33,10 +33,10 @@ function Slider({
       thumbAlignment="edge"
       {...props}
     >
-      <SliderPrimitive.Control className="group/slider-control relative flex w-full touch-none items-center select-none data-disabled:opacity-50 data-vertical:h-full data-vertical:min-h-40 data-vertical:w-auto data-vertical:flex-col in-data-[size=touch]:h-11">
+      <SliderPrimitive.Control className="group/slider-control relative flex w-full touch-none items-center select-none in-data-[size=touch]:h-11 data-disabled:opacity-50 data-vertical:h-full data-vertical:min-h-40 data-vertical:w-auto data-vertical:flex-col">
         <SliderPrimitive.Track
           data-slot="slider-track"
-          className="relative grow overflow-hidden rounded-none bg-muted select-none data-horizontal:h-1 data-horizontal:w-full data-vertical:h-full data-vertical:w-1 in-data-[size=touch]:data-horizontal:h-1.5"
+          className="relative grow overflow-hidden rounded-none bg-muted select-none data-horizontal:h-1 data-horizontal:w-full in-data-[size=touch]:data-horizontal:h-1.5 data-vertical:h-full data-vertical:w-1"
         >
           <SliderPrimitive.Indicator
             data-slot="slider-range"
@@ -52,7 +52,7 @@ function Slider({
         ))}
       </SliderPrimitive.Control>
     </SliderPrimitive.Root>
-  )
+  );
 }
 
-export { Slider }
+export { Slider };
