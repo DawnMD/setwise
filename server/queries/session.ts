@@ -3,6 +3,7 @@ import { and, asc, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import type { DbClient } from "@/db";
 import { exercises, sets, workoutSessions } from "@/db/schema";
 import type { SetInput } from "@/db/validators";
+import { sessionPlan, type SessionPlan } from "./plan";
 
 export type SetRow = {
   id: string;
@@ -29,6 +30,12 @@ export type SessionDetail = {
   endedAt: Date | null;
   notes: string | null;
   routineDayId: string | null;
+  /**
+   * The routine day this session was started from, if any. The logger opens
+   * with this lineup already on screen, which is the whole point of planning a
+   * day in advance.
+   */
+  plan: SessionPlan | null;
   /** Every exercise the session has at least one set for, in the order first logged. */
   exercises: SessionExercise[];
   sets: SetRow[];
@@ -83,12 +90,15 @@ export async function getSessionDetail(
     exerciseOrder.push({ id: row.exerciseId, name: row.exerciseName, equipment: row.equipment });
   }
 
+  const plan = session.routineDayId ? await sessionPlan(db, userId, sessionId) : null;
+
   return {
     id: session.id,
     startedAt: session.startedAt,
     endedAt: session.endedAt,
     notes: session.notes,
     routineDayId: session.routineDayId,
+    plan,
     exercises: exerciseOrder,
     sets: rows.map((row) => ({
       id: row.id,

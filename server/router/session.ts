@@ -4,6 +4,7 @@ import { z } from "zod";
 import { sets, workoutSessions } from "@/db/schema";
 import { sessionStartInput, setInput, uuid } from "@/db/validators";
 import { protectedProcedure } from "../orpc";
+import { findDay } from "../queries/plan";
 import {
   recordSessionVolumeRecords,
   recordSetPersonalRecords,
@@ -38,6 +39,9 @@ const sessionProcedure = protectedProcedure.errors({
   },
   EXERCISE_NOT_FOUND: {
     message: "That exercise isn't in your catalogue.",
+  },
+  DAY_NOT_FOUND: {
+    message: "That routine day isn't yours, or no longer exists.",
   },
 });
 
@@ -75,6 +79,13 @@ export const sessionRouter = {
 
       if (open) {
         throw errors.SESSION_ALREADY_ACTIVE({ data: { sessionId: open.id } });
+      }
+
+      // The foreign key only proves the day exists, not that it is the caller's.
+      // Without this check a routine day id guessed from someone else's plan
+      // would attach their template to this workout.
+      if (input.routineDayId && !(await findDay(context.db, context.userId, input.routineDayId))) {
+        throw errors.DAY_NOT_FOUND();
       }
 
       const [row] = await context.db
