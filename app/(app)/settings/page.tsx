@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata: Metadata = { title: "Settings · Setwise" };
@@ -34,15 +34,14 @@ export default async function SettingsPage() {
         <CardContent>
           {/* A plain link, not a fetch: the browser saves the file itself, and
               it works on a phone with no JavaScript in the way. */}
-          <Button
-            variant="outline"
-            size="touch"
-            className="w-full"
-            render={<a href="/api/export" download />}
+          <a
+            href="/api/export"
+            download
+            className={buttonVariants({ variant: "outline", size: "touch", className: "w-full" })}
           >
             <Download data-icon="inline-start" />
             Download CSV
-          </Button>
+          </a>
         </CardContent>
       </Card>
 

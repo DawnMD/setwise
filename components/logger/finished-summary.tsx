@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { formatElapsed, formatWeight, formatWhen } from "@/lib/format";
 import { estimateOneRepMax } from "@/lib/math";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Item, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 
@@ -107,9 +107,9 @@ export function FinishedSummary({
         );
       })}
 
-      <Button size="touch" className="mt-2 w-full" render={<Link href="/train" />}>
+      <Link href="/train" className={buttonVariants({ size: "touch", className: "mt-2 w-full" })}>
         Done
-      </Button>
+      </Link>
     </div>
   );
 }

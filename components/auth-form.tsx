@@ -6,7 +6,7 @@ import * as React from "react";
 
 import { authClient } from "@/lib/auth-client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -121,13 +121,12 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
         {isSignUp ? "Already have an account? " : "No account yet? "}
-        <Button
-          variant="link"
-          size="sm"
-          render={<Link href={isSignUp ? "/sign-in" : "/sign-up"} />}
+        <Link
+          href={isSignUp ? "/sign-in" : "/sign-up"}
+          className={buttonVariants({ variant: "link", size: "sm" })}
         >
           {isSignUp ? "Sign in" : "Create one"}
-        </Button>
+        </Link>
       </p>
     </>
   );

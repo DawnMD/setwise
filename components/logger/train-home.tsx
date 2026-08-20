@@ -11,7 +11,7 @@ import { formatWeight, formatWhen } from "@/lib/format";
 import { orpc } from "@/lib/orpc";
 import { uuidv7 } from "@/lib/uuid";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
@@ -54,14 +54,13 @@ export function TrainHome() {
     <div className="mx-auto flex w-full max-w-[520px] flex-col gap-4 px-4 py-4">
       <header className="flex items-center justify-between py-2">
         <h1 className="font-heading text-2xl font-semibold tracking-tight">Setwise</h1>
-        <Button
-          variant="ghost"
-          size="icon-touch"
+        <Link
+          href="/settings"
           aria-label="Settings"
-          render={<Link href="/settings" />}
+          className={buttonVariants({ variant: "ghost", size: "icon-touch" })}
         >
           <Settings />
-        </Button>
+        </Link>
       </header>
 
       {active.data ? (
@@ -74,13 +73,12 @@ export function TrainHome() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button
-              size="touch"
-              className="w-full"
-              render={<Link href={`/train/${active.data.id}`} />}
+            <Link
+              href={`/train/${active.data.id}`}
+              className={buttonVariants({ size: "touch", className: "w-full" })}
             >
               Carry on
-            </Button>
+            </Link>
           </CardContent>
         </Card>
       ) : (
