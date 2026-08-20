@@ -17,22 +17,40 @@ const HEX: string[] = Array.from({ length: 256 }, (_, i) => i.toString(16).padSt
 let lastMs = 0;
 let counter = 0;
 
+/** The counter is 12 bits, seeded in the bottom quarter so it has room to run. */
+const COUNTER_MAX = 0xfff;
+const COUNTER_SEED_MASK = 0x3ff;
+
 /**
  * Within a single millisecond the random bits alone would order ids randomly, so
  * the 12 bits after the version act as a monotonic counter. Two sets logged in
  * the same millisecond is not a real scenario, but "ids sort by creation time"
  * is only worth claiming if it is true.
+ *
+ * Which is why the seed is masked to the bottom quarter of the range and the
+ * counter borrows a millisecond rather than wrapping. Seeding across the whole
+ * 12 bits leaves an id minted near 0xfff to roll over to zero inside the same
+ * millisecond, and the id after it then sorts before it. RFC 9562 calls this
+ * the rollover guard.
  */
 export function uuidv7(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
 
-  const ms = Date.now();
-  if (ms === lastMs) {
-    counter = (counter + 1) & 0xfff;
+  let ms = Date.now();
+  if (ms <= lastMs) {
+    // Also covers a clock that stepped backwards: the ids stay ordered, at the
+    // cost of running slightly ahead of the wall clock until it catches up.
+    ms = lastMs;
+    counter += 1;
+    if (counter > COUNTER_MAX) {
+      ms = lastMs + 1;
+      lastMs = ms;
+      counter = ((bytes[6] << 8) | bytes[7]) & COUNTER_SEED_MASK;
+    }
   } else {
     lastMs = ms;
-    counter = ((bytes[6] << 8) | bytes[7]) & 0xfff;
+    counter = ((bytes[6] << 8) | bytes[7]) & COUNTER_SEED_MASK;
   }
 
   // 48-bit timestamp. Split with division rather than shifts: `>>>` truncates to
