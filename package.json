@@ -13,7 +13,6 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed.ts",
-    "db:verify:logging": "tsx scripts/verify-logging.ts",
     "db:verify:plan": "tsx scripts/verify-plan.ts",
     "svg:generate": "tsx scripts/generate-body-svg.ts"
   },
