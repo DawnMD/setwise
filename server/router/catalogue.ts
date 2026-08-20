@@ -1,8 +1,13 @@
-import { and, eq, ilike, isNull, or, sql } from "drizzle-orm";
+import { and, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { exercises } from "@/db/schema";
-import { uuid } from "@/db/validators";
+import { exerciseMuscles, exercises, muscles } from "@/db/schema";
+import {
+  customExerciseInput,
+  PRIMARY_FACTOR,
+  SECONDARY_FACTOR,
+  uuid,
+} from "@/db/validators";
 import { MUSCLE_SLUGS } from "@/lib/muscles";
 import { protectedProcedure, publicProcedure } from "../orpc";
 
@@ -73,4 +78,92 @@ export const catalogueRouter = {
   muscles: publicProcedure.handler(async ({ context }) => {
     return context.db.query.muscles.findMany();
   }),
+
+  /**
+   * A custom exercise, owned by the caller.
+   *
+   * The tagging is the whole reason this needs a form rather than a name field.
+   * The heatmap inherits every factor written here directly, so a muscle the
+   * user forgets to tick is training that silently disappears from it — which
+   * is why at least one primary is required at the boundary.
+   */
+  createExercise: protectedProcedure
+    .errors({
+      NAME_TAKEN: {
+        message: "You already have an exercise with that name.",
+      },
+      UNKNOWN_MUSCLE: {
+        message: "That muscle isn't one of the eighteen regions.",
+      },
+    })
+    .input(customExerciseInput)
+    .handler(async ({ input, context, errors }) => {
+      // A muscle can be primary or secondary, not both. Silently dropping the
+      // secondary would credit it 1.0 without saying so.
+      const secondary = input.secondaryMuscles.filter(
+        (slug) => !input.primaryMuscles.includes(slug),
+      );
+
+      const rows = await context.db
+        .select({ id: muscles.id, slug: muscles.slug })
+        .from(muscles)
+        .where(inArray(muscles.slug, [...input.primaryMuscles, ...secondary]));
+
+      const idBySlug = new Map(rows.map((row) => [row.slug, row.id]));
+      if (idBySlug.size !== input.primaryMuscles.length + secondary.length) {
+        throw errors.UNKNOWN_MUSCLE();
+      }
+
+      const slug = slugify(input.name);
+
+      return context.db.transaction(async (tx) => {
+        const [exercise] = await tx
+          .insert(exercises)
+          .values({
+            name: input.name,
+            // Namespaced with the owner id: the global slug index is unique,
+            // and a custom "Bench Press" must not collide with the catalogue's.
+            slug: `${slug}-${context.userId.slice(0, 8)}`,
+            equipment: input.equipment,
+            movementPattern: input.movementPattern,
+            ownerId: context.userId,
+          })
+          .onConflictDoNothing()
+          .returning();
+
+        if (!exercise) throw errors.NAME_TAKEN();
+
+        await tx.insert(exerciseMuscles).values([
+          ...input.primaryMuscles.map((muscleSlug) => ({
+            exerciseId: exercise.id,
+            muscleId: idBySlug.get(muscleSlug)!,
+            role: "primary" as const,
+            factor: PRIMARY_FACTOR,
+          })),
+          ...secondary.map((muscleSlug) => ({
+            exerciseId: exercise.id,
+            muscleId: idBySlug.get(muscleSlug)!,
+            role: "secondary" as const,
+            factor: SECONDARY_FACTOR,
+          })),
+        ]);
+
+        return {
+          id: exercise.id,
+          name: exercise.name,
+          slug: exercise.slug,
+          equipment: exercise.equipment,
+          movementPattern: exercise.movementPattern,
+          isCustom: true,
+        };
+      });
+    }),
 };
+
+/** Lowercase, hyphenated, no leading or trailing punctuation. */
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
