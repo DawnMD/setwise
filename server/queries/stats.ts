@@ -127,7 +127,7 @@ export async function intensitySummary(
   userId: string,
   days: number,
 ): Promise<IntensitySummary> {
-  const [row] = await db.execute<{
+  const { rows } = await db.execute<{
     avg_relative_intensity: number | null;
     intensity_sets: number;
     avg_rpe: number | null;
@@ -162,6 +162,7 @@ export async function intensitySummary(
       count(*)::int as working_sets
     from window_sets
   `);
+  const [row] = rows;
 
   return {
     avgRelativeIntensity: row?.avg_relative_intensity ?? null,

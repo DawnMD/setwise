@@ -129,7 +129,7 @@ export async function recordSessionVolumeRecords(
   userId: string,
   sessionId: string,
 ): Promise<SessionVolumeRecord[]> {
-  const rows = await db.execute<{
+  const { rows } = await db.execute<{
     exercise_id: string;
     exercise_name: string;
     volume: number;

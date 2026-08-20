@@ -1,19 +1,24 @@
-import { config } from "dotenv";
+import { loadEnvConfig } from "@next/env";
 import { defineConfig } from "drizzle-kit";
 
-config({ path: ".env.local", quiet: true });
+loadEnvConfig(process.cwd(), process.env.NODE_ENV !== "production");
 
-// Migrations run over the unpooled endpoint. Neon's pooler runs in transaction
-// mode, where DDL that spans statements and advisory locks behave badly.
+// Neon recommends a direct connection for ORM migration tools.
 const url = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL;
-if (!url) throw new Error("Set DATABASE_URL_UNPOOLED or DATABASE_URL in .env.local");
 
 export default defineConfig({
   schema: "./db/schema/index.ts",
   out: "./drizzle",
   dialect: "postgresql",
-  dbCredentials: { url },
+  ...(url ? { dbCredentials: { url } } : {}),
   casing: "snake_case",
+  schemaFilter: "public",
+  introspect: { casing: "camel" },
+  migrations: {
+    table: "__drizzle_migrations",
+    schema: "drizzle",
+  },
+  breakpoints: true,
   strict: true,
   verbose: true,
 });

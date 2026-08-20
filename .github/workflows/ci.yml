@@ -2,9 +2,10 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 permissions:
@@ -38,8 +39,9 @@ jobs:
     env:
       BETTER_AUTH_SECRET: setwise-ci-only-secret-not-used-outside-actions
       BETTER_AUTH_URL: http://localhost:3000
-      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/setwise?sslmode=disable
-      DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@127.0.0.1:5432/setwise?sslmode=disable
+      DATABASE_DRIVER: pg
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/setwise
+      DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@127.0.0.1:5432/setwise
 
     steps:
       - name: Check out repository
@@ -53,6 +55,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install local test database driver
+        run: npm install --no-save --package-lock=false pg@8.16.3
 
       - name: Check formatting
         run: npm run format:check

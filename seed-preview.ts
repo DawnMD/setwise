@@ -1,10 +1,9 @@
 import { config } from "dotenv";
 config({ path: ".env.local", quiet: true });
 import { randomUUID } from "node:crypto";
-import { and, eq, inArray } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-import { parseConnectionString } from "./db/connection";
+import { eq, inArray } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { createNeonPool } from "./db/neon";
 import * as schema from "./db/schema";
 
 const EMAIL = "phase3-preview@example.invalid";
@@ -32,9 +31,8 @@ const DAYS: Record<string, [string, number, number, number][]> = {
 };
 
 async function main() {
-  const { url, ssl } = parseConnectionString(process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL!);
-  const client = postgres(url, { ssl, max: 1, onnotice: () => {} });
-  const db = drizzle(client, { schema });
+  const client = createNeonPool(process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL!);
+  const db = drizzle({ client, schema });
 
   const [u] = await db.select().from(schema.user).where(eq(schema.user.email, EMAIL));
   if (!u) throw new Error("preview user not found");
@@ -42,9 +40,19 @@ async function main() {
 
   await db.delete(schema.workoutSessions).where(eq(schema.workoutSessions.userId, u.id));
 
-  const wanted = [...new Set(Object.values(DAYS).flat().map(([s]) => s))];
+  const wanted = [
+    ...new Set(
+      Object.values(DAYS)
+        .flat()
+        .map(([s]) => s),
+    ),
+  ];
   const found = await db
-    .select({ id: schema.exercises.id, sourceId: schema.exercises.sourceId, name: schema.exercises.name })
+    .select({
+      id: schema.exercises.id,
+      sourceId: schema.exercises.sourceId,
+      name: schema.exercises.name,
+    })
     .from(schema.exercises)
     .where(inArray(schema.exercises.sourceId, wanted));
   const byS = new Map(found.map((e) => [e.sourceId!, e]));
@@ -62,7 +70,10 @@ async function main() {
       const at = new Date(Date.now() - age * 86_400_000);
       const sessionId = randomUUID();
       await db.insert(schema.workoutSessions).values({
-        id: sessionId, userId: u.id, startedAt: at, endedAt: new Date(at.getTime() + 3.6e6),
+        id: sessionId,
+        userId: u.id,
+        startedAt: at,
+        endedAt: new Date(at.getTime() + 3.6e6),
       });
       sessionCount += 1;
 
@@ -75,16 +86,29 @@ async function main() {
         // One warm-up on the first exercise of the day.
         if (idx === 0 && progressed > 0) {
           await db.insert(schema.sets).values({
-            id: randomUUID(), sessionId, exerciseId: ex.id, setIndex: idx++,
-            weight: Math.round(progressed * 0.6), reps: 5, isWarmup: true,
-            performedAt: at, clientCreatedAt: at,
+            id: randomUUID(),
+            sessionId,
+            exerciseId: ex.id,
+            setIndex: idx++,
+            weight: Math.round(progressed * 0.6),
+            reps: 5,
+            isWarmup: true,
+            performedAt: at,
+            clientCreatedAt: at,
           });
         }
         for (let s = 0; s < count; s += 1) {
           await db.insert(schema.sets).values({
-            id: randomUUID(), sessionId, exerciseId: ex.id, setIndex: idx++,
-            weight: progressed, reps, rpe: s === count - 1 ? 8.5 : 7.5,
-            isWarmup: false, performedAt: at, clientCreatedAt: at,
+            id: randomUUID(),
+            sessionId,
+            exerciseId: ex.id,
+            setIndex: idx++,
+            weight: progressed,
+            reps,
+            rpe: s === count - 1 ? 8.5 : 7.5,
+            isWarmup: false,
+            performedAt: at,
+            clientCreatedAt: at,
           });
         }
       }
