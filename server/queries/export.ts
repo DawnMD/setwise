@@ -1,7 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 
 import type { DbClient } from "@/db";
-import { exercises, sets, workoutSessions } from "@/db/schema";
+import { bodyweightLogs, exercises, sets, workoutSessions } from "@/db/schema";
 import { estimateOneRepMax } from "@/lib/math";
 
 /**
@@ -84,5 +84,34 @@ export async function exportSetsCsv(db: DbClient, userId: string): Promise<strin
   }
 
   // Trailing newline: some tools drop the last row without one.
+  return `${lines.join("\r\n")}\r\n`;
+}
+
+const BODYWEIGHT_COLUMNS = ["logged_on", "weight_kg", "note"] as const;
+
+/**
+ * The weigh-ins, as their own file rather than a column on the set export.
+ *
+ * They are a different shape — one row per day, not per set — and stapling them
+ * onto a set table would mean either repeating a weight on every set of the day
+ * or leaving most of the column blank. Two files a spreadsheet can each open.
+ */
+export async function exportBodyweightCsv(db: DbClient, userId: string): Promise<string> {
+  const rows = await db
+    .select({
+      loggedOn: bodyweightLogs.loggedOn,
+      weight: bodyweightLogs.weight,
+      note: bodyweightLogs.note,
+    })
+    .from(bodyweightLogs)
+    .where(eq(bodyweightLogs.userId, userId))
+    .orderBy(asc(bodyweightLogs.loggedOn));
+
+  const lines = [BODYWEIGHT_COLUMNS.join(",")];
+
+  for (const row of rows) {
+    lines.push([row.loggedOn, row.weight, row.note].map(escape).join(","));
+  }
+
   return `${lines.join("\r\n")}\r\n`;
 }

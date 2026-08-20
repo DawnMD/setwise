@@ -1,3 +1,4 @@
+import { bodyweightRouter } from "./bodyweight";
 import { catalogueRouter } from "./catalogue";
 import { planRouter } from "./plan";
 import { sessionRouter } from "./session";
@@ -16,6 +17,7 @@ export const router = {
   plan: planRouter,
   catalogue: catalogueRouter,
   stats: statsRouter,
+  bodyweight: bodyweightRouter,
 };
 
 export type AppRouter = typeof router;

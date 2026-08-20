@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { BodyweightSection } from "@/components/bodyweight/bodyweight-section";
+
 import { ExerciseTrend } from "./exercise-trend";
 import { IntensitySummary } from "./intensity-summary";
 import { MuscleHeatmap } from "./muscle-heatmap";
@@ -125,6 +127,16 @@ export function ProgressHome() {
           </section>
         </>
       )}
+
+      {/*
+        Outside the volume branch, not inside it. A week with no working sets is
+        exactly the week someone is most likely to be watching the scale, and
+        an empty heatmap is no reason to hide their weigh-ins.
+      */}
+      <section className="flex flex-col gap-2">
+        <h2 className="font-heading text-sm font-semibold text-muted-foreground">Bodyweight</h2>
+        <BodyweightSection window={window} />
+      </section>
     </div>
   );
 }

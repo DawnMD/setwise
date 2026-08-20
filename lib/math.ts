@@ -64,3 +64,13 @@ export function kgToLb(kg: number): number {
 export function lbToKg(lb: number): number {
   return lb * KG_PER_LB;
 }
+
+/**
+ * The rolling window the bodyweight trend line is drawn over.
+ *
+ * Seven days rather than five or ten because a week is one full cycle of
+ * whatever weekly habit moves the number — the Sunday meal, the Monday restart
+ * — so the average takes each of them exactly once and stops reporting it as a
+ * change in bodyweight.
+ */
+export const BODYWEIGHT_TREND_DAYS = 7;

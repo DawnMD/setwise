@@ -100,6 +100,67 @@ export const statWindow = z
   .describe("Trailing window in days.");
 
 /**
+ * The user's IANA time zone, sent by the client and used wherever an instant
+ * has to be bucketed into a day.
+ *
+ * Bodyweight is stored as a `date`, so it is already local by construction, but
+ * a set is a timestamp. Without the zone a 9pm workout lands on tomorrow for
+ * anyone west of UTC, and the tonnage bars would sit a day off the weight line
+ * they are drawn against.
+ *
+ * Validated by asking `Intl` rather than by pattern, because the zone list
+ * changes and a regex would either refuse valid names or wave through a string
+ * Postgres then throws on.
+ */
+export const timeZone = z
+  .string()
+  .max(64)
+  .refine(
+    (value) => {
+      try {
+        new Intl.DateTimeFormat(undefined, { timeZone: value });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { message: "Unknown time zone." },
+  );
+
+/**
+ * Bodyweight.
+ *
+ * The bounds are a typo guard, not a judgement. They only have to be wide
+ * enough that no real person is refused, and narrow enough that a misplaced
+ * decimal point does not quietly flatten the trend line for a fortnight.
+ */
+export const BODYWEIGHT_MIN = 20;
+export const BODYWEIGHT_MAX = 500;
+/** Scales read to a tenth, so the pad's increment is a plausible correction. */
+export const BODYWEIGHT_STEP = 0.5;
+
+export const bodyweightKg = z
+  .number()
+  .min(BODYWEIGHT_MIN, "That doesn't look like a bodyweight.")
+  .max(BODYWEIGHT_MAX, "That doesn't look like a bodyweight.")
+  .refine((w) => Math.abs(w * 100 - Math.round(w * 100)) < 1e-6, {
+    message: "Weight goes to two decimal places.",
+  });
+
+/** "YYYY-MM-DD", the client's local day. Never a timestamp: see `bodyweightLogs`. */
+export const isoDay = z.iso.date();
+
+export const bodyweightNote = z.string().trim().max(280, "That note is too long.").nullable();
+
+export const bodyweightLogInput = z.object({
+  loggedOn: isoDay,
+  weight: bodyweightKg,
+  note: bodyweightNote,
+});
+
+export type BodyweightLogInput = z.infer<typeof bodyweightLogInput>;
+
+/**
  * The plan builder.
  *
  * Targets are all nullable, and that is the point: a routine that forces you to

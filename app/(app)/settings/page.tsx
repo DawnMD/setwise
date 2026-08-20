@@ -28,11 +28,12 @@ export default async function SettingsPage() {
         <CardHeader>
           <CardTitle>Export your data</CardTitle>
           <CardDescription>
-            Every set you have logged, one row each, as CSV. Sets are stored in kilograms.
+            Two CSVs: every set you have logged, one row each, and every weigh-in, one row per day.
+            Both are in kilograms.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {/* A plain link, not a fetch: the browser saves the file itself, and
+        <CardContent className="flex flex-col gap-2">
+          {/* Plain links, not fetches: the browser saves the file itself, and
               it works on a phone with no JavaScript in the way. */}
           <a
             href="/api/export"
@@ -40,7 +41,15 @@ export default async function SettingsPage() {
             className={buttonVariants({ variant: "outline", size: "touch", className: "w-full" })}
           >
             <Download data-icon="inline-start" />
-            Download CSV
+            Download sets
+          </a>
+          <a
+            href="/api/export?data=bodyweight"
+            download
+            className={buttonVariants({ variant: "outline", size: "touch", className: "w-full" })}
+          >
+            <Download data-icon="inline-start" />
+            Download bodyweight
           </a>
         </CardContent>
       </Card>

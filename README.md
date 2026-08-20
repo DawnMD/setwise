@@ -3,10 +3,12 @@
 A workout log built around progressive overload. Last session's number sits next
 to the field where you type this session's.
 
-Phases 0 to 2 are done: the foundation, the logger, the plan builder. See
-[docs/plan.md](docs/plan.md) for the full build plan, and the phase notes for what
-shipped in each and what it cost: [phase 0](docs/phase-0.md),
-[phase 1](docs/phase-1.md), [phase 2](docs/phase-2.md).
+Phases 0 to 4 are done: the foundation, the logger, the plan builder, the stats
+screen, the bodyweight log. See [docs/plan.md](docs/plan.md) for the full build
+plan, and the phase notes for what shipped in each and what it cost:
+[phase 0](docs/phase-0.md), [phase 1](docs/phase-1.md),
+[phase 2](docs/phase-2.md), [phase 4](docs/phase-4.md). Phase 3 shipped without
+notes of its own.
 
 ## Stack
 

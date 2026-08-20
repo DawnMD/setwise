@@ -220,6 +220,10 @@ The suite covers the contracts that are hard to trust by clicking around:
   ghost values, idempotent set retries, PR creation, and PR cleanup after edits.
 - Plan checks target round-tripping, safe day swaps, ownership, planned-session
   prefill, next-day ordering, and keeping workout history after routine deletion.
+- Bodyweight checks the rolling average against a hand-worked series, the
+  lead-in behind its first point, days with no weigh-in, tonnage per day with
+  warm-ups excluded, day bucketing in a second time zone, the per-day upsert,
+  and the delete.
 
 Each file creates throwaway users and removes them when it finishes. Files run
 one at a time to keep database connections predictable. The database must be
@@ -286,11 +290,19 @@ What shipped, and the move onto shadcn that came with it: [phase-2.md](phase-2.m
 
 Done when: the heatmap tells you something about your training you didn't already know.
 
-### Phase 4: bodyweight
+### Phase 4: bodyweight (done)
 
 - Weight log with a 7-day rolling average line, because daily weight is mostly water and showing raw makes people miserable
 - Chart it against the same 7/30/90 windows as the heatmap, so the toggle means one thing everywhere in the app
 - Overlay total tonnage on the same axis. Bodyweight moving while volume climbs is the story people actually want, and nobody else shows it on one chart.
+
+Three things this list did not ask for and the phase needed anyway:
+
+- **Six days of lead-in that never get drawn.** A seven-day average needs seven days of history, so the first six points of any window are averages of a partial week unless the query reaches back past its own start. They slope toward the rest of the line and report a change that did not happen.
+- **The reader's time zone, sent with every read.** A weigh-in is a `date` and is already local. A set is a timestamp, and bucketing it in UTC files an evening session under tomorrow for everyone west of it, which slides the bars a day off the line they are drawn against.
+- **A correction path.** One row per day, upserted, with edit and delete from the list. A log nobody can fix after a mistyped digit is a log they stop trusting.
+
+What shipped, and the calls the list left open: [phase-4.md](phase-4.md).
 
 ### Phase 5: social
 

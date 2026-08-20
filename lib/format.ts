@@ -110,3 +110,29 @@ export function formatWhen(date: Date, now: Date = new Date()): string {
 export function formatTime(date: Date): string {
   return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
+
+/**
+ * A calendar day, in the reader's own zone.
+ *
+ * `toISOString().slice(0, 10)` is the obvious way to do this and it is wrong
+ * for anyone west of UTC after their afternoon: it answers in UTC, so an
+ * evening weigh-in would be filed under tomorrow. These two go through the
+ * local getters instead, and are the only place a "YYYY-MM-DD" is built or read.
+ */
+export function toIsoDay(date: Date = new Date()): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+export function parseIsoDay(iso: string): Date {
+  const [year, month, day] = iso.split("-").map(Number);
+  // Local midnight. `new Date("2026-08-21")` would parse as UTC midnight and
+  // land on the 20th for half the world.
+  return new Date(year, month - 1, day);
+}
+
+/** "21 Aug" for an axis tick, where the year is already implied by the window. */
+export function formatDayShort(iso: string): string {
+  return parseIsoDay(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
