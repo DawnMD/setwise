@@ -10,6 +10,8 @@
 
 import { z } from "zod";
 
+import { MUSCLE_SLUGS } from "@/lib/muscles";
+
 /** `numeric(6, 2)`: four digits before the point, two after. */
 export const WEIGHT_MAX = 9999.99;
 /** The smallest plate jump anyone loads, and the granularity of the number pad. */
@@ -88,3 +90,101 @@ export const sessionStartInput = z.object({
 export const statWindow = z
   .union([z.literal(7), z.literal(30), z.literal(90)])
   .describe("Trailing window in days.");
+
+/**
+ * The plan builder.
+ *
+ * Targets are all nullable, and that is the point: a routine that forces you to
+ * declare an RPE target for every accessory is a routine nobody finishes
+ * building. A blank target means "no opinion", which the logger renders as
+ * nothing rather than as a zero.
+ */
+
+export const routineName = z
+  .string()
+  .trim()
+  .min(1, "Give the routine a name.")
+  .max(80, "That name is too long.");
+
+export const dayName = z
+  .string()
+  .trim()
+  .min(1, "Give the day a name.")
+  .max(60, "That name is too long.");
+
+/** Ten sets of one exercise is already past the point of usefulness; 20 is the ceiling. */
+export const targetSets = z.number().int().min(1).max(20);
+
+/**
+ * A rep range, not a rep count. "8 to 12" is how anyone who trains actually
+ * thinks, and it is what makes the double progression in the logger legible.
+ */
+export const targetReps = z.number().int().min(1).max(100);
+
+export const routineExerciseTargets = z
+  .object({
+    targetSets: targetSets.nullable(),
+    targetRepLow: targetReps.nullable(),
+    targetRepHigh: targetReps.nullable(),
+    targetRpe: rpe.nullable(),
+  })
+  .refine(
+    (value) =>
+      value.targetRepLow === null ||
+      value.targetRepHigh === null ||
+      value.targetRepLow <= value.targetRepHigh,
+    { message: "The low end of the range has to come first.", path: ["targetRepLow"] },
+  );
+
+export const exerciseName = z
+  .string()
+  .trim()
+  .min(1, "Give the exercise a name.")
+  .max(120, "That name is too long.");
+
+export const equipment = z.enum([
+  "barbell",
+  "dumbbell",
+  "machine",
+  "cable",
+  "kettlebell",
+  "bands",
+  "body only",
+  "other",
+]);
+
+export const movementPattern = z.enum([
+  "squat",
+  "hinge",
+  "lunge",
+  "horizontal_push",
+  "vertical_push",
+  "horizontal_pull",
+  "vertical_pull",
+  "carry",
+  "core",
+  "isolation",
+]);
+
+/** 1.0 for a primary mover, 0.5 for a secondary. The heatmap inherits both. */
+export const PRIMARY_FACTOR = 1;
+export const SECONDARY_FACTOR = 0.5;
+
+/**
+ * A custom exercise, with its muscle tagging.
+ *
+ * At least one primary muscle is required. An exercise with no primary is
+ * invisible to every volume query in the app, and a silently untracked
+ * exercise is worse than no exercise: the heatmap would quietly under-report
+ * the training someone actually did.
+ */
+export const customExerciseInput = z.object({
+  name: exerciseName,
+  equipment: equipment.nullable(),
+  movementPattern: movementPattern.nullable(),
+  primaryMuscles: z.array(z.enum(MUSCLE_SLUGS)).min(1, "Pick at least one primary muscle.").max(6),
+  secondaryMuscles: z.array(z.enum(MUSCLE_SLUGS)).max(8),
+});
+
+export type CustomExerciseInput = z.infer<typeof customExerciseInput>;
+export type RoutineExerciseTargets = z.infer<typeof routineExerciseTargets>;
