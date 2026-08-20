@@ -9,6 +9,7 @@ import { uuidv7 } from "../../lib/uuid";
 import {
   findDay,
   getRoutineDetail,
+  listRoutines,
   sessionPlan,
   startableDays,
   swapDayOrder,
@@ -175,6 +176,16 @@ describe("plan builder acceptance", () => {
     const afterRuns = await startableDays(db, userId);
     expect(afterRuns.map((day) => day.name)).toEqual(["Legs", "Push"]);
     expect(afterRuns.every((day) => day.lastRunAt !== null)).toBe(true);
+
+    const listed = await listRoutines(db, userId);
+    expect(listed).toEqual([
+      expect.objectContaining({
+        id: routine.id,
+        dayCount: 3,
+        exerciseCount: 3,
+        lastRunAt: expect.any(Date),
+      }),
+    ]);
 
     await db.delete(schema.routines).where(eq(schema.routines.id, routine.id));
     const [survivingSession] = await db

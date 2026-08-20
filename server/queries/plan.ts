@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, countDistinct, eq, max, sql } from "drizzle-orm";
 
 import type { DbClient } from "@/db";
 import { exercises, routineDays, routineExercises, routines, workoutSessions } from "@/db/schema";
@@ -103,24 +103,19 @@ export async function listRoutines(db: DbClient, userId: string): Promise<Routin
       name: routines.name,
       notes: routines.notes,
       isArchived: routines.isArchived,
-      dayCount: sql<number>`(
-        select count(*)::int from routine_days d where d.routine_id = ${routines.id}
-      )`,
-      exerciseCount: sql<number>`(
-        select count(*)::int
-        from routine_exercises re
-        join routine_days d on d.id = re.routine_day_id
-        where d.routine_id = ${routines.id}
-      )`,
-      lastRunAt: sql<Date | null>`(
-        select max(s.started_at)
-        from workout_sessions s
-        join routine_days d on d.id = s.routine_day_id
-        where d.routine_id = ${routines.id} and s.user_id = ${userId}
-      )`,
+      dayCount: countDistinct(routineDays.id),
+      exerciseCount: countDistinct(routineExercises.id),
+      lastRunAt: max(workoutSessions.startedAt),
     })
     .from(routines)
+    .leftJoin(routineDays, eq(routineDays.routineId, routines.id))
+    .leftJoin(routineExercises, eq(routineExercises.routineDayId, routineDays.id))
+    .leftJoin(
+      workoutSessions,
+      and(eq(workoutSessions.routineDayId, routineDays.id), eq(workoutSessions.userId, userId)),
+    )
     .where(eq(routines.userId, userId))
+    .groupBy(routines.id)
     .orderBy(asc(routines.isArchived), asc(routines.createdAt));
 
   return rows;
