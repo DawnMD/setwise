@@ -16,16 +16,16 @@ import { and, inArray, isNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
-import { parseConnectionString } from "../src/db/connection";
-import * as schema from "../src/db/schema";
-import { EXERCISE_OVERRIDES, type MovementPattern } from "../src/lib/exercise-seed/overrides";
+import { parseConnectionString } from "../db/connection";
+import * as schema from "../db/schema";
+import { EXERCISE_OVERRIDES, type MovementPattern } from "../lib/exercise-seed/overrides";
 import {
   PRIMARY_FACTOR,
   SECONDARY_FACTOR,
   SOURCE_MUSCLE_MAP,
   type SourceMuscleTag,
-} from "../src/lib/exercise-seed/source-map";
-import { MUSCLES, type MuscleSlug } from "../src/lib/muscles";
+} from "../lib/exercise-seed/source-map";
+import { MUSCLES, type MuscleSlug } from "../lib/muscles";
 
 config({ path: ".env.local", quiet: true });
 

@@ -22,10 +22,10 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
-import { parseConnectionString } from "../src/db/connection";
-import * as schema from "../src/db/schema";
-import type { MuscleSlug } from "../src/lib/muscles";
-import { muscleVolume } from "../src/server/stats";
+import { parseConnectionString } from "../db/connection";
+import * as schema from "../db/schema";
+import type { MuscleSlug } from "../lib/muscles";
+import { muscleVolume } from "../server/queries/stats";
 
 config({ path: ".env.local", quiet: true });
 

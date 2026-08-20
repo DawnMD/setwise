@@ -9,9 +9,10 @@
 | API | oRPC | End-to-end types with no codegen, and it emits an OpenAPI spec for free when you build a native app later |
 | Auth | Better Auth | Sessions in your own Postgres, no vendor lock |
 | Client state | TanStack Query | oRPC ships a first-party integration, so `orpc.sets.log.mutationOptions()` is the whole wiring |
-| Components | shadcn/ui on Base UI | Base UI became shadcn's default in July 2026, so `npx shadcn create` gets you there with no flags |
+| Components | shadcn/ui on Base UI | Base UI became shadcn's default in July 2026, so `npx shadcn create` gets you there with no flags. Running on preset `b2eYKQAHg1`: style lyra, zinc, lucide, medium radius |
 | Styling | Tailwind | Comes with shadcn, and mobile-first breakpoints are the default direction |
-| Charts | Visx or Recharts | Recharts is faster to write, Visx looks better |
+| Charts | Visx or Recharts | Recharts is faster to write, Visx looks better. shadcn's `Chart` wraps Recharts, which settles it |
+| Theme | next-themes | The shadcn tokens key off a `.dark` class, so system preference needs a provider to apply it |
 
 Swap in PocketBase if you want one binary instead of five services. Everything below still applies, just with collections instead of tables.
 
@@ -127,7 +128,7 @@ Online only for the MVP. Logging a set goes:
 1. Client generates a UUIDv7 for the row.
 2. TanStack Query optimistic mutation puts the set in the cache immediately, so the UI never waits on the network.
 3. POST with that id. Server does `insert ... on conflict (id) do update`.
-4. On failure, roll the cache back and show a retry affordance on that specific set.
+4. On failure, show a retry affordance on that specific set. **Do not roll the cache back.** Removing the row takes someone's numbers off the screen at the moment they need to read them back. Turn the row red instead. The contract that matters is that nothing which failed is ever displayed as saved.
 
 Two details that are not optional even without offline support.
 
@@ -163,6 +164,8 @@ Two semantic colors beyond that. One for a PR, one for a failed save. No third.
 
 For the heatmap, ramp a single hue from the surface color to the accent. Zero volume is flat grey, not red. Red reads as injury or error, and a muscle you skipped isn't an error.
 
+**How this landed on the preset.** The shadcn preset supplies the zinc scale, which is the whole of the interface chrome, and `--destructive` for the failed save. On top of it the app defines two colors and one ramp. `--overload` (the 20kg blue) marks beating last session's number and tops the heatmap, `--pr` marks a record, and `--band-*` fills in between. Watch for the collision if you switch presets. `--accent` and `--border` are shadcn's names, so app colors cannot use them.
+
 ### Type
 
 This app is mostly numbers, read at a glance, from a phone on the floor, three feet away.
@@ -181,7 +184,7 @@ Everything else follows from thumb reach:
 
 - Primary actions live in the bottom third. Never a top-right save button.
 - Bottom nav, three items: Train, Progress, Plan. Three because that's genuinely the count, not because three looks nice.
-- 44px minimum touch targets. Chalky, sweaty hands.
+- 44px minimum touch targets. Chalky, sweaty hands. The lyra style is dense, and its largest button is 36px, so `Button`, `Slider` and `NativeSelect` each carry a `touch` size added on top of the preset's scale. Use it for anything reachable mid-set.
 - `inputmode="decimal"` on weight and `inputmode="numeric"` on reps, for the cases where the OS keyboard still appears.
 - `100dvh` not `100vh`, or browser chrome eats your action bar.
 - No hover state carries meaning. There is no hover.
@@ -199,9 +202,11 @@ Empty states give an instruction, not a mood. "No workouts yet" plus a button be
 
 Base UI is the shadcn default now, so nothing special to configure. Two things that matter for this app: it handles focus trapping and ARIA in the bottom sheet you'll build the number pad inside, and its Slider is what you want for the RPE input. RPE on a 6 to 10 scale with half steps is a slider, not a dropdown, and definitely not a text field.
 
+In practice the bottom sheet is shadcn's `Drawer`, which wraps Base UI's and brings swipe-to-dismiss. `Sheet` is the side panel; do not reach for it on a phone.
+
 ## Phases
 
-### Phase 0: foundation
+### Phase 0: foundation (done)
 
 - Repo, Drizzle schema, migrations running
 - Better Auth with email and one OAuth provider
@@ -210,7 +215,9 @@ Base UI is the shadcn default now, so nothing special to configure. Two things t
 
 Done when: you can query effective sets for a hand-inserted week and the number is right.
 
-### Phase 1: the logger
+What shipped and what it cost: [phase-0.md](phase-0.md).
+
+### Phase 1: the logger (done)
 
 This is the app. Everything else is a feature.
 
@@ -226,16 +233,26 @@ This is the app. Everything else is a feature.
 
 Done when: you can log a full workout on a phone, one-handed, without zooming.
 
-Test this in a real gym before building anything else. Every UX flaw shows up in the first session and none of them show up at a desk.
+Test this in a real gym before building anything else. Every UX flaw shows up in the first session and none of them show up at a desk. **Still not done.**
 
-### Phase 2: plan builder
+What shipped, and where it departed from this list: [phase-1.md](phase-1.md).
+
+### Phase 2: plan builder (done)
 
 - Create routine, add days, add exercises with target sets and rep ranges
 - Start a session from a routine day, pre-filled
 - Custom exercise creation, with the SVG muscle picker for tagging
 - Reorder, supersets can wait
 
+Three things this list did not ask for and the phase needed anyway:
+
+- **What to run next, on the train screen.** Starting a planned day only from the plan editor means four taps before every workout. `plan.upcoming` returns the days of every live routine, least recently run first, so the rotation looks after itself mid-week.
+- **The plan is read live, not snapshotted into the session.** A routine edited on Tuesday should show its new form the next time it runs. A copy taken at start would need its own table to say something nobody asked for.
+- **Archive, not just delete.** Deleting a routine costs no training history, because `routine_day_id` is `set null`, but it does cost the answer to "what was I running in March".
+
 Done when: you build a push/pull/legs split and run a week off it without editing anything mid-workout.
+
+What shipped, and the move onto shadcn that came with it: [phase-2.md](phase-2.md).
 
 ### Phase 3: heatmap and stats
 

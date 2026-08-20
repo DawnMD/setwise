@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 
-import { parseConnectionString } from "../src/db/connection";
+import { parseConnectionString } from "../db/connection";
 
 config({ path: ".env.local", quiet: true });
 
