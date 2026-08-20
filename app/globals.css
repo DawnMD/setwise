@@ -66,7 +66,23 @@
   --font-sans: var(--font-archivo);
 }
 
+/*
+  Base UI portals its sheets and dialogs to the end of <body>. Giving the app its
+  own stacking context means a popup is always above the page without any
+  z-index in app code having to know about it.
+*/
+.app-root {
+  isolation: isolate;
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+}
+
 body {
+  /* iOS 26+ Safari shows content under the browser chrome, and a dialog
+     backdrop has to be absolute to cover the visual viewport. That only works
+     from a positioned body. */
+  position: relative;
   background: var(--surface);
   color: var(--ink);
   font-family: var(--font-archivo), system-ui, sans-serif;
