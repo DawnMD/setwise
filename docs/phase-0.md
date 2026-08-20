@@ -8,9 +8,10 @@ inherits.
 > Done when: you can query effective sets for a hand-inserted week and the number
 > is right.
 
-`npm run db:verify` inserts a known week against a throwaway user, asks the
-database for effective sets, and compares to numbers worked out by hand in
-`scripts/verify-effective-sets.ts`. It asserts four things:
+`npm test` runs the Vitest integration suite. The Phase 0 coverage lives in
+`tests/integration/stats.test.ts`: it inserts a known week against a throwaway
+user, asks the database for effective sets, and compares the result to numbers
+worked out by hand. It asserts four things:
 
 1. Effective sets sum per-muscle factors rather than counting sets.
 2. Warm-up sets contribute nothing.

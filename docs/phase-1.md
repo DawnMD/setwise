@@ -17,11 +17,11 @@ step that matters — "every UX flaw shows up in the first session and none of t
 show up at a desk" — and it has only been driven in a browser. Do that before
 building Phase 2.
 
-`npm run db:verify:logging` covers what a browser cannot check by looking: plate
-loading against hand-worked answers, UUIDv7 shape and ordering, the Epley
-window, the overload delta, and then a real session through the write path
-asserting that a retry upserts rather than duplicates, that PR detection reports
-what it beat, and that a warm-up sets no records.
+`npm test` includes `tests/integration/logger.test.ts`, which covers what a
+browser cannot check by looking: plate loading against hand-worked answers,
+UUIDv7 shape and ordering, the Epley window, the overload delta, and then a real
+session through the write path. It checks that a retry upserts rather than
+duplicates, PR detection reports what it beat, and a warm-up sets no records.
 
 ## What shipped
 

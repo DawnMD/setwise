@@ -36,11 +36,14 @@ npm run dev
 | `npm run db:generate` | Generate a migration from schema changes |
 | `npm run db:migrate` | Apply migrations (uses the unpooled endpoint) |
 | `npm run db:seed` | Seed muscles and the exercise catalogue. Idempotent. |
-| `npm run db:verify` | Assert effective-set maths against a known week |
-| `npm run db:verify:logging` | Assert plate maths, UUIDv7, PR detection and the set upsert |
-| `npm run db:verify:plan` | Assert day reordering, plan ownership, session prefill and what-to-run-next |
+| `npm test` | Run all Vitest integration tests once |
+| `npm run test:watch` | Re-run Vitest integration tests as files change |
 | `npm run db:studio` | Drizzle Studio |
 | `npm run svg:generate` | Redraw the body SVGs from `scripts/generate-body-svg.ts` |
+
+The integration tests use the database in `.env.local`. Migrate and seed it
+before the first run. Every fixture is attached to a throwaway user and cleaned
+up after its test file finishes.
 
 ## Things that will bite you
 
@@ -53,7 +56,7 @@ once. Changing it means a migration, an SVG regeneration and a reseed.
 **Migrations use `DATABASE_URL_UNPOOLED`.** Neon's pooler runs in transaction
 mode, where DDL and advisory locks misbehave.
 
-**Re-run `npm run db:verify` after touching exercise tagging.** It is the check
+**Re-run `npm test` after touching exercise tagging.** It is the check
 that catches the heatmap silently inheriting a bad muscle factor.
 
 **Set ids are minted on the client**, as UUIDv7, and the server upserts on them.

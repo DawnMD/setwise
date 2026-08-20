@@ -204,6 +204,28 @@ Base UI is the shadcn default now, so nothing special to configure. Two things t
 
 In practice the bottom sheet is shadcn's `Drawer`, which wraps Base UI's and brings swipe-to-dismiss. `Sheet` is the side panel; do not reach for it on a phone.
 
+## Testing
+
+`npm test` runs Vitest against the Postgres database configured in `.env.local`.
+This is an integration suite on purpose. There is no component suite or broad
+unit-test pass yet. A few deterministic contracts from the old verification
+programs stay beside the database flows, and Vitest is not being asked to fake
+async Server Components.
+
+The suite covers the contracts that are hard to trust by clicking around:
+
+- Stats checks effective-set factors, warm-up exclusion, time windows, tonnage,
+  zero-volume muscles, and heatmap bands against a hand-worked week.
+- Logger checks plate loading, UUIDv7 ordering, Epley limits, overload deltas,
+  ghost values, idempotent set retries, PR creation, and PR cleanup after edits.
+- Plan checks target round-tripping, safe day swaps, ownership, planned-session
+  prefill, next-day ordering, and keeping workout history after routine deletion.
+
+Each file creates throwaway users and removes them when it finishes. Files run
+one at a time to keep database connections predictable. The database must be
+migrated and seeded first. Browser flows and the real-gym check remain manual
+until an end-to-end runner is added.
+
 ## Phases
 
 ### Phase 0: foundation (done)
