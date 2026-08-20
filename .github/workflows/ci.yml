@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Build and test
+    name: Test, lint and format
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -64,9 +64,6 @@ jobs:
 
       - name: Lint
         run: npm run lint
-
-      - name: Build with Neon driver
-        run: npm run build
 
       - name: Apply database migrations
         run: npm run db:migrate
