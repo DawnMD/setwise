@@ -5,6 +5,7 @@ import * as React from "react";
 
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 
 export function SignOutButton() {
   const router = useRouter();
@@ -12,7 +13,8 @@ export function SignOutButton() {
 
   return (
     <Button
-      variant="secondary"
+      variant="outline"
+      size="touch"
       className="w-full"
       disabled={pending}
       onClick={async () => {
@@ -22,6 +24,7 @@ export function SignOutButton() {
         router.refresh();
       }}
     >
+      {pending ? <Spinner data-icon="inline-start" /> : null}
       {pending ? "Signing out…" : "Sign out"}
     </Button>
   );
