@@ -218,7 +218,7 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
         </Empty>
       ) : (
         <Tabs value={currentDayId ?? undefined} onValueChange={setActiveDay}>
-          <TabsList className="w-full overflow-x-auto">
+          <TabsList className="w-full overflow-x-auto overflow-y-hidden group-data-horizontal/tabs:h-auto">
             {days.map((day) => (
               <TabsTrigger key={day.id} value={day.id} className="h-11 shrink-0">
                 {day.name}
