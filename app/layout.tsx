@@ -32,8 +32,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${archivo.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">
-        <Providers>{children}</Providers>
+      <body className="min-h-full">
+        <div className="app-root">
+          <Providers>{children}</Providers>
+        </div>
       </body>
     </html>
   );
