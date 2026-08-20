@@ -10,6 +10,7 @@ import { useRestTimer } from "@/hooks/use-rest-timer";
 import { useWakeLock } from "@/hooks/use-wake-lock";
 import { formatWeight } from "@/lib/format";
 import { orpc } from "@/lib/orpc";
+import type { Targets } from "@/lib/targets";
 import { uuidv7 } from "@/lib/uuid";
 import { Button } from "@/components/ui/button";
 import {
@@ -108,6 +109,47 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
     if (!isOpen) return;
     window.localStorage.setItem(lineupKey(sessionId), JSON.stringify(lineup));
   }, [lineup, sessionId, isOpen]);
+
+  /**
+   * A workout started from a routine day opens with that day's lineup already
+   * on screen.
+   *
+   * Seeded in an effect rather than at mount because the plan arrives with the
+   * session, one round trip after the first render, so there is nothing to seed
+   * from at that point. Once, guarded by a ref: after the first pass the lineup
+   * is the user's, and re-seeding would resurrect anything they removed.
+   */
+  const seeded = React.useRef(false);
+  React.useEffect(() => {
+    if (seeded.current || !detail) return;
+    seeded.current = true;
+
+    const planned = detail.plan?.exercises ?? [];
+    if (planned.length === 0) return;
+
+    setPicked((current) => {
+      if (current.length > 0) return current;
+      return planned.map((entry) => ({
+        id: entry.exerciseId,
+        name: entry.name,
+        equipment: entry.equipment,
+      }));
+    });
+  }, [detail]);
+
+  /** Targets by exercise id, so a block can find its own without a scan. */
+  const targetsByExercise = React.useMemo(() => {
+    const map = new Map<string, Targets>();
+    for (const entry of detail?.plan?.exercises ?? []) {
+      map.set(entry.exerciseId, {
+        targetSets: entry.targetSets,
+        targetRepLow: entry.targetRepLow,
+        targetRepHigh: entry.targetRepHigh,
+        targetRpe: entry.targetRpe,
+      });
+    }
+    return map;
+  }, [detail]);
 
   const setsByExercise = React.useMemo(() => {
     const map = new Map<string, LoggerSet[]>();
@@ -316,8 +358,11 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
       <div className="mx-auto w-full max-w-[520px] px-4 pb-4">
         <header className="flex items-center justify-between gap-3 py-3">
           <div>
-            <h1 className="font-heading text-lg font-semibold">Workout</h1>
+            <h1 className="font-heading text-lg font-semibold">
+              {detail.plan ? detail.plan.dayName : "Workout"}
+            </h1>
             <p className="numeric text-xs text-muted-foreground">
+              {detail.plan ? `${detail.plan.routineName} · ` : ""}
               <Elapsed since={detail.startedAt} /> · {working.length} sets ·{" "}
               {formatWeight(Math.round(tonnage))} kg
             </p>
@@ -346,6 +391,7 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
                 exercise={exercise}
                 sessionId={sessionId}
                 sets={setsByExercise.get(exercise.id) ?? []}
+                target={targetsByExercise.get(exercise.id) ?? null}
                 statusOf={(setId) => pending[setId]?.status ?? "saved"}
                 prSetIds={prSetIds}
                 onAddSet={(target) => {

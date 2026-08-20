@@ -7,6 +7,8 @@ import * as React from "react";
 import { formatWeight, formatWhen } from "@/lib/format";
 import { ghostForPosition } from "@/lib/overload";
 import { orpc } from "@/lib/orpc";
+import { describeTargets, type Targets } from "@/lib/targets";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,6 +34,7 @@ export function ExerciseBlock({
   exercise,
   sessionId,
   sets,
+  target,
   statusOf,
   prSetIds,
   onAddSet,
@@ -43,6 +46,8 @@ export function ExerciseBlock({
   exercise: LoggerExercise;
   sessionId: string;
   sets: LoggerSet[];
+  /** What the routine day asks for here, if this session came from one. */
+  target: Targets | null;
   statusOf: (setId: string) => RowStatus;
   prSetIds: ReadonlySet<string>;
   onAddSet: (exercise: LoggerExercise) => void;
@@ -74,6 +79,13 @@ export function ExerciseBlock({
     return map;
   }, [sets]);
 
+  const workingSets = sets.filter((set) => !set.isWarmup);
+  const targetLabel = target ? describeTargets(target) : null;
+  const hitTarget =
+    target?.targetSets !== null &&
+    target?.targetSets !== undefined &&
+    workingSets.length >= target.targetSets;
+
   return (
     <Card>
       <CardHeader>
@@ -85,13 +97,23 @@ export function ExerciseBlock({
               ? " "
               : "First time"}
         </CardDescription>
-        {sets.length === 0 ? (
-          <CardAction>
+        <CardAction>
+          {targetLabel ? (
+            // The count comes first because that is what you check between
+            // sets. The range behind it is the reminder of what you agreed to.
+            <Badge variant={hitTarget ? "pr" : "outline"} className="numeric">
+              {workingSets.length}
+              {target?.targetSets !== null && target?.targetSets !== undefined
+                ? ` / ${target.targetSets}`
+                : ""}{" "}
+              · {targetLabel}
+            </Badge>
+          ) : sets.length === 0 ? (
             <Button variant="ghost" size="sm" onClick={() => onRemove(exercise.id)}>
               Remove
             </Button>
-          </CardAction>
-        ) : null}
+          ) : null}
+        </CardAction>
       </CardHeader>
 
       {sets.length > 0 ? (
