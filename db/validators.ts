@@ -86,7 +86,15 @@ export const sessionStartInput = z.object({
   notes: z.string().trim().max(2000).nullable(),
 });
 
-/** The trailing windows the whole app toggles between. One meaning everywhere. */
+/**
+ * The trailing windows the whole app toggles between. One meaning everywhere.
+ *
+ * The list lives here rather than beside the stats queries so the toggle can
+ * import it without pulling the Drizzle schema into the client bundle.
+ */
+export const STAT_WINDOWS = [7, 30, 90] as const;
+export type StatWindow = (typeof STAT_WINDOWS)[number];
+
 export const statWindow = z
   .union([z.literal(7), z.literal(30), z.literal(90)])
   .describe("Trailing window in days.");

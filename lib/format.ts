@@ -38,6 +38,39 @@ export function formatE1rm(e1rm: number | null, unit: UnitPref = "kg"): string {
   return `${Math.round(toUnit(e1rm, unit) * 10) / 10} ${unit}`;
 }
 
+/**
+ * Effective sets, which are fractional because a secondary muscle is credited
+ * half a set. One decimal place at most, and none when the number is whole:
+ * "12" rather than "12.0", because the extra glyph carries nothing.
+ */
+export function formatEffectiveSets(sets: number): string {
+  const rounded = Math.round(sets * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
+/**
+ * Tonnage runs to five and six figures over a 90-day window, so it is grouped
+ * and never given decimals. Nobody has an opinion about the last kilogram of
+ * forty tonnes.
+ */
+export function formatTonnage(kg: number, unit: UnitPref = "kg"): string {
+  const value = Math.round(toUnit(kg, unit));
+  return `${value.toLocaleString()} ${unit}`;
+}
+
+/** Relative intensity, reported as a percentage of your own recent best. */
+export function formatPercent(ratio: number | null): string {
+  if (ratio === null) return "—";
+  return `${Math.round(ratio * 100)}%`;
+}
+
+/** RPE is a half-point scale, so one decimal, and no trailing zero on a whole. */
+export function formatRpe(rpe: number | null): string {
+  if (rpe === null) return "—";
+  const rounded = Math.round(rpe * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
 /** "1:30", counting down. Minutes never zero-pad; seconds always do. */
 export function formatDuration(totalSeconds: number): string {
   const clamped = Math.max(0, Math.round(totalSeconds));
