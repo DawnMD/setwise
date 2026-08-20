@@ -1,12 +1,22 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import * as React from "react";
 
 import { formatWeight, formatWhen } from "@/lib/format";
 import { ghostForPosition } from "@/lib/overload";
 import { orpc } from "@/lib/orpc";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 import { SetRow } from "./set-row";
 import type { LoggerExercise, LoggerSet, RowStatus } from "./types";
@@ -65,51 +75,50 @@ export function ExerciseBlock({
   }, [sets]);
 
   return (
-    <section className="rounded-xl border border-border bg-surface-raised">
-      <header className="flex items-start justify-between gap-3 px-3 pt-3">
-        <div className="min-w-0">
-          <h2 className="truncate text-[15px] font-semibold">{exercise.name}</h2>
-          <p className="numeric mt-0.5 text-xs text-ink-muted">
-            {last.data
-              ? `Last ${formatWhen(last.data.performedAt).toLowerCase()} · ${summarise(last.data.sets)}`
-              : last.isPending
-                ? " "
-                : "First time"}
-          </p>
-        </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="truncate text-[15px]">{exercise.name}</CardTitle>
+        <CardDescription className="numeric">
+          {last.data
+            ? `Last ${formatWhen(last.data.performedAt).toLowerCase()} · ${summarise(last.data.sets)}`
+            : last.isPending
+              ? " "
+              : "First time"}
+        </CardDescription>
         {sets.length === 0 ? (
-          <button
-            type="button"
-            onClick={() => onRemove(exercise.id)}
-            className="shrink-0 text-xs text-ink-muted underline underline-offset-4"
-          >
-            Remove
-          </button>
+          <CardAction>
+            <Button variant="ghost" size="sm" onClick={() => onRemove(exercise.id)}>
+              Remove
+            </Button>
+          </CardAction>
         ) : null}
-      </header>
+      </CardHeader>
 
-      <div className="mt-2 space-y-1 px-1">
-        {sets.map((set) => (
-          <SetRow
-            key={set.id}
-            set={set}
-            label={set.isWarmup ? "W" : String((ordinals.get(set.id) ?? 0) + 1)}
-            status={statusOf(set.id)}
-            ghost={ghostForPosition(lastSets, ordinals.get(set.id) ?? 0, set.isWarmup)}
-            isPr={prSetIds.has(set.id)}
-            onEdit={() => onEditSet(set)}
-            onRetry={() => onRetrySet(set.id)}
-            onDelete={() => onDeleteSet(set.id)}
-          />
-        ))}
-      </div>
+      {sets.length > 0 ? (
+        <CardContent className="flex flex-col gap-1 px-1">
+          {sets.map((set) => (
+            <SetRow
+              key={set.id}
+              set={set}
+              label={set.isWarmup ? "W" : String((ordinals.get(set.id) ?? 0) + 1)}
+              status={statusOf(set.id)}
+              ghost={ghostForPosition(lastSets, ordinals.get(set.id) ?? 0, set.isWarmup)}
+              isPr={prSetIds.has(set.id)}
+              onEdit={() => onEditSet(set)}
+              onRetry={() => onRetrySet(set.id)}
+              onDelete={() => onDeleteSet(set.id)}
+            />
+          ))}
+        </CardContent>
+      ) : null}
 
-      <div className="p-2">
-        <Button variant="secondary" className="w-full" onClick={() => onAddSet(exercise)}>
+      <CardFooter>
+        <Button variant="secondary" size="touch" className="w-full" onClick={() => onAddSet(exercise)}>
+          <Plus data-icon="inline-start" />
           Add set
         </Button>
-      </div>
-    </section>
+      </CardFooter>
+    </Card>
   );
 }
 

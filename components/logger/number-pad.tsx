@@ -1,8 +1,10 @@
 "use client";
 
+import { Delete } from "lucide-react";
 import * as React from "react";
 
-import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 
 /**
  * The custom number pad.
@@ -64,71 +66,74 @@ export function NumberPad({
 
   const backspace = () => onChange((current) => (current.length <= 1 ? "" : current.slice(0, -1)));
 
-  const key = (
-    label: React.ReactNode,
-    onClick: () => void,
-    options: { extra?: string; ariaLabel?: string } = {},
-  ) => (
-    <button
-      key={options.ariaLabel ?? String(label)}
-      type="button"
-      onClick={onClick}
-      aria-label={options.ariaLabel}
-      // `touch-manipulation` kills the 300ms double-tap-to-zoom delay, which is
-      // very noticeable when someone taps four digits in a row.
-      className={cn(
-        "numeric-display flex h-14 items-center justify-center rounded-lg text-2xl",
-        "bg-surface-raised border border-border touch-manipulation select-none",
-        "active:bg-border/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-        options.extra,
-      )}
-    >
-      {label}
-    </button>
-  );
+  // `touch-manipulation` kills the 300ms double-tap-to-zoom delay, which is
+  // very noticeable when someone taps four digits in a row.
+  const keyClass = "numeric-display h-14 flex-1 text-2xl touch-manipulation";
 
   return (
-    <div className="grid grid-cols-3 gap-2">
-      <button
-        type="button"
-        onClick={() => onChange((current) => stepValue(current, -step, min, max, decimals))}
-        className={cn(
-          "numeric col-span-1 h-12 rounded-lg border border-border bg-surface text-base font-medium",
-          "touch-manipulation select-none active:bg-border/50",
-        )}
-      >
-        −{step}
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange("")}
-        className="col-span-1 h-12 rounded-lg border border-border bg-surface text-base font-medium touch-manipulation select-none active:bg-border/50"
-      >
-        Clear
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange((current) => stepValue(current, step, min, max, decimals))}
-        className={cn(
-          "numeric col-span-1 h-12 rounded-lg border border-border bg-surface text-base font-medium",
-          "touch-manipulation select-none active:bg-border/50",
-        )}
-      >
-        +{step}
-      </button>
+    <div className="flex flex-col gap-2">
+      <ButtonGroup className="w-full">
+        <Button
+          variant="outline"
+          size="touch"
+          className="numeric flex-1 touch-manipulation"
+          onClick={() => onChange((current) => stepValue(current, -step, min, max, decimals))}
+        >
+          −{step}
+        </Button>
+        <Button
+          variant="outline"
+          size="touch"
+          className="flex-1 touch-manipulation"
+          onClick={() => onChange("")}
+        >
+          Clear
+        </Button>
+        <Button
+          variant="outline"
+          size="touch"
+          className="numeric flex-1 touch-manipulation"
+          onClick={() => onChange((current) => stepValue(current, step, min, max, decimals))}
+        >
+          +{step}
+        </Button>
+      </ButtonGroup>
 
-      {DIGITS.map((digit) => key(digit, () => append(digit)))}
+      <div className="grid grid-cols-3 gap-2">
+        {DIGITS.map((digit) => (
+          <Button
+            key={digit}
+            variant="outline"
+            size="touch"
+            className={keyClass}
+            onClick={() => append(digit)}
+          >
+            {digit}
+          </Button>
+        ))}
 
-      {allowDecimal ? (
-        key(".", () => append("."))
-      ) : (
-        <span aria-hidden className="h-14" />
-      )}
-      {key("0", () => append("0"))}
-      {key(<span aria-hidden>⌫</span>, backspace, {
-        extra: "text-ink-muted",
-        ariaLabel: "Backspace",
-      })}
+        {allowDecimal ? (
+          <Button variant="outline" size="touch" className={keyClass} onClick={() => append(".")}>
+            .
+          </Button>
+        ) : (
+          <span aria-hidden className="h-14" />
+        )}
+
+        <Button variant="outline" size="touch" className={keyClass} onClick={() => append("0")}>
+          0
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="touch"
+          className="h-14 flex-1 touch-manipulation text-muted-foreground"
+          aria-label="Backspace"
+          onClick={backspace}
+        >
+          <Delete />
+        </Button>
+      </div>
     </div>
   );
 }

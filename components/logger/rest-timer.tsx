@@ -2,9 +2,12 @@
 
 import * as React from "react";
 
-import { cn } from "@/lib/cn";
+import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/format";
 import { REST_PRESETS } from "@/hooks/use-rest-timer";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 /**
  * A slim bar above the nav, never a modal.
@@ -29,73 +32,64 @@ export function RestTimer({
   onRestart: (seconds: number) => void;
 }) {
   const [presetsOpen, setPresetsOpen] = React.useState(false);
-  const progress = duration > 0 ? Math.min(1, Math.max(0, 1 - remaining / duration)) : 1;
+  const progress = duration > 0 ? Math.min(100, Math.max(0, (1 - remaining / duration) * 100)) : 100;
 
   return (
-    <div className="border-t border-border bg-surface-raised">
-      <div
-        aria-hidden
-        className={cn("h-0.5 origin-left transition-transform", done ? "bg-accent" : "bg-accent/60")}
-        style={{ transform: `scaleX(${progress})` }}
-      />
+    <div className="border-t bg-card">
+      <Progress value={progress} className="h-0.5 rounded-none" aria-label="Rest progress" />
 
       <div className="mx-auto flex h-12 w-full max-w-[520px] items-center gap-2 px-4">
-        <button
-          type="button"
-          onClick={() => setPresetsOpen((value) => !value)}
+        <Button
+          variant="ghost"
+          size="touch"
+          className="-ml-2 items-baseline"
           aria-expanded={presetsOpen}
-          className="flex items-baseline gap-2"
+          onClick={() => setPresetsOpen((value) => !value)}
         >
           <span
-            className={cn(
-              "numeric-display text-xl tabular-nums",
-              done ? "text-accent" : "text-ink",
-            )}
+            className={cn("numeric-display text-xl", done ? "text-overload" : "text-foreground")}
             // Announced only when it matters. A per-second live region would
             // read the countdown aloud continuously.
             aria-live={done ? "polite" : "off"}
           >
             {done ? "Rest done" : formatDuration(remaining)}
           </span>
-          <span className="text-xs text-ink-muted">rest</span>
-        </button>
+          <span className="text-xs font-normal text-muted-foreground">rest</span>
+        </Button>
 
         <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => onExtend(30)}
-            className="numeric h-9 rounded-lg border border-border px-3 text-sm active:bg-border/50"
-          >
+          <Button variant="outline" size="touch" className="numeric" onClick={() => onExtend(30)}>
             +30s
-          </button>
-          <button
-            type="button"
-            onClick={onSkip}
-            className="h-9 rounded-lg px-3 text-sm text-ink-muted active:bg-border/50"
-          >
+          </Button>
+          <Button variant="ghost" size="touch" onClick={onSkip}>
             {done ? "Dismiss" : "Skip"}
-          </button>
+          </Button>
         </div>
       </div>
 
       {presetsOpen ? (
-        <div className="mx-auto flex w-full max-w-[520px] gap-2 px-4 pb-3">
-          {REST_PRESETS.map((seconds) => (
-            <button
-              key={seconds}
-              type="button"
-              onClick={() => {
-                onRestart(seconds);
-                setPresetsOpen(false);
-              }}
-              className={cn(
-                "numeric h-11 flex-1 rounded-lg border text-sm active:bg-border/50",
-                seconds === duration ? "border-accent text-accent" : "border-border text-ink-muted",
-              )}
-            >
-              {formatDuration(seconds)}
-            </button>
-          ))}
+        <div className="mx-auto w-full max-w-[520px] px-4 pb-3">
+          <ToggleGroup
+            variant="outline"
+            value={[String(duration)]}
+            onValueChange={([next]) => {
+              if (!next) return;
+              onRestart(Number(next));
+              setPresetsOpen(false);
+            }}
+            aria-label="Rest length"
+            className="w-full"
+          >
+            {REST_PRESETS.map((seconds) => (
+              <ToggleGroupItem
+                key={seconds}
+                value={String(seconds)}
+                className="numeric h-11 flex-1"
+              >
+                {formatDuration(seconds)}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
         </div>
       ) : null}
     </div>

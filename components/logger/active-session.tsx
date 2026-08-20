@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
@@ -11,7 +12,20 @@ import { formatWeight } from "@/lib/format";
 import { orpc } from "@/lib/orpc";
 import { uuidv7 } from "@/lib/uuid";
 import { Button } from "@/components/ui/button";
-import { Confirm } from "@/components/ui/confirm";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Empty, EmptyContent, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 
 import { Elapsed } from "./elapsed";
 import { ExerciseBlock } from "./exercise-block";
@@ -263,16 +277,29 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
   };
 
   if (sessionQuery.isPending) {
-    return <p className="px-4 py-10 text-center text-sm text-ink-muted">Loading workout…</p>;
+    return (
+      <div className="mx-auto flex w-full max-w-[520px] flex-col gap-3 px-4 py-4">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
   }
 
   if (sessionQuery.isError || !detail) {
     return (
-      <div className="px-4 py-10 text-center">
-        <p className="text-sm text-danger">That workout couldn&apos;t be loaded.</p>
-        <Button variant="secondary" className="mt-4" onClick={() => router.replace("/train")}>
-          Back to training
-        </Button>
+      <div className="mx-auto w-full max-w-[520px] px-4 py-10">
+        <Empty className="border">
+          <EmptyTitle>That workout couldn&apos;t be loaded</EmptyTitle>
+          <EmptyDescription>
+            It may have been discarded on another device. Check your connection and try again.
+          </EmptyDescription>
+          <EmptyContent>
+            <Button variant="outline" size="touch" onClick={() => router.replace("/train")}>
+              Back to training
+            </Button>
+          </EmptyContent>
+        </Empty>
       </div>
     );
   }
@@ -287,32 +314,32 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
   return (
     <>
       <div className="mx-auto w-full max-w-[520px] px-4 pb-4">
-        <header className="flex items-baseline justify-between gap-3 py-3">
+        <header className="flex items-center justify-between gap-3 py-3">
           <div>
-            <h1 className="text-lg font-semibold">Workout</h1>
-            <p className="numeric text-xs text-ink-muted">
+            <h1 className="font-heading text-lg font-semibold">Workout</h1>
+            <p className="numeric text-xs text-muted-foreground">
               <Elapsed since={detail.startedAt} /> · {working.length} sets ·{" "}
               {formatWeight(Math.round(tonnage))} kg
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setConfirm("discard")}
-            className="text-sm text-ink-muted underline underline-offset-4"
-          >
+          <Button variant="ghost" size="sm" onClick={() => setConfirm("discard")}>
             Discard
-          </button>
+          </Button>
         </header>
 
         {lineup.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center">
-            <p className="text-sm text-ink-muted">No exercises yet.</p>
-            <Button className="mt-4" onClick={() => setPickerOpen(true)}>
-              Add exercise
-            </Button>
-          </div>
+          <Empty className="border border-dashed">
+            <EmptyTitle>No exercises yet</EmptyTitle>
+            <EmptyDescription>Add the first one and log a set against it.</EmptyDescription>
+            <EmptyContent>
+              <Button size="touch" onClick={() => setPickerOpen(true)}>
+                <Plus data-icon="inline-start" />
+                Add exercise
+              </Button>
+            </EmptyContent>
+          </Empty>
         ) : (
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             {lineup.map((exercise) => (
               <ExerciseBlock
                 key={exercise.id}
@@ -337,17 +364,25 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
               />
             ))}
 
-            <Button variant="secondary" className="w-full" onClick={() => setPickerOpen(true)}>
+            <Button
+              variant="secondary"
+              size="touch"
+              className="w-full"
+              onClick={() => setPickerOpen(true)}
+            >
+              <Plus data-icon="inline-start" />
               Add exercise
             </Button>
           </div>
         )}
 
         {failedIds.length > 0 ? (
-          <p className="mt-4 rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">
-            {failedIds.length === 1 ? "1 set didn't save." : `${failedIds.length} sets didn't save.`}{" "}
-            Tap the red row to retry.
-          </p>
+          <Alert variant="destructive" className="mt-4">
+            <AlertTitle>
+              {failedIds.length === 1 ? "1 set didn't save" : `${failedIds.length} sets didn't save`}
+            </AlertTitle>
+            <AlertDescription>Tap the red row to retry.</AlertDescription>
+          </Alert>
         ) : null}
       </div>
 
@@ -364,13 +399,14 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
             onRestart={rest.start}
           />
         ) : null}
-        <div className="border-t border-border bg-surface-raised px-4 py-3">
+        <div className="border-t bg-card px-4 py-3">
           <Button
-            size="lg"
+            size="touch"
             className="mx-auto w-full max-w-[520px]"
             disabled={finish.isPending}
             onClick={() => setConfirm(failedIds.length > 0 ? "unsaved" : "finish")}
           >
+            {finish.isPending ? <Spinner data-icon="inline-start" /> : null}
             {finish.isPending ? "Finishing…" : "Finish workout"}
           </Button>
         </div>
@@ -407,43 +443,66 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
         />
       ) : null}
 
-      <Confirm
-        open={confirm === "finish"}
-        onOpenChange={(open) => !open && setConfirm(null)}
-        title="Finish workout?"
-        description={`${working.length} working sets, ${formatWeight(Math.round(tonnage))} kg total.`}
-        confirmLabel="Finish workout"
-        onConfirm={doFinish}
-      />
+      <AlertDialog open={confirm === "finish"} onOpenChange={(open) => !open && setConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Finish workout?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {working.length} working sets, {formatWeight(Math.round(tonnage))} kg total.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel size="touch">Keep going</AlertDialogCancel>
+            <AlertDialogAction size="touch" onClick={doFinish}>
+              Finish workout
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      <Confirm
+      <AlertDialog
         // Derived, not just `confirm === "unsaved"`: retrying the last failed
         // set from inside this dialog should dismiss it, not leave it up saying
         // zero sets are unsaved.
         open={confirm === "unsaved" && failedIds.length > 0}
         onOpenChange={(open) => !open && setConfirm(null)}
-        title="Some sets didn't save"
-        description={
-          <>
-            {failedIds.length} {failedIds.length === 1 ? "set is" : "sets are"} still only on this
-            phone. Finishing now loses {failedIds.length === 1 ? "it" : "them"}.
-          </>
-        }
-        confirmLabel="Finish anyway"
-        destructive
-        extraAction={{ label: "Retry all", onClick: () => failedIds.forEach(retry) }}
-        onConfirm={doFinish}
-      />
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Some sets didn&apos;t save</AlertDialogTitle>
+            <AlertDialogDescription>
+              {failedIds.length} {failedIds.length === 1 ? "set is" : "sets are"} still only on this
+              phone. Finishing now loses {failedIds.length === 1 ? "it" : "them"}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel size="touch">Keep going</AlertDialogCancel>
+            <Button variant="secondary" size="touch" onClick={() => failedIds.forEach(retry)}>
+              Retry all
+            </Button>
+            <AlertDialogAction variant="destructive" size="touch" onClick={doFinish}>
+              Finish anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      <Confirm
-        open={confirm === "discard"}
-        onOpenChange={(open) => !open && setConfirm(null)}
-        title="Discard this workout?"
-        description="Every set in it is deleted. This can't be undone."
-        confirmLabel="Discard workout"
-        destructive
-        onConfirm={doDiscard}
-      />
+      <AlertDialog open={confirm === "discard"} onOpenChange={(open) => !open && setConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard this workout?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Every set in it is deleted. This can&apos;t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel size="touch">Keep it</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" size="touch" onClick={doDiscard}>
+              Discard workout
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { Slider } from "@base-ui/react/slider";
-
 import { RPE_MAX, RPE_MIN, RPE_STEP } from "@/db/validators";
-import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Slider } from "@/components/ui/slider";
 
 /**
  * RPE on a 6-to-10 scale with half steps.
@@ -23,59 +23,36 @@ export function RpeSlider({
   const active = value !== null;
 
   return (
-    <div>
-      <div className="flex h-9 items-baseline justify-between">
-        <span className="text-sm text-ink-muted">RPE</span>
-        {active ? (
-          <button
-            type="button"
-            onClick={() => onChange(null)}
-            className="text-sm text-ink-muted underline underline-offset-4"
-          >
-            Clear
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => onChange(8)}
-            className="text-sm text-accent underline underline-offset-4"
-          >
-            Add RPE
-          </button>
-        )}
+    <Field>
+      <div className="flex items-center justify-between">
+        <FieldLabel htmlFor="rpe">RPE</FieldLabel>
+        <Button
+          type="button"
+          variant="link"
+          size="sm"
+          onClick={() => onChange(active ? null : 8)}
+        >
+          {active ? "Clear" : "Add RPE"}
+        </Button>
       </div>
 
       {active ? (
-        <Slider.Root
-          value={value}
-          onValueChange={(next) => onChange(Array.isArray(next) ? next[0] : next)}
-          min={RPE_MIN}
-          max={RPE_MAX}
-          step={RPE_STEP}
-          largeStep={1}
-        >
-          <div className="flex items-center gap-4">
-            <Slider.Control className="flex h-11 flex-1 touch-none items-center select-none">
-              <Slider.Track className="h-1.5 w-full rounded-full bg-border select-none">
-                <Slider.Indicator className="rounded-full bg-accent select-none" />
-                <Slider.Thumb
-                  aria-label="RPE"
-                  className={cn(
-                    "size-6 rounded-full border-2 border-accent bg-surface-raised select-none",
-                    "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent",
-                  )}
-                />
-              </Slider.Track>
-            </Slider.Control>
-            <Slider.Value className="numeric-display w-10 text-right text-xl" />
-          </div>
-          <div className="numeric flex justify-between text-xs text-ink-muted">
-            <span>6</span>
-            <span>8</span>
-            <span>10</span>
-          </div>
-        </Slider.Root>
+        <div className="flex items-center gap-4">
+          <Slider
+            id="rpe"
+            size="touch"
+            value={value}
+            onValueChange={(next) => onChange(Array.isArray(next) ? next[0] : next)}
+            min={RPE_MIN}
+            max={RPE_MAX}
+            step={RPE_STEP}
+            largeStep={1}
+            aria-label="RPE"
+            className="flex-1"
+          />
+          <span className="numeric-display w-10 text-right text-xl">{value}</span>
+        </div>
       ) : null}
-    </div>
+    </Field>
   );
 }

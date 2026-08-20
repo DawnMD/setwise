@@ -18,14 +18,14 @@ export function PlateMath({ targetKg, barKg }: { targetKg: number; barKg: number
 
   if (loading === null) {
     return (
-      <p className="text-xs text-ink-muted">
+      <p className="text-xs text-muted-foreground">
         Under the {formatWeight(barKg)} kg bar.
       </p>
     );
   }
 
   if (loading.perSide.length === 0 && loading.remainderKg === 0) {
-    return <p className="text-xs text-ink-muted">Empty bar.</p>;
+    return <p className="text-xs text-muted-foreground">Empty bar.</p>;
   }
 
   return (
@@ -33,7 +33,7 @@ export function PlateMath({ targetKg, barKg }: { targetKg: number; barKg: number
       <span className="sr-only">Per side: {describeLoading(loading)}</span>
 
       <div aria-hidden className="flex items-center gap-[3px]">
-        <span className="h-1 w-3 rounded-sm bg-ink-muted/50" />
+        <span className="h-1 w-3 rounded-sm bg-muted-foreground/50" />
         {loading.perSide.map((plate, index) => (
           <span
             key={`${plate.label}-${index}`}
@@ -50,10 +50,10 @@ export function PlateMath({ targetKg, barKg }: { targetKg: number; barKg: number
         ))}
       </div>
 
-      <span className="numeric text-xs text-ink-muted">
+      <span className="numeric text-xs text-muted-foreground">
         per side
         {loading.remainderKg > 0 ? (
-          <span className="text-danger">
+          <span className="text-destructive">
             {" "}
             · {formatWeight(loading.remainderKg)} kg short
           </span>

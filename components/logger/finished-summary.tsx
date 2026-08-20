@@ -4,7 +4,15 @@ import Link from "next/link";
 
 import { formatElapsed, formatWeight, formatWhen } from "@/lib/format";
 import { estimateOneRepMax } from "@/lib/math";
-import { buttonClass } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Item, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 
 import type { LoggerSession } from "./types";
 
@@ -38,84 +46,87 @@ export function FinishedSummary({
   const beaten = records.filter((record) => record.previous !== null);
 
   return (
-    <div className="mx-auto w-full max-w-[520px] px-4 py-4">
+    <div className="mx-auto flex w-full max-w-[520px] flex-col gap-4 px-4 py-4">
       <header className="py-2">
-        <h1 className="text-lg font-semibold">Workout saved</h1>
-        <p className="text-xs text-ink-muted">
+        <h1 className="font-heading text-lg font-semibold">Workout saved</h1>
+        <p className="text-xs text-muted-foreground">
           {formatWhen(new Date(detail.startedAt))}
           {duration ? ` · ${duration}` : ""}
         </p>
       </header>
 
-      <dl className="my-4 grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <Stat label="Sets" value={String(working.length)} />
         <Stat label="Exercises" value={String(detail.exercises.length)} />
         <Stat label="Volume" value={`${formatWeight(Math.round(tonnage))} kg`} />
-      </dl>
+      </div>
 
       {beaten.length > 0 ? (
-        <section className="mb-4 rounded-xl border border-pr/30 bg-pr/5 p-3">
-          <h2 className="text-sm font-semibold text-pr">Most volume yet</h2>
-          <ul className="numeric mt-1 space-y-0.5 text-sm">
+        <Card className="border-pr/30 bg-pr/5">
+          <CardHeader>
+            <CardTitle className="text-pr">Most volume yet</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1">
             {beaten.map((record) => (
-              <li key={record.exerciseId} className="flex justify-between gap-3">
+              <div key={record.exerciseId} className="numeric flex justify-between gap-3 text-sm">
                 <span className="truncate">{record.exerciseName}</span>
-                <span className="shrink-0 text-ink-muted">
+                <span className="shrink-0 text-muted-foreground">
                   {formatWeight(Math.round(record.value))} kg, was{" "}
                   {formatWeight(Math.round(record.previous ?? 0))}
                 </span>
-              </li>
+              </div>
             ))}
-          </ul>
-        </section>
+          </CardContent>
+        </Card>
       ) : null}
 
-      <ul className="space-y-3">
-        {detail.exercises.map((exercise) => {
-          const sets = detail.sets
-            .filter((set) => set.exerciseId === exercise.id)
-            .sort((a, b) => a.setIndex - b.setIndex);
-          const best = sets
-            .filter((set) => !set.isWarmup)
-            .map((set) => estimateOneRepMax(set.weight, set.reps))
-            .filter((value): value is number => value !== null)
-            .reduce<number | null>((max, value) => (max === null || value > max ? value : max), null);
+      {detail.exercises.map((exercise) => {
+        const sets = detail.sets
+          .filter((set) => set.exerciseId === exercise.id)
+          .sort((a, b) => a.setIndex - b.setIndex);
+        const best = sets
+          .filter((set) => !set.isWarmup)
+          .map((set) => estimateOneRepMax(set.weight, set.reps))
+          .filter((value): value is number => value !== null)
+          .reduce<number | null>((max, value) => (max === null || value > max ? value : max), null);
 
-          return (
-            <li key={exercise.id} className="rounded-xl border border-border bg-surface-raised p-3">
-              <div className="flex items-baseline justify-between gap-3">
-                <h3 className="truncate text-[15px] font-semibold">{exercise.name}</h3>
-                {best !== null ? (
-                  <span className="numeric shrink-0 text-xs text-ink-muted">
-                    best e1RM {Math.round(best * 10) / 10} kg
-                  </span>
-                ) : null}
-              </div>
-              <ul className="numeric mt-1 space-y-0.5 text-sm text-ink-muted">
-                {sets.map((set) => (
-                  <li key={set.id}>
-                    {set.isWarmup ? "W" : ""} {formatWeight(set.weight)} kg × {set.reps}
-                    {set.rpe !== null ? ` @ ${set.rpe}` : ""}
-                  </li>
-                ))}
-              </ul>
-            </li>
-          );
-        })}
-      </ul>
+        return (
+          <Card key={exercise.id}>
+            <CardHeader>
+              <CardTitle className="truncate text-[15px]">{exercise.name}</CardTitle>
+              {best !== null ? (
+                <CardDescription className="numeric">
+                  best e1RM {Math.round(best * 10) / 10} kg
+                </CardDescription>
+              ) : null}
+            </CardHeader>
+            <CardContent className="numeric flex flex-col gap-0.5 text-sm text-muted-foreground">
+              {sets.map((set) => (
+                <span key={set.id}>
+                  {set.isWarmup ? "W " : ""}
+                  {formatWeight(set.weight)} kg × {set.reps}
+                  {set.rpe !== null ? ` @ ${set.rpe}` : ""}
+                </span>
+              ))}
+            </CardContent>
+          </Card>
+        );
+      })}
 
-      <Link href="/train" className={buttonClass("primary", "lg", "mt-6 w-full")}>
+      <Button size="touch" className="mt-2 w-full" render={<Link href="/train" />}>
         Done
-      </Link>
+      </Button>
     </div>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-border bg-surface-raised px-3 py-2">
-      <dt className="text-xs text-ink-muted">{label}</dt>
-      <dd className="numeric-display text-xl">{value}</dd>
-    </div>
+    <Item variant="outline" size="xs" className="flex-col items-start gap-0">
+      <ItemContent>
+        <ItemDescription className="text-xs">{label}</ItemDescription>
+        <ItemTitle className="numeric-display text-xl">{value}</ItemTitle>
+      </ItemContent>
+    </Item>
   );
 }

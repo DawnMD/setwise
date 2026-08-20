@@ -3,10 +3,25 @@
 import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
 
-import { cn } from "@/lib/cn";
 import { MUSCLES, type MuscleSlug } from "@/lib/muscles";
 import { orpc } from "@/lib/orpc";
-import { Sheet } from "@/components/ui/sheet";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import type { LoggerExercise } from "./types";
 
@@ -15,7 +30,8 @@ import type { LoggerExercise } from "./types";
  *
  * The muscle chips are the fast path: mid-workout nobody types "Romanian
  * deadlift", they tap Hamstrings and scan. Search is debounced because a
- * per-keystroke round trip on gym wifi is worse than a stale list.
+ * per-keystroke round trip on gym wifi is worse than a stale list, and cmdk's
+ * own filtering is off — the server has already decided what matches.
  */
 export function ExercisePicker({
   open,
@@ -44,76 +60,76 @@ export function ExercisePicker({
   );
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title="Add exercise">
-      <div className="mt-3 space-y-3">
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search exercises"
-          autoComplete="off"
-          className={cn(
-            "h-12 w-full rounded-lg border border-border bg-surface px-3 text-base",
-            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-          )}
-        />
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="mx-auto max-w-[520px]">
+        <DrawerHeader>
+          <DrawerTitle>Add exercise</DrawerTitle>
+        </DrawerHeader>
 
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-          {MUSCLES.map((entry) => {
-            const active = muscle === entry.slug;
-            return (
-              <button
-                key={entry.slug}
-                type="button"
-                onClick={() => setMuscle(active ? null : entry.slug)}
-                className={cn(
-                  "h-9 shrink-0 rounded-full border px-3 text-sm whitespace-nowrap",
-                  active
-                    ? "border-accent bg-accent text-accent-ink"
-                    : "border-border bg-surface text-ink-muted",
-                )}
-              >
-                {entry.displayName}
-              </button>
-            );
-          })}
-        </div>
+        <Command shouldFilter={false} className="gap-3 bg-transparent p-4">
+          <CommandInput
+            value={query}
+            onValueChange={setQuery}
+            placeholder="Search exercises"
+            className="h-11 text-base"
+          />
 
-        <ul className="max-h-[46dvh] divide-y divide-border overflow-y-auto">
-          {results.isPending ? (
-            <li className="py-6 text-center text-sm text-ink-muted">Loading…</li>
-          ) : results.isError ? (
-            <li className="py-6 text-center text-sm text-danger">
-              Couldn&apos;t load exercises. Check your connection and try again.
-            </li>
-          ) : results.data.length === 0 ? (
-            <li className="py-6 text-center text-sm text-ink-muted">
-              Nothing matches. Try a different word or muscle.
-            </li>
-          ) : (
-            results.data.map((exercise) => (
-              <li key={exercise.id}>
-                <button
-                  type="button"
-                  onClick={() =>
-                    onPick({
-                      id: exercise.id,
-                      name: exercise.name,
-                      equipment: exercise.equipment,
-                    })
-                  }
-                  className="flex min-h-12 w-full items-center justify-between gap-3 py-2 text-left active:bg-border/40"
-                >
-                  <span className="text-[15px]">{exercise.name}</span>
-                  <span className="shrink-0 text-xs text-ink-muted capitalize">
-                    {exercise.isCustom ? "Yours" : exercise.equipment}
-                  </span>
-                </button>
-              </li>
-            ))
-          )}
-        </ul>
-      </div>
-    </Sheet>
+          <div className="-mx-4 overflow-x-auto px-4 pb-1">
+            <ToggleGroup
+              variant="outline"
+              value={muscle ? [muscle] : []}
+              onValueChange={([next]) => setMuscle((next as MuscleSlug | undefined) ?? null)}
+              aria-label="Filter by muscle"
+            >
+              {MUSCLES.map((entry) => (
+                <ToggleGroupItem key={entry.slug} value={entry.slug} className="h-9 shrink-0">
+                  {entry.displayName}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
+
+          <CommandList className="max-h-[46dvh]">
+            {results.isPending ? (
+              <div className="flex flex-col gap-2 py-2">
+                {[0, 1, 2, 3, 4].map((row) => (
+                  <Skeleton key={row} className="h-11 w-full" />
+                ))}
+              </div>
+            ) : results.isError ? (
+              <Empty>
+                <EmptyTitle>Couldn&apos;t load exercises</EmptyTitle>
+                <EmptyDescription>Check your connection and try again.</EmptyDescription>
+              </Empty>
+            ) : (
+              <>
+                <CommandEmpty>Nothing matches. Try a different word or muscle.</CommandEmpty>
+                <CommandGroup>
+                  {results.data.map((exercise) => (
+                    <CommandItem
+                      key={exercise.id}
+                      value={exercise.id}
+                      onSelect={() =>
+                        onPick({
+                          id: exercise.id,
+                          name: exercise.name,
+                          equipment: exercise.equipment,
+                        })
+                      }
+                      className="min-h-11 justify-between gap-3 text-[15px]"
+                    >
+                      <span className="truncate">{exercise.name}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground capitalize">
+                        {exercise.isCustom ? "Yours" : exercise.equipment}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </>
+            )}
+          </CommandList>
+        </Command>
+      </DrawerContent>
+    </Drawer>
   );
 }
