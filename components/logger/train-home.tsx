@@ -14,7 +14,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
-import { Item, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -33,6 +39,7 @@ export function TrainHome() {
 
   const active = useQuery(orpc.session.active.queryOptions({ staleTime: 0 }));
   const recent = useQuery(orpc.session.recent.queryOptions({ input: { limit: 10 } }));
+  const upcoming = useQuery(orpc.plan.upcoming.queryOptions({ staleTime: 60_000 }));
 
   const start = useMutation(
     orpc.session.start.mutationOptions({
@@ -84,7 +91,38 @@ export function TrainHome() {
         </Card>
       ) : (
         <div className="flex flex-col gap-2">
+          {/* Least recently run first, so the day at the top is almost always
+              the right one and the rotation looks after itself. */}
+          {upcoming.data?.map((day, index) => (
+            <Item key={day.id} variant="outline" className="min-h-14">
+              <ItemContent>
+                <ItemTitle className="text-[15px]">{day.name}</ItemTitle>
+                <ItemDescription>
+                  {day.routineName} · {day.exerciseCount}{" "}
+                  {day.exerciseCount === 1 ? "exercise" : "exercises"}
+                  {day.lastRunAt
+                    ? ` · last run ${formatWhen(new Date(day.lastRunAt)).toLowerCase()}`
+                    : " · never run"}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Button
+                  variant={index === 0 ? "default" : "outline"}
+                  size="touch"
+                  disabled={start.isPending || active.isPending}
+                  onClick={() => {
+                    setError(null);
+                    start.mutate({ id: uuidv7(), routineDayId: day.id, notes: null });
+                  }}
+                >
+                  Start
+                </Button>
+              </ItemActions>
+            </Item>
+          ))}
+
           <Button
+            variant={upcoming.data && upcoming.data.length > 0 ? "secondary" : "default"}
             size="touch"
             className="w-full"
             disabled={start.isPending || active.isPending}
@@ -94,7 +132,11 @@ export function TrainHome() {
             }}
           >
             {start.isPending ? <Spinner data-icon="inline-start" /> : null}
-            {start.isPending ? "Starting…" : "Start workout"}
+            {start.isPending
+              ? "Starting…"
+              : upcoming.data && upcoming.data.length > 0
+                ? "Start an empty workout"
+                : "Start workout"}
           </Button>
           {error ? (
             <Alert variant="destructive">
