@@ -2,14 +2,35 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import * as React from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
 
 import { authClient } from "@/lib/auth-client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+
+const email = z.string().trim().min(1, "Enter your email address.").email("Enter a valid email.");
+
+const signInSchema = z.object({
+  name: z.string(),
+  email,
+  password: z.string().min(1, "Enter your password."),
+});
+
+const signUpSchema = z.object({
+  name: z.string().trim().max(80, "Keep your name under 80 characters."),
+  email,
+  password: z
+    .string()
+    .min(8, "Use at least eight characters.")
+    .max(128, "Keep your password under 128 characters."),
+});
+
+type AuthValues = z.input<typeof signUpSchema>;
 
 /**
  * Email and password, both modes from one component.
@@ -20,33 +41,48 @@ import { Spinner } from "@/components/ui/spinner";
 export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
   const router = useRouter();
   const isSignUp = mode === "sign-up";
+  const form = useForm<AuthValues>({
+    resolver: zodResolver(isSignUp ? signUpSchema : signInSchema),
+    defaultValues: { name: "", email: "", password: "" },
+    mode: "onTouched",
+    reValidateMode: "onChange",
+    criteriaMode: "all",
+  });
 
-  const [name, setName] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [error, setError] = React.useState<string | null>(null);
-  const [pending, setPending] = React.useState(false);
+  const submit = form.handleSubmit(async (values) => {
+    form.clearErrors("root");
 
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setError(null);
-    setPending(true);
+    try {
+      const result = isSignUp
+        ? await authClient.signUp.email({
+            email: values.email,
+            password: values.password,
+            name: values.name || values.email,
+          })
+        : await authClient.signIn.email({ email: values.email, password: values.password });
 
-    const result = isSignUp
-      ? await authClient.signUp.email({ email, password, name: name.trim() || email })
-      : await authClient.signIn.email({ email, password });
+      if (result.error) {
+        form.setError("root.server", {
+          type: "server",
+          message: result.error.message ?? "That didn't work. Check your details and try again.",
+        });
+        return;
+      }
 
-    if (result.error) {
-      setError(result.error.message ?? "That didn't work. Check your details and try again.");
-      setPending(false);
-      return;
+      // The server layout reads the session, so the cookie has to be visible to
+      // the next server render.
+      router.replace("/train");
+      router.refresh();
+    } catch {
+      form.setError("root.server", {
+        type: "server",
+        message: "Couldn't reach the server. Check your connection and try again.",
+      });
     }
+  });
 
-    // The server layout reads the session, so the cookie has to be visible to
-    // the next server render.
-    router.replace("/train");
-    router.refresh();
-  };
+  const pending = form.formState.isSubmitting;
+  const serverError = form.formState.errors.root?.server?.message;
 
   return (
     <>
@@ -59,56 +95,80 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
           : "Pick up where your last workout left off."}
       </p>
 
-      <form onSubmit={submit} className="mt-6">
+      <form onSubmit={submit} className="mt-6" noValidate>
         <FieldGroup>
           {isSignUp ? (
-            <Field>
-              <FieldLabel htmlFor="name">Name</FieldLabel>
-              <Input
-                id="name"
-                type="text"
-                autoComplete="name"
-                className="h-11 text-base"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </Field>
+            <Controller
+              name="name"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="name">Name</FieldLabel>
+                  <Input
+                    {...field}
+                    id="name"
+                    type="text"
+                    autoComplete="name"
+                    maxLength={80}
+                    aria-invalid={fieldState.invalid}
+                    className="h-11 text-base"
+                  />
+                  {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
+                </Field>
+              )}
+            />
           ) : null}
 
-          <Field>
-            <FieldLabel htmlFor="email">Email</FieldLabel>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              inputMode="email"
-              required
-              className="h-11 text-base"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </Field>
+          <Controller
+            name="email"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <Input
+                  {...field}
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  required
+                  aria-invalid={fieldState.invalid}
+                  className="h-11 text-base"
+                />
+                {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
+              </Field>
+            )}
+          />
 
-          <Field>
-            <FieldLabel htmlFor="password">Password</FieldLabel>
-            <Input
-              id="password"
-              type="password"
-              autoComplete={isSignUp ? "new-password" : "current-password"}
-              required
-              className="h-11 text-base"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-            {isSignUp ? <FieldDescription>At least eight characters.</FieldDescription> : null}
-          </Field>
+          <Controller
+            name="password"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <Input
+                  {...field}
+                  id="password"
+                  type="password"
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
+                  required
+                  minLength={isSignUp ? 8 : undefined}
+                  maxLength={128}
+                  aria-invalid={fieldState.invalid}
+                  className="h-11 text-base"
+                />
+                {isSignUp ? <FieldDescription>At least eight characters.</FieldDescription> : null}
+                {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
+              </Field>
+            )}
+          />
 
-          {error ? (
+          {serverError ? (
             <Alert variant="destructive">
               <AlertTitle>
                 {isSignUp ? "Couldn't create the account" : "Couldn't sign in"}
               </AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{serverError}</AlertDescription>
             </Alert>
           ) : null}
 

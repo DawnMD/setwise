@@ -113,7 +113,7 @@ export function PlanHome() {
         description="Push/pull/legs, upper/lower, whatever you call yours."
         saveLabel="Create routine"
         pending={create.isPending}
-        onSave={(name) => create.mutate({ name })}
+        onSave={(name) => create.mutateAsync({ name })}
       />
     </div>
   );

@@ -406,30 +406,34 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
         initialValue={detail.name}
         saveLabel="Save name"
         pending={renameRoutine.isPending}
-        onSave={(name) => renameRoutine.mutate({ id: detail.id, name })}
+        onSave={(name) => renameRoutine.mutateAsync({ id: detail.id, name })}
       />
 
       <RoutineNameForm
         open={dialog?.kind === "add-day"}
         onOpenChange={(open) => !open && close()}
         title="Add a day"
+        kind="day"
         label="Day name"
         placeholder="Push"
         saveLabel="Add day"
         pending={addDay.isPending}
-        onSave={(name) => addDay.mutate({ routineId: detail.id, name })}
+        onSave={(name) => addDay.mutateAsync({ routineId: detail.id, name })}
       />
 
       <RoutineNameForm
         open={dialog?.kind === "rename-day"}
         onOpenChange={(open) => !open && close()}
         title="Rename day"
+        kind="day"
         label="Day name"
         initialValue={dialog?.kind === "rename-day" ? dialog.name : ""}
         saveLabel="Save name"
         pending={renameDay.isPending}
         onSave={(name) => {
-          if (dialog?.kind === "rename-day") renameDay.mutate({ id: dialog.dayId, name });
+          if (dialog?.kind === "rename-day") {
+            return renameDay.mutateAsync({ id: dialog.dayId, name });
+          }
         }}
       />
 
@@ -441,7 +445,7 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
           exerciseName={dialog.planned.name}
           initial={dialog.planned}
           pending={updateTargets.isPending}
-          onSave={(targets) => updateTargets.mutate({ id: dialog.planned.id, targets })}
+          onSave={(targets) => updateTargets.mutateAsync({ id: dialog.planned.id, targets })}
         />
       ) : null}
 

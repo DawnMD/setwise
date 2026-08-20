@@ -1,9 +1,17 @@
 "use client";
 
-import * as React from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
 
-import { RPE_MAX, RPE_MIN, RPE_STEP } from "@/db/validators";
+import {
+  RPE_MAX,
+  RPE_MIN,
+  RPE_STEP,
+  routineExerciseTargets,
+  type RoutineExerciseTargets,
+} from "@/db/validators";
 import type { Targets } from "@/lib/targets";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -12,14 +20,13 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Spinner } from "@/components/ui/spinner";
 
-const toField = (value: number | null) => (value === null ? "" : String(value));
 const toNumber = (value: string) => {
-  const parsed = Number.parseInt(value, 10);
+  const parsed = Number.parseInt(value.replace(/\D/g, ""), 10);
   return Number.isFinite(parsed) ? parsed : null;
 };
 
@@ -46,24 +53,31 @@ export function TargetsForm({
   exerciseName: string;
   initial: Targets;
   pending?: boolean;
-  onSave: (targets: Targets) => void;
+  onSave: (targets: Targets) => unknown | Promise<unknown>;
 }) {
-  const [sets, setSets] = React.useState(() => toField(initial.targetSets));
-  const [low, setLow] = React.useState(() => toField(initial.targetRepLow));
-  const [high, setHigh] = React.useState(() => toField(initial.targetRepHigh));
-  const [rpe, setRpe] = React.useState<number | null>(initial.targetRpe);
+  const form = useForm<RoutineExerciseTargets>({
+    resolver: zodResolver(routineExerciseTargets),
+    defaultValues: initial,
+    mode: "onTouched",
+    reValidateMode: "onChange",
+    criteriaMode: "all",
+  });
 
-  const parsed: Targets = {
-    targetSets: toNumber(sets),
-    targetRepLow: toNumber(low),
-    targetRepHigh: toNumber(high),
-    targetRpe: rpe,
-  };
+  const submit = form.handleSubmit(async (targets) => {
+    form.clearErrors("root");
 
-  const rangeInverted =
-    parsed.targetRepLow !== null &&
-    parsed.targetRepHigh !== null &&
-    parsed.targetRepLow > parsed.targetRepHigh;
+    try {
+      await onSave(targets);
+    } catch {
+      form.setError("root.server", {
+        type: "server",
+        message: "Couldn't save those targets. Check your connection and try again.",
+      });
+    }
+  });
+
+  const busy = pending || form.formState.isSubmitting;
+  const serverError = form.formState.errors.root?.server?.message;
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -73,100 +87,140 @@ export function TargetsForm({
           <DrawerDescription>{exerciseName}</DrawerDescription>
         </DrawerHeader>
 
-        <form
-          className="overflow-y-auto p-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!rangeInverted && !pending) onSave(parsed);
-          }}
-        >
+        <form className="overflow-y-auto p-4" onSubmit={submit} noValidate>
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="target-sets">Sets</FieldLabel>
-              <Input
-                id="target-sets"
-                inputMode="numeric"
-                value={sets}
-                onChange={(event) => setSets(event.target.value.replace(/\D/g, ""))}
-                placeholder="3"
-                className="numeric h-11 text-base"
+            <Controller
+              name="targetSets"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="target-sets">Sets</FieldLabel>
+                  <Input
+                    id="target-sets"
+                    name={field.name}
+                    ref={field.ref}
+                    onBlur={field.onBlur}
+                    inputMode="numeric"
+                    value={field.value ?? ""}
+                    onChange={(event) => field.onChange(toNumber(event.target.value))}
+                    placeholder="3"
+                    aria-invalid={fieldState.invalid}
+                    className="numeric h-11 text-base"
+                  />
+                  {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
+                </Field>
+              )}
+            />
+
+            <Field orientation="horizontal">
+              <Controller
+                name="targetRepLow"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="target-rep-low">Reps from</FieldLabel>
+                    <Input
+                      id="target-rep-low"
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
+                      inputMode="numeric"
+                      value={field.value ?? ""}
+                      onChange={(event) => field.onChange(toNumber(event.target.value))}
+                      placeholder="8"
+                      aria-invalid={fieldState.invalid}
+                      className="numeric h-11 text-base"
+                    />
+                    {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
+                  </Field>
+                )}
+              />
+              <Controller
+                name="targetRepHigh"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="target-rep-high">to</FieldLabel>
+                    <Input
+                      id="target-rep-high"
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
+                      inputMode="numeric"
+                      value={field.value ?? ""}
+                      onChange={(event) => field.onChange(toNumber(event.target.value))}
+                      placeholder="12"
+                      aria-invalid={fieldState.invalid}
+                      className="numeric h-11 text-base"
+                    />
+                    {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
+                  </Field>
+                )}
               />
             </Field>
 
-            <Field orientation="horizontal">
-              <Field>
-                <FieldLabel htmlFor="target-rep-low">Reps from</FieldLabel>
-                <Input
-                  id="target-rep-low"
-                  inputMode="numeric"
-                  aria-invalid={rangeInverted}
-                  value={low}
-                  onChange={(event) => setLow(event.target.value.replace(/\D/g, ""))}
-                  placeholder="8"
-                  className="numeric h-11 text-base"
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="target-rep-high">to</FieldLabel>
-                <Input
-                  id="target-rep-high"
-                  inputMode="numeric"
-                  value={high}
-                  onChange={(event) => setHigh(event.target.value.replace(/\D/g, ""))}
-                  placeholder="12"
-                  className="numeric h-11 text-base"
-                />
-              </Field>
-            </Field>
+            <Controller
+              name="targetRpe"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <div className="flex items-center justify-between">
+                    <FieldLabel htmlFor="target-rpe">RPE</FieldLabel>
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      onClick={() => field.onChange(field.value === null ? 8 : null)}
+                    >
+                      {field.value === null ? "Add a target" : "Clear"}
+                    </Button>
+                  </div>
+                  {field.value !== null ? (
+                    <div className="flex items-center gap-4">
+                      <Slider
+                        id="target-rpe"
+                        name={field.name}
+                        ref={field.ref}
+                        onBlur={field.onBlur}
+                        size="touch"
+                        value={field.value}
+                        onValueChange={(next) =>
+                          field.onChange(Array.isArray(next) ? next[0] : next)
+                        }
+                        min={RPE_MIN}
+                        max={RPE_MAX}
+                        step={RPE_STEP}
+                        largeStep={1}
+                        aria-label="Target RPE"
+                        aria-invalid={fieldState.invalid}
+                        className="flex-1"
+                      />
+                      <output
+                        htmlFor="target-rpe"
+                        className="numeric-display w-10 text-right text-xl"
+                      >
+                        {field.value}
+                      </output>
+                    </div>
+                  ) : (
+                    <FieldDescription>
+                      Left off unless the exercise is meant to be run at a specific effort.
+                    </FieldDescription>
+                  )}
+                  {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
+                </Field>
+              )}
+            />
 
-            {rangeInverted ? (
-              <FieldDescription className="text-destructive">
-                The low end of the range has to come first.
-              </FieldDescription>
+            {serverError ? (
+              <Alert variant="destructive">
+                <AlertTitle>Couldn&apos;t save targets</AlertTitle>
+                <AlertDescription>{serverError}</AlertDescription>
+              </Alert>
             ) : null}
 
-            <Field>
-              <div className="flex items-center justify-between">
-                <FieldLabel htmlFor="target-rpe">RPE</FieldLabel>
-                <Button
-                  type="button"
-                  variant="link"
-                  size="sm"
-                  onClick={() => setRpe(rpe === null ? 8 : null)}
-                >
-                  {rpe === null ? "Add a target" : "Clear"}
-                </Button>
-              </div>
-              {rpe !== null ? (
-                <div className="flex items-center gap-4">
-                  <Slider
-                    id="target-rpe"
-                    size="touch"
-                    value={rpe}
-                    onValueChange={(next) => setRpe(Array.isArray(next) ? next[0] : next)}
-                    min={RPE_MIN}
-                    max={RPE_MAX}
-                    step={RPE_STEP}
-                    largeStep={1}
-                    aria-label="Target RPE"
-                    className="flex-1"
-                  />
-                  <span className="numeric-display w-10 text-right text-xl">{rpe}</span>
-                </div>
-              ) : (
-                <FieldDescription>
-                  Left off unless the exercise is meant to be run at a specific effort.
-                </FieldDescription>
-              )}
-            </Field>
-
-            <Button
-              type="submit"
-              size="touch"
-              className="w-full"
-              disabled={rangeInverted || pending}
-            >
-              {pending ? <Spinner data-icon="inline-start" /> : null}
+            <Button type="submit" size="touch" className="w-full" disabled={busy}>
+              {busy ? <Spinner data-icon="inline-start" /> : null}
               Save targets
             </Button>
           </FieldGroup>

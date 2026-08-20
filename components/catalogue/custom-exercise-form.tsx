@@ -1,10 +1,11 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { isDefinedError } from "@orpc/client";
-import * as React from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 
-import type { MuscleSlug } from "@/lib/muscles";
+import { customExerciseInput, type CustomExerciseInput } from "@/db/validators";
 import { orpc } from "@/lib/orpc";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Spinner } from "@/components/ui/spinner";
@@ -66,13 +67,19 @@ export function CustomExerciseForm({
   onCreated: (exercise: { id: string; name: string; equipment: string | null }) => void;
 }) {
   const queryClient = useQueryClient();
-
-  const [name, setName] = React.useState("");
-  const [equipment, setEquipment] = React.useState<Equipment>("barbell");
-  const [pattern, setPattern] = React.useState<Pattern | "">("");
-  const [primary, setPrimary] = React.useState<MuscleSlug[]>([]);
-  const [secondary, setSecondary] = React.useState<MuscleSlug[]>([]);
-  const [error, setError] = React.useState<string | null>(null);
+  const form = useForm<CustomExerciseInput>({
+    resolver: zodResolver(customExerciseInput),
+    defaultValues: {
+      name: "",
+      equipment: "barbell",
+      movementPattern: null,
+      primaryMuscles: [],
+      secondaryMuscles: [],
+    },
+    mode: "onTouched",
+    reValidateMode: "onChange",
+    criteriaMode: "all",
+  });
 
   const create = useMutation(
     orpc.catalogue.createExercise.mutationOptions({
@@ -80,22 +87,35 @@ export function CustomExerciseForm({
         // Every search result list is now out of date by exactly one row.
         void queryClient.invalidateQueries({ queryKey: orpc.catalogue.search.key() });
         onCreated({ id: exercise.id, name: exercise.name, equipment: exercise.equipment });
+        form.reset();
         onOpenChange(false);
       },
       onError: (mutationError) => {
-        setError(
-          isDefinedError(mutationError)
+        form.setError("root.server", {
+          type: "server",
+          message: isDefinedError(mutationError)
             ? mutationError.message
             : "Couldn't save the exercise. Check your connection and try again.",
-        );
+        });
       },
     }),
   );
 
-  const canSave = name.trim().length > 0 && primary.length > 0 && !create.isPending;
+  const primary = useWatch({ control: form.control, name: "primaryMuscles" });
+  const serverError = form.formState.errors.root?.server?.message;
+
+  const submit = form.handleSubmit((values) => {
+    form.clearErrors("root");
+    create.mutate(values);
+  });
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && !create.isPending) form.reset();
+    onOpenChange(nextOpen);
+  };
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer open={open} onOpenChange={handleOpenChange}>
       <DrawerContent className="mx-auto max-w-[520px]">
         <DrawerHeader>
           <DrawerTitle>New exercise</DrawerTitle>
@@ -104,96 +124,132 @@ export function CustomExerciseForm({
           </DrawerDescription>
         </DrawerHeader>
 
-        <form
-          className="overflow-y-auto p-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!canSave) return;
-            setError(null);
-            create.mutate({
-              name: name.trim(),
-              equipment,
-              movementPattern: pattern === "" ? null : pattern,
-              primaryMuscles: primary,
-              secondaryMuscles: secondary,
-            });
-          }}
-        >
+        <form className="overflow-y-auto p-4" onSubmit={submit} noValidate>
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="exercise-name">Name</FieldLabel>
-              <Input
-                id="exercise-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Safety squat bar squat"
-                autoComplete="off"
-                className="h-11 text-base"
-              />
-            </Field>
+            <Controller
+              name="name"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="exercise-name">Name</FieldLabel>
+                  <Input
+                    {...field}
+                    id="exercise-name"
+                    placeholder="Safety squat bar squat"
+                    autoComplete="off"
+                    maxLength={120}
+                    aria-invalid={fieldState.invalid}
+                    className="h-11 text-base"
+                  />
+                  {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
+                </Field>
+              )}
+            />
 
             <Field orientation="responsive">
-              <Field>
-                <FieldLabel htmlFor="exercise-equipment">Equipment</FieldLabel>
-                <NativeSelect
-                  id="exercise-equipment"
-                  size="touch"
-                  value={equipment}
-                  onChange={(event) => setEquipment(event.target.value as Equipment)}
-                  className="w-full"
-                >
-                  {EQUIPMENT.map((option) => (
-                    <NativeSelectOption key={option} value={option}>
-                      {option}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
-                <FieldDescription>Plate maths only shows for a barbell.</FieldDescription>
-              </Field>
+              <Controller
+                name="equipment"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="exercise-equipment">Equipment</FieldLabel>
+                    <NativeSelect
+                      id="exercise-equipment"
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
+                      size="touch"
+                      value={field.value ?? "barbell"}
+                      onChange={(event) => field.onChange(event.target.value as Equipment)}
+                      aria-invalid={fieldState.invalid}
+                      className="w-full"
+                    >
+                      {EQUIPMENT.map((option) => (
+                        <NativeSelectOption key={option} value={option}>
+                          {option}
+                        </NativeSelectOption>
+                      ))}
+                    </NativeSelect>
+                    <FieldDescription>Plate maths only shows for a barbell.</FieldDescription>
+                    {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
+                  </Field>
+                )}
+              />
 
-              <Field>
-                <FieldLabel htmlFor="exercise-pattern">Pattern</FieldLabel>
-                <NativeSelect
-                  id="exercise-pattern"
-                  size="touch"
-                  value={pattern}
-                  onChange={(event) => setPattern(event.target.value as Pattern | "")}
-                  className="w-full"
-                >
-                  <NativeSelectOption value="">Not set</NativeSelectOption>
-                  {PATTERNS.map((option) => (
-                    <NativeSelectOption key={option.value} value={option.value}>
-                      {option.label}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
-              </Field>
-            </Field>
-
-            <Field>
-              <FieldLabel>Muscles trained</FieldLabel>
-              <FieldDescription>
-                Tap once for primary, twice for secondary, three times to clear. The heatmap reads
-                exactly what you set here.
-              </FieldDescription>
-              <MusclePicker
-                primary={primary}
-                secondary={secondary}
-                onChange={(next) => {
-                  setPrimary(next.primary);
-                  setSecondary(next.secondary);
-                }}
+              <Controller
+                name="movementPattern"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="exercise-pattern">Pattern</FieldLabel>
+                    <NativeSelect
+                      id="exercise-pattern"
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
+                      size="touch"
+                      value={field.value ?? ""}
+                      onChange={(event) =>
+                        field.onChange(
+                          event.target.value === "" ? null : (event.target.value as Pattern),
+                        )
+                      }
+                      aria-invalid={fieldState.invalid}
+                      className="w-full"
+                    >
+                      <NativeSelectOption value="">Not set</NativeSelectOption>
+                      {PATTERNS.map((option) => (
+                        <NativeSelectOption key={option.value} value={option.value}>
+                          {option.label}
+                        </NativeSelectOption>
+                      ))}
+                    </NativeSelect>
+                    {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
+                  </Field>
+                )}
               />
             </Field>
 
-            {error ? (
+            <Controller
+              name="primaryMuscles"
+              control={form.control}
+              render={({ field: primaryField, fieldState }) => (
+                <Controller
+                  name="secondaryMuscles"
+                  control={form.control}
+                  render={({ field: secondaryField, fieldState: secondaryState }) => (
+                    <Field data-invalid={fieldState.invalid || secondaryState.invalid}>
+                      <FieldLabel>Muscles trained</FieldLabel>
+                      <FieldDescription>
+                        Tap once for primary, twice for secondary, three times to clear. The heatmap
+                        reads exactly what you set here.
+                      </FieldDescription>
+                      <MusclePicker
+                        primary={primaryField.value}
+                        secondary={secondaryField.value}
+                        invalid={fieldState.invalid || secondaryState.invalid}
+                        onChange={(next) => {
+                          primaryField.onChange(next.primary);
+                          secondaryField.onChange(next.secondary);
+                        }}
+                      />
+                      {fieldState.invalid || secondaryState.invalid ? (
+                        <FieldError errors={[fieldState.error, secondaryState.error]} />
+                      ) : null}
+                    </Field>
+                  )}
+                />
+              )}
+            />
+
+            {serverError ? (
               <Alert variant="destructive">
                 <AlertTitle>Couldn&apos;t save the exercise</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>{serverError}</AlertDescription>
               </Alert>
             ) : null}
 
-            <Button type="submit" size="touch" className="w-full" disabled={!canSave}>
+            <Button type="submit" size="touch" className="w-full" disabled={create.isPending}>
               {create.isPending ? <Spinner data-icon="inline-start" /> : null}
               {primary.length === 0 ? "Pick a primary muscle" : "Save exercise"}
             </Button>
