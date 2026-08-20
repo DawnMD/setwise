@@ -29,10 +29,12 @@ export type MuscleRole = "primary" | "secondary";
 export function MusclePicker({
   primary,
   secondary,
+  invalid = false,
   onChange,
 }: {
   primary: MuscleSlug[];
   secondary: MuscleSlug[];
+  invalid?: boolean;
   onChange: (next: { primary: MuscleSlug[]; secondary: MuscleSlug[] }) => void;
 }) {
   const roleOf = React.useCallback(
@@ -118,6 +120,7 @@ export function MusclePicker({
           if (slug && isMuscleSlug(slug)) cycle(slug);
         }}
         aria-label="Muscles trained"
+        aria-invalid={invalid}
         className="flex-wrap"
       >
         {MUSCLES.map((muscle) => {

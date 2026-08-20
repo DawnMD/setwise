@@ -1,7 +1,11 @@
 "use client";
 
-import * as React from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
 
+import { dayName, routineName } from "@/db/validators";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -10,7 +14,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -30,9 +34,12 @@ type RoutineNameFormProps = {
   placeholder?: string;
   initialValue?: string;
   saveLabel: string;
+  kind?: "routine" | "day";
   pending?: boolean;
-  onSave: (name: string) => void;
+  onSave: (name: string) => unknown | Promise<unknown>;
 };
+
+type NameValues = { name: string };
 
 export function RoutineNameForm({ open, onOpenChange, ...form }: RoutineNameFormProps) {
   return (
@@ -49,12 +56,33 @@ function OpenRoutineNameForm({
   placeholder,
   initialValue = "",
   saveLabel,
+  kind = "routine",
   pending = false,
   onSave,
 }: Omit<RoutineNameFormProps, "open" | "onOpenChange">) {
-  const [value, setValue] = React.useState(initialValue);
+  const form = useForm<NameValues>({
+    resolver: zodResolver(z.object({ name: kind === "day" ? dayName : routineName })),
+    defaultValues: { name: initialValue },
+    mode: "onTouched",
+    reValidateMode: "onChange",
+    criteriaMode: "all",
+  });
 
-  const trimmed = value.trim();
+  const submit = form.handleSubmit(async ({ name }) => {
+    form.clearErrors("root");
+
+    try {
+      await onSave(name);
+    } catch {
+      form.setError("root.server", {
+        type: "server",
+        message: "Couldn't save that name. Check your connection and try again.",
+      });
+    }
+  });
+
+  const busy = pending || form.formState.isSubmitting;
+  const serverError = form.formState.errors.root?.server?.message;
 
   return (
     <DrawerContent className="mx-auto max-w-[520px]">
@@ -63,34 +91,38 @@ function OpenRoutineNameForm({
         {description ? <DrawerDescription>{description}</DrawerDescription> : null}
       </DrawerHeader>
 
-      <form
-        className="p-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (trimmed.length > 0 && !pending) onSave(trimmed);
-        }}
-      >
+      <form className="p-4" onSubmit={submit} noValidate>
         <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor="routine-name">{label}</FieldLabel>
-            <Input
-              id="routine-name"
-              value={value}
-              onChange={(event) => setValue(event.target.value)}
-              placeholder={placeholder}
-              autoComplete="off"
-              autoFocus
-              className="h-11 text-base"
-            />
-          </Field>
+          <Controller
+            name="name"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="routine-name">{label}</FieldLabel>
+                <Input
+                  {...field}
+                  id="routine-name"
+                  placeholder={placeholder}
+                  autoComplete="off"
+                  autoFocus
+                  maxLength={kind === "day" ? 60 : 80}
+                  aria-invalid={fieldState.invalid}
+                  className="h-11 text-base"
+                />
+                {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
+              </Field>
+            )}
+          />
 
-          <Button
-            type="submit"
-            size="touch"
-            className="w-full"
-            disabled={trimmed.length === 0 || pending}
-          >
-            {pending ? <Spinner data-icon="inline-start" /> : null}
+          {serverError ? (
+            <Alert variant="destructive">
+              <AlertTitle>Couldn&apos;t save</AlertTitle>
+              <AlertDescription>{serverError}</AlertDescription>
+            </Alert>
+          ) : null}
+
+          <Button type="submit" size="touch" className="w-full" disabled={busy}>
+            {busy ? <Spinner data-icon="inline-start" /> : null}
             {saveLabel}
           </Button>
         </FieldGroup>

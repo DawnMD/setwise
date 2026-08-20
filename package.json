@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
+    "@hookform/resolvers": "^5.9.1",
     "@orpc/client": "^1.15.0",
     "@orpc/server": "^1.15.0",
     "@orpc/tanstack-query": "^1.15.0",
@@ -34,6 +35,7 @@
     "postgres": "^3.4.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-hook-form": "^7.85.0",
     "recharts": "^3.8.0",
     "shadcn": "^4.18.0",
     "tailwind-merge": "^3.6.0",
