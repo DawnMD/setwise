@@ -1,87 +1,138 @@
-"use client";
+"use client"
 
-import { Drawer } from "@base-ui/react/drawer";
-import * as React from "react";
+import * as React from "react"
+import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
 
-import { cn } from "@/lib/cn";
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { XIcon } from "lucide-react"
 
-/**
- * The bottom sheet everything in the logger opens into.
- *
- * Built on Base UI's Drawer for the parts that are tedious and easy to get
- * wrong on a phone: focus trapping, the `aria-labelledby` wiring, scroll lock,
- * escape, and swipe-to-dismiss with a real velocity model.
- *
- * Never a centred modal. A sheet keeps its content in the bottom third of the
- * screen, which is the only part a thumb reaches.
- */
-export function Sheet({
-  open,
-  onOpenChange,
-  title,
-  description,
-  children,
-  className,
-  onOpenChangeComplete,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  /** Fires after the slide-out finishes, so the caller can unmount cleanly. */
-  onOpenChangeComplete?: (open: boolean) => void;
-  title: React.ReactNode;
-  /** Rendered under the title. Screen readers get it either way. */
-  description?: React.ReactNode;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <Drawer.Root open={open} onOpenChange={onOpenChange} onOpenChangeComplete={onOpenChangeComplete}>
-      <Drawer.Portal>
-        <Drawer.Backdrop
-          className={cn(
-            "fixed inset-0 min-h-dvh bg-black opacity-[calc(0.35*(1-var(--drawer-swipe-progress)))]",
-            "transition-opacity duration-[450ms] ease-[cubic-bezier(0.32,0.72,0,1)]",
-            "data-swiping:duration-0 data-starting-style:opacity-0 data-ending-style:opacity-0",
-            "data-ending-style:duration-[calc(var(--drawer-swipe-strength)*400ms)]",
-            // iOS 26+ lets content sit under the browser chrome, and a fixed
-            // backdrop stops short of the visual viewport there.
-            "supports-[-webkit-touch-callout:none]:absolute",
-          )}
-        />
-        <Drawer.Viewport className="fixed inset-0 flex items-end justify-center">
-          <Drawer.Popup
-            className={cn(
-              // The bleed is dead space below the sheet that stays filled while
-              // it rubber-bands, so an overscroll never shows the page through
-              // a gap at the bottom edge.
-              "-mb-12 w-full max-w-[520px] rounded-t-2xl border-t border-border bg-surface-raised text-ink",
-              "px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px)+3rem)]",
-              "max-h-[calc(88dvh+3rem)] overflow-y-auto overscroll-contain touch-auto outline-none",
-              "shadow-[0_-8px_32px_rgba(0,0,0,0.12)]",
-              "[transform:translateY(var(--drawer-swipe-movement-y))]",
-              "transition-transform duration-[450ms] ease-[cubic-bezier(0.32,0.72,0,1)]",
-              "data-swiping:select-none",
-              "data-starting-style:[transform:translateY(calc(100%-3rem+2px))]",
-              "data-ending-style:[transform:translateY(calc(100%-3rem+2px))]",
-              "data-ending-style:duration-[calc(var(--drawer-swipe-strength)*400ms)]",
-              className,
-            )}
-          >
-            <div aria-hidden className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
-            <Drawer.Content>
-              <Drawer.Title className="text-base font-semibold">{title}</Drawer.Title>
-              {description ? (
-                <Drawer.Description className="mt-0.5 text-sm text-ink-muted">
-                  {description}
-                </Drawer.Description>
-              ) : null}
-              {children}
-            </Drawer.Content>
-          </Drawer.Popup>
-        </Drawer.Viewport>
-      </Drawer.Portal>
-    </Drawer.Root>
-  );
+function Sheet({ ...props }: SheetPrimitive.Root.Props) {
+  return <SheetPrimitive.Root data-slot="sheet" {...props} />
 }
 
-export const SheetClose = Drawer.Close;
+function SheetTrigger({ ...props }: SheetPrimitive.Trigger.Props) {
+  return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />
+}
+
+function SheetClose({ ...props }: SheetPrimitive.Close.Props) {
+  return <SheetPrimitive.Close data-slot="sheet-close" {...props} />
+}
+
+function SheetPortal({ ...props }: SheetPrimitive.Portal.Props) {
+  return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />
+}
+
+function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
+  return (
+    <SheetPrimitive.Backdrop
+      data-slot="sheet-overlay"
+      className={cn(
+        "fixed inset-0 z-50 bg-black/10 text-xs/relaxed transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function SheetContent({
+  className,
+  children,
+  side = "right",
+  showCloseButton = true,
+  ...props
+}: SheetPrimitive.Popup.Props & {
+  side?: "top" | "right" | "bottom" | "left"
+  showCloseButton?: boolean
+}) {
+  return (
+    <SheetPortal>
+      <SheetOverlay />
+      <SheetPrimitive.Popup
+        data-slot="sheet-content"
+        data-side={side}
+        className={cn(
+          "fixed z-50 flex flex-col bg-popover bg-clip-padding text-xs/relaxed text-popover-foreground shadow-lg transition duration-200 ease-in-out data-ending-style:opacity-0 data-starting-style:opacity-0 data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:border-t data-[side=bottom]:data-ending-style:translate-y-[2.5rem] data-[side=bottom]:data-starting-style:translate-y-[2.5rem] data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:border-r data-[side=left]:data-ending-style:translate-x-[-2.5rem] data-[side=left]:data-starting-style:translate-x-[-2.5rem] data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:border-l data-[side=right]:data-ending-style:translate-x-[2.5rem] data-[side=right]:data-starting-style:translate-x-[2.5rem] data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:border-b data-[side=top]:data-ending-style:translate-y-[-2.5rem] data-[side=top]:data-starting-style:translate-y-[-2.5rem] data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm",
+          className
+        )}
+        {...props}
+      >
+        {children}
+        {showCloseButton && (
+          <SheetPrimitive.Close
+            data-slot="sheet-close"
+            render={
+              <Button
+                variant="ghost"
+                className="absolute top-3 right-3"
+                size="icon-sm"
+              />
+            }
+          >
+            <XIcon
+            />
+            <span className="sr-only">Close</span>
+          </SheetPrimitive.Close>
+        )}
+      </SheetPrimitive.Popup>
+    </SheetPortal>
+  )
+}
+
+function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="sheet-header"
+      className={cn("flex flex-col gap-0.5 p-4", className)}
+      {...props}
+    />
+  )
+}
+
+function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="sheet-footer"
+      className={cn("mt-auto flex flex-col gap-2 p-4", className)}
+      {...props}
+    />
+  )
+}
+
+function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
+  return (
+    <SheetPrimitive.Title
+      data-slot="sheet-title"
+      className={cn(
+        "font-heading text-sm font-medium text-foreground",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function SheetDescription({
+  className,
+  ...props
+}: SheetPrimitive.Description.Props) {
+  return (
+    <SheetPrimitive.Description
+      data-slot="sheet-description"
+      className={cn("text-xs/relaxed text-muted-foreground", className)}
+      {...props}
+    />
+  )
+}
+
+export {
+  Sheet,
+  SheetTrigger,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetFooter,
+  SheetTitle,
+  SheetDescription,
+}

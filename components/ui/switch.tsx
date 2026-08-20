@@ -1,40 +1,32 @@
-"use client";
+"use client"
 
-import { Switch as BaseSwitch } from "@base-ui/react/switch";
+import { Switch as SwitchPrimitive } from "@base-ui/react/switch"
 
-import { cn } from "@/lib/cn";
+import { cn } from "@/lib/utils"
 
-/** A 44px-tall hit area around a smaller track, because thumbs are imprecise. */
-export function Switch({
-  checked,
-  onCheckedChange,
-  label,
+function Switch({
   className,
-}: {
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-  label: string;
-  className?: string;
+  size = "default",
+  ...props
+}: SwitchPrimitive.Root.Props & {
+  size?: "sm" | "default"
 }) {
   return (
-    <label className={cn("flex h-11 cursor-pointer items-center gap-3 select-none", className)}>
-      <BaseSwitch.Root
-        checked={checked}
-        onCheckedChange={onCheckedChange}
-        className={cn(
-          "relative h-6 w-10 shrink-0 rounded-full border border-border bg-border/60 transition-colors",
-          "data-checked:border-accent data-checked:bg-accent",
-          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-        )}
-      >
-        <BaseSwitch.Thumb
-          className={cn(
-            "block size-5 rounded-full bg-surface-raised shadow-sm transition-transform",
-            "translate-x-0.5 data-checked:translate-x-[1.125rem]",
-          )}
-        />
-      </BaseSwitch.Root>
-      <span className="text-[15px]">{label}</span>
-    </label>
-  );
+    <SwitchPrimitive.Root
+      data-slot="switch"
+      data-size={size}
+      className={cn(
+        "peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none group-has-[:focus-visible]/field-label:border-transparent group-has-[:focus-visible]/field-label:ring-0 after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50",
+        className
+      )}
+      {...props}
+    >
+      <SwitchPrimitive.Thumb
+        data-slot="switch-thumb"
+        className="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)] dark:data-checked:bg-primary-foreground group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 dark:data-unchecked:bg-foreground"
+      />
+    </SwitchPrimitive.Root>
+  )
 }
+
+export { Switch }
