@@ -38,8 +38,8 @@ jobs:
     env:
       BETTER_AUTH_SECRET: setwise-ci-only-secret-not-used-outside-actions
       BETTER_AUTH_URL: http://localhost:3000
-      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/setwise
-      DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@127.0.0.1:5432/setwise
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/setwise?sslmode=disable
+      DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@127.0.0.1:5432/setwise?sslmode=disable
 
     steps:
       - name: Check out repository
