@@ -32,7 +32,8 @@ export function RestTimer({
   onRestart: (seconds: number) => void;
 }) {
   const [presetsOpen, setPresetsOpen] = React.useState(false);
-  const progress = duration > 0 ? Math.min(100, Math.max(0, (1 - remaining / duration) * 100)) : 100;
+  const progress =
+    duration > 0 ? Math.min(100, Math.max(0, (1 - remaining / duration) * 100)) : 100;
 
   return (
     <div className="border-t bg-card">

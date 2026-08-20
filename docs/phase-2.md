@@ -8,12 +8,13 @@ departs from the plan, and what Phase 3 inherits.
 > Done when: you build a push/pull/legs split and run a week off it without
 > editing anything mid-workout.
 
-The split builds and runs. `npm run db:verify:plan` covers the four things a
-browser cannot check by looking. Reordering days survives the unique index on
-`(routine_id, day_index)`. Ownership is enforced through the join rather than the
-id. A session started from a day reads its lineup back in plan order with targets
-attached. And "what's next" puts the day you have gone longest without at the
-top.
+The split builds and runs. `npm test` includes
+`tests/integration/plan.test.ts`, which covers the four things a browser cannot
+check by looking. Reordering days survives the unique index on
+`(routine_id, day_index)`. Ownership is enforced through the join rather than
+the id. A session started from a day reads its lineup back in plan order with
+targets attached. "What's next" puts the day you have gone longest without at
+the top.
 
 The same caveat as Phase 1 stands. **None of this has been used in a real gym.**
 

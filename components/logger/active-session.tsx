@@ -50,13 +50,13 @@ const lineupKey = (sessionId: string) => `setwise:lineup:${sessionId}`;
  * not earn a row in the database. Keeping the pick order in `localStorage` is
  * what stops a stray refresh from wiping a lineup someone just set up.
  */
-function readLineup(sessionId: string): LoggerExercise[] {
-  if (typeof window === "undefined") return [];
+function readLineup(sessionId: string): LoggerExercise[] | null {
+  if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(lineupKey(sessionId));
-    return raw ? (JSON.parse(raw) as LoggerExercise[]) : [];
+    return raw ? (JSON.parse(raw) as LoggerExercise[]) : null;
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -73,7 +73,7 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
 
   useWakeLock(isOpen);
 
-  const [picked, setPicked] = React.useState<LoggerExercise[]>(() => readLineup(sessionId));
+  const [picked, setPicked] = React.useState<LoggerExercise[] | null>(() => readLineup(sessionId));
   const [pending, setPending] = React.useState<Record<string, PendingWrite>>({});
   const [prSetIds, setPrSetIds] = React.useState<ReadonlySet<string>>(() => new Set());
   const [editing, setEditing] = React.useState<Editing | null>(null);
@@ -89,13 +89,23 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
    * grows. The tail covers a lost `localStorage` — a reload on another phone
    * still shows the whole workout, just in logged order.
    */
+  const plannedLineup = React.useMemo(
+    () =>
+      detail?.plan?.exercises.map((entry) => ({
+        id: entry.exerciseId,
+        name: entry.name,
+        equipment: entry.equipment,
+      })) ?? [],
+    [detail],
+  );
+
   const lineup = React.useMemo(() => {
     const server = detail?.exercises ?? [];
     const byId = new Map(server.map((entry) => [entry.id, entry]));
     const merged: LoggerExercise[] = [];
     const seen = new Set<string>();
 
-    for (const entry of picked) {
+    for (const entry of picked ?? plannedLineup) {
       merged.push(byId.get(entry.id) ?? entry);
       seen.add(entry.id);
     }
@@ -103,39 +113,12 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
       if (!seen.has(entry.id)) merged.push(entry);
     }
     return merged;
-  }, [picked, detail]);
+  }, [picked, plannedLineup, detail]);
 
   React.useEffect(() => {
     if (!isOpen) return;
     window.localStorage.setItem(lineupKey(sessionId), JSON.stringify(lineup));
   }, [lineup, sessionId, isOpen]);
-
-  /**
-   * A workout started from a routine day opens with that day's lineup already
-   * on screen.
-   *
-   * Seeded in an effect rather than at mount because the plan arrives with the
-   * session, one round trip after the first render, so there is nothing to seed
-   * from at that point. Once, guarded by a ref: after the first pass the lineup
-   * is the user's, and re-seeding would resurrect anything they removed.
-   */
-  const seeded = React.useRef(false);
-  React.useEffect(() => {
-    if (seeded.current || !detail) return;
-    seeded.current = true;
-
-    const planned = detail.plan?.exercises ?? [];
-    if (planned.length === 0) return;
-
-    setPicked((current) => {
-      if (current.length > 0) return current;
-      return planned.map((entry) => ({
-        id: entry.exerciseId,
-        name: entry.name,
-        equipment: entry.equipment,
-      }));
-    });
-  }, [detail]);
 
   /** Targets by exercise id, so a block can find its own without a scan. */
   const targetsByExercise = React.useMemo(() => {
@@ -405,7 +388,9 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
                 onRetrySet={retry}
                 onDeleteSet={removeSet}
                 onRemove={(exerciseId) =>
-                  setPicked((current) => current.filter((entry) => entry.id !== exerciseId))
+                  setPicked((current) =>
+                    (current ?? plannedLineup).filter((entry) => entry.id !== exerciseId),
+                  )
                 }
               />
             ))}
@@ -425,7 +410,9 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
         {failedIds.length > 0 ? (
           <Alert variant="destructive" className="mt-4">
             <AlertTitle>
-              {failedIds.length === 1 ? "1 set didn't save" : `${failedIds.length} sets didn't save`}
+              {failedIds.length === 1
+                ? "1 set didn't save"
+                : `${failedIds.length} sets didn't save`}
             </AlertTitle>
             <AlertDescription>Tap the red row to retry.</AlertDescription>
           </Alert>
@@ -464,7 +451,9 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
         onPick={(exercise) => {
           setPickerOpen(false);
           setPicked((current) =>
-            current.some((entry) => entry.id === exercise.id) ? current : [...current, exercise],
+            (current ?? plannedLineup).some((entry) => entry.id === exercise.id)
+              ? (current ?? plannedLineup)
+              : [...(current ?? plannedLineup), exercise],
           );
           // Straight into the set sheet: picking an exercise and then not
           // logging against it is not something anyone does mid-workout.

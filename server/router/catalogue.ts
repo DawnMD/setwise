@@ -2,12 +2,7 @@ import { and, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { exerciseMuscles, exercises, muscles } from "@/db/schema";
-import {
-  customExerciseInput,
-  PRIMARY_FACTOR,
-  SECONDARY_FACTOR,
-  uuid,
-} from "@/db/validators";
+import { customExerciseInput, PRIMARY_FACTOR, SECONDARY_FACTOR, uuid } from "@/db/validators";
 import { MUSCLE_SLUGS } from "@/lib/muscles";
 import { protectedProcedure, publicProcedure } from "../orpc";
 
@@ -64,7 +59,12 @@ export const catalogueRouter = {
   exerciseMuscles: protectedProcedure
     .input(z.object({ exerciseId: uuid }))
     .handler(async ({ input, context }) => {
-      return context.db.execute<{ slug: string; display_name: string; role: string; factor: number }>(
+      return context.db.execute<{
+        slug: string;
+        display_name: string;
+        role: string;
+        factor: number;
+      }>(
         sql`
           select m.slug, m.display_name, em.role, em.factor::float8 as factor
           from exercise_muscles em

@@ -79,17 +79,26 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
   }, [queryClient, options.queryKey]);
 
   const close = () => setDialog(null);
-  const afterWrite = { onSuccess: () => { refresh(); close(); } };
+  const afterWrite = {
+    onSuccess: () => {
+      refresh();
+      close();
+    },
+  };
 
   const renameRoutine = useMutation(orpc.plan.renameRoutine.mutationOptions(afterWrite));
-  const archiveRoutine = useMutation(orpc.plan.archiveRoutine.mutationOptions({ onSuccess: refresh }));
+  const archiveRoutine = useMutation(
+    orpc.plan.archiveRoutine.mutationOptions({ onSuccess: refresh }),
+  );
   const addDay = useMutation(orpc.plan.addDay.mutationOptions(afterWrite));
   const renameDay = useMutation(orpc.plan.renameDay.mutationOptions(afterWrite));
   const deleteDay = useMutation(orpc.plan.deleteDay.mutationOptions(afterWrite));
   const moveDay = useMutation(orpc.plan.moveDay.mutationOptions({ onSuccess: refresh }));
   const addExercise = useMutation(orpc.plan.addExercise.mutationOptions({ onSuccess: refresh }));
   const updateTargets = useMutation(orpc.plan.updateTargets.mutationOptions(afterWrite));
-  const removeExercise = useMutation(orpc.plan.removeExercise.mutationOptions({ onSuccess: refresh }));
+  const removeExercise = useMutation(
+    orpc.plan.removeExercise.mutationOptions({ onSuccess: refresh }),
+  );
   const moveExercise = useMutation(orpc.plan.moveExercise.mutationOptions({ onSuccess: refresh }));
 
   const deleteRoutine = useMutation(
@@ -183,7 +192,10 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
               >
                 {detail.isArchived ? "Unarchive routine" : "Archive routine"}
               </DropdownMenuItem>
-              <DropdownMenuItem variant="destructive" onClick={() => setDialog({ kind: "delete-routine" })}>
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => setDialog({ kind: "delete-routine" })}
+              >
                 Delete routine
               </DropdownMenuItem>
             </DropdownMenuGroup>
@@ -194,7 +206,9 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
       {days.length === 0 ? (
         <Empty className="border border-dashed">
           <EmptyTitle>No days yet</EmptyTitle>
-          <EmptyDescription>Add the first one — Push, Upper, Legs, whatever it is.</EmptyDescription>
+          <EmptyDescription>
+            Add the first one — Push, Upper, Legs, whatever it is.
+          </EmptyDescription>
           <EmptyContent>
             <Button size="touch" onClick={() => setDialog({ kind: "add-day" })}>
               <Plus data-icon="inline-start" />
@@ -247,13 +261,17 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
                   <DropdownMenuContent align="end">
                     <DropdownMenuGroup>
                       <DropdownMenuItem
-                        onClick={() => setDialog({ kind: "rename-day", dayId: day.id, name: day.name })}
+                        onClick={() =>
+                          setDialog({ kind: "rename-day", dayId: day.id, name: day.name })
+                        }
                       >
                         Rename day
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         variant="destructive"
-                        onClick={() => setDialog({ kind: "delete-day", dayId: day.id, name: day.name })}
+                        onClick={() =>
+                          setDialog({ kind: "delete-day", dayId: day.id, name: day.name })
+                        }
                       >
                         Delete day
                       </DropdownMenuItem>
@@ -302,13 +320,17 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
                           <DropdownMenuGroup>
                             <DropdownMenuItem
                               disabled={index === 0}
-                              onClick={() => moveExercise.mutate({ id: planned.id, direction: "up" })}
+                              onClick={() =>
+                                moveExercise.mutate({ id: planned.id, direction: "up" })
+                              }
                             >
                               Move up
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               disabled={index === day.exercises.length - 1}
-                              onClick={() => moveExercise.mutate({ id: planned.id, direction: "down" })}
+                              onClick={() =>
+                                moveExercise.mutate({ id: planned.id, direction: "down" })
+                              }
                             >
                               Move down
                             </DropdownMenuItem>
@@ -350,7 +372,7 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
       {/* Running the day is the point of the screen, so it sits in the bottom
           third under the thumb rather than beside the day's name. */}
       {currentDay && currentDay.exercises.length > 0 ? (
-        <div className="sticky bottom-0 mt-auto -mx-4 border-t bg-card px-4 py-3">
+        <div className="sticky bottom-0 -mx-4 mt-auto border-t bg-card px-4 py-3">
           <Button
             size="touch"
             className="w-full"
@@ -423,10 +445,7 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
         />
       ) : null}
 
-      <AlertDialog
-        open={dialog?.kind === "delete-day"}
-        onOpenChange={(open) => !open && close()}
-      >
+      <AlertDialog open={dialog?.kind === "delete-day"} onOpenChange={(open) => !open && close()}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>

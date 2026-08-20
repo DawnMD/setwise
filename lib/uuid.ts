@@ -67,11 +67,26 @@ export function uuidv7(): string {
   bytes[8] = (bytes[8] & 0x3f) | 0x80; // RFC 9562 variant
 
   return (
-    HEX[bytes[0]] + HEX[bytes[1]] + HEX[bytes[2]] + HEX[bytes[3]] + "-" +
-    HEX[bytes[4]] + HEX[bytes[5]] + "-" +
-    HEX[bytes[6]] + HEX[bytes[7]] + "-" +
-    HEX[bytes[8]] + HEX[bytes[9]] + "-" +
-    HEX[bytes[10]] + HEX[bytes[11]] + HEX[bytes[12]] + HEX[bytes[13]] + HEX[bytes[14]] + HEX[bytes[15]]
+    HEX[bytes[0]] +
+    HEX[bytes[1]] +
+    HEX[bytes[2]] +
+    HEX[bytes[3]] +
+    "-" +
+    HEX[bytes[4]] +
+    HEX[bytes[5]] +
+    "-" +
+    HEX[bytes[6]] +
+    HEX[bytes[7]] +
+    "-" +
+    HEX[bytes[8]] +
+    HEX[bytes[9]] +
+    "-" +
+    HEX[bytes[10]] +
+    HEX[bytes[11]] +
+    HEX[bytes[12]] +
+    HEX[bytes[13]] +
+    HEX[bytes[14]] +
+    HEX[bytes[15]]
   );
 }
 

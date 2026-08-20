@@ -130,9 +130,7 @@ export function MusclePicker({
               aria-label={`${muscle.displayName}${role ? `, ${role}` : ""}`}
             >
               {muscle.displayName}
-              {role === "secondary" ? (
-                <span className="text-muted-foreground"> ½</span>
-              ) : null}
+              {role === "secondary" ? <span className="text-muted-foreground"> ½</span> : null}
             </ToggleGroupItem>
           );
         })}

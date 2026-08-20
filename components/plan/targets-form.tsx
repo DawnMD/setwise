@@ -12,12 +12,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Spinner } from "@/components/ui/spinner";
@@ -165,7 +160,12 @@ export function TargetsForm({
               )}
             </Field>
 
-            <Button type="submit" size="touch" className="w-full" disabled={rangeInverted || pending}>
+            <Button
+              type="submit"
+              size="touch"
+              className="w-full"
+              disabled={rangeInverted || pending}
+            >
               {pending ? <Spinner data-icon="inline-start" /> : null}
               Save targets
             </Button>

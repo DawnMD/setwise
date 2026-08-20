@@ -135,7 +135,12 @@ export function ExerciseBlock({
       ) : null}
 
       <CardFooter>
-        <Button variant="secondary" size="touch" className="w-full" onClick={() => onAddSet(exercise)}>
+        <Button
+          variant="secondary"
+          size="touch"
+          className="w-full"
+          onClick={() => onAddSet(exercise)}
+        >
           <Plus data-icon="inline-start" />
           Add set
         </Button>

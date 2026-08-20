@@ -2,17 +2,17 @@
 
 ## Stack
 
-| Layer | Pick | Why |
-|---|---|---|
-| DB | Postgres (Neon) | Window functions for the weekly rollups, branching for schema work |
-| Schema/queries | Drizzle | Migrations in TypeScript, no codegen step |
-| API | oRPC | End-to-end types with no codegen, and it emits an OpenAPI spec for free when you build a native app later |
-| Auth | Better Auth | Sessions in your own Postgres, no vendor lock |
-| Client state | TanStack Query | oRPC ships a first-party integration, so `orpc.sets.log.mutationOptions()` is the whole wiring |
-| Components | shadcn/ui on Base UI | Base UI became shadcn's default in July 2026, so `npx shadcn create` gets you there with no flags. Running on preset `b2eYKQAHg1`: style lyra, zinc, lucide, medium radius |
-| Styling | Tailwind | Comes with shadcn, and mobile-first breakpoints are the default direction |
-| Charts | Visx or Recharts | Recharts is faster to write, Visx looks better. shadcn's `Chart` wraps Recharts, which settles it |
-| Theme | next-themes | The shadcn tokens key off a `.dark` class, so system preference needs a provider to apply it |
+| Layer          | Pick                 | Why                                                                                                                                                                        |
+| -------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DB             | Postgres (Neon)      | Window functions for the weekly rollups, branching for schema work                                                                                                         |
+| Schema/queries | Drizzle              | Migrations in TypeScript, no codegen step                                                                                                                                  |
+| API            | oRPC                 | End-to-end types with no codegen, and it emits an OpenAPI spec for free when you build a native app later                                                                  |
+| Auth           | Better Auth          | Sessions in your own Postgres, no vendor lock                                                                                                                              |
+| Client state   | TanStack Query       | oRPC ships a first-party integration, so `orpc.sets.log.mutationOptions()` is the whole wiring                                                                             |
+| Components     | shadcn/ui on Base UI | Base UI became shadcn's default in July 2026, so `npx shadcn create` gets you there with no flags. Running on preset `b2eYKQAHg1`: style lyra, zinc, lucide, medium radius |
+| Styling        | Tailwind             | Comes with shadcn, and mobile-first breakpoints are the default direction                                                                                                  |
+| Charts         | Visx or Recharts     | Recharts is faster to write, Visx looks better. shadcn's `Chart` wraps Recharts, which settles it                                                                          |
+| Theme          | next-themes          | The shadcn tokens key off a `.dark` class, so system preference needs a provider to apply it                                                                               |
 
 Swap in PocketBase if you want one binary instead of five services. Everything below still applies, just with collections instead of tables.
 
@@ -203,6 +203,28 @@ Empty states give an instruction, not a mood. "No workouts yet" plus a button be
 Base UI is the shadcn default now, so nothing special to configure. Two things that matter for this app: it handles focus trapping and ARIA in the bottom sheet you'll build the number pad inside, and its Slider is what you want for the RPE input. RPE on a 6 to 10 scale with half steps is a slider, not a dropdown, and definitely not a text field.
 
 In practice the bottom sheet is shadcn's `Drawer`, which wraps Base UI's and brings swipe-to-dismiss. `Sheet` is the side panel; do not reach for it on a phone.
+
+## Testing
+
+`npm test` runs Vitest against the Postgres database configured in `.env.local`.
+This is an integration suite on purpose. There is no component suite or broad
+unit-test pass yet. A few deterministic contracts from the old verification
+programs stay beside the database flows, and Vitest is not being asked to fake
+async Server Components.
+
+The suite covers the contracts that are hard to trust by clicking around:
+
+- Stats checks effective-set factors, warm-up exclusion, time windows, tonnage,
+  zero-volume muscles, and heatmap bands against a hand-worked week.
+- Logger checks plate loading, UUIDv7 ordering, Epley limits, overload deltas,
+  ghost values, idempotent set retries, PR creation, and PR cleanup after edits.
+- Plan checks target round-tripping, safe day swaps, ownership, planned-session
+  prefill, next-day ordering, and keeping workout history after routine deletion.
+
+Each file creates throwaway users and removes them when it finishes. Files run
+one at a time to keep database connections predictable. The database must be
+migrated and seeded first. Browser flows and the real-gym check remain manual
+until an end-to-end runner is added.
 
 ## Phases
 

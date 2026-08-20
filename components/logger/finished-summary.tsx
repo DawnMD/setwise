@@ -5,13 +5,7 @@ import Link from "next/link";
 import { formatElapsed, formatWeight, formatWhen } from "@/lib/format";
 import { estimateOneRepMax } from "@/lib/math";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Item, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 
 import type { LoggerSession } from "./types";
