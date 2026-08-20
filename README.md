@@ -27,6 +27,10 @@ npm run dev
 ```
 
 `BETTER_AUTH_SECRET` needs a real value before deploying: `openssl rand -base64 32`.
+Better Auth resolves its base URL per request. On Vercel, keep **Automatically
+expose System Environment Variables** enabled so the generated deployment,
+branch and production domains are allowlisted without overriding
+`BETTER_AUTH_URL` for every preview.
 
 ## Scripts
 
