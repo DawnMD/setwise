@@ -13,11 +13,9 @@ import path from "node:path";
 
 import { config } from "dotenv";
 import { and, inArray, isNull, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
 
-import { parseConnectionString } from "../db/connection";
 import * as schema from "../db/schema";
+import { openToolingDatabase } from "../db/tooling";
 import { EXERCISE_OVERRIDES, type MovementPattern } from "../lib/exercise-seed/overrides";
 import {
   PRIMARY_FACTOR,
@@ -104,9 +102,7 @@ async function main() {
   const raw = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL;
   if (!raw) throw new Error("Set DATABASE_URL_UNPOOLED or DATABASE_URL in .env.local");
 
-  const { url, ssl } = parseConnectionString(raw);
-  const client = postgres(url, { ssl, max: 1, onnotice: () => {} });
-  const db = drizzle(client, { schema });
+  const { client, db } = openToolingDatabase(raw);
 
   try {
     // ---------------------------------------------------------------- muscles

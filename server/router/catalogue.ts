@@ -59,7 +59,7 @@ export const catalogueRouter = {
   exerciseMuscles: protectedProcedure
     .input(z.object({ exerciseId: uuid }))
     .handler(async ({ input, context }) => {
-      return context.db.execute<{
+      const result = await context.db.execute<{
         slug: string;
         display_name: string;
         role: string;
@@ -73,6 +73,8 @@ export const catalogueRouter = {
           order by em.factor desc, m.display_name
         `,
       );
+
+      return result.rows;
     }),
 
   muscles: publicProcedure.handler(async ({ context }) => {

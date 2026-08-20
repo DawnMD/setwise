@@ -1,19 +1,16 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/neon-serverless";
 
-import { parseConnectionString, requireEnv } from "./connection";
+import { requireEnv } from "./connection";
+import { createNeonPool } from "./neon";
 import * as schema from "./schema";
 
-const { url, ssl } = parseConnectionString(requireEnv("DATABASE_URL"));
-
 /**
- * One connection per serverless invocation. `prepare: false` because the pooled
- * Neon endpoint runs in transaction mode, where prepared statements don't
- * survive between checkouts.
+ * The application uses Neon's pooled endpoint. The module-level pool can be
+ * reused when a serverless instance handles more than one request.
  */
-const client = postgres(url, { ssl, max: 1, prepare: false });
+const client = createNeonPool(requireEnv("DATABASE_URL"));
 
-export const db = drizzle(client, { schema });
+export const db = drizzle({ client, schema });
 export type Db = typeof db;
 export { schema };
 

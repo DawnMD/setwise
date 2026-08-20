@@ -33,8 +33,11 @@ npm run dev
 | Script                 | What it does                                             |
 | ---------------------- | -------------------------------------------------------- |
 | `npm run dev`          | Dev server on :3000                                      |
+| `npm run db:check`     | Check committed migration history for collisions         |
+| `npm run db:export`    | Print the schema's SQL DDL without changing the database |
 | `npm run db:generate`  | Generate a migration from schema changes                 |
-| `npm run db:migrate`   | Apply migrations (uses the unpooled endpoint)            |
+| `npm run db:migrate`   | Apply committed migrations with Drizzle Kit              |
+| `npm run db:push`      | Sync directly after confirmation; local prototyping only |
 | `npm run db:seed`      | Seed muscles and the exercise catalogue. Idempotent.     |
 | `npm test`             | Run all Vitest integration tests once                    |
 | `npm run test:watch`   | Re-run Vitest integration tests as files change          |
@@ -45,6 +48,13 @@ The integration tests use the database in `.env.local`. Migrate and seed it
 before the first run. Every fixture is attached to a throwaway user and cleaned
 up after its test file finishes.
 
+The normal schema workflow is code first: edit `db/schema`, run
+`npm run db:generate -- --name=<change>`, review the generated SQL, run
+`npm run db:check`, then apply it with `npm run db:migrate`. Commit the schema,
+SQL migration and `drizzle/meta` snapshot together. `db:push` deliberately asks
+for confirmation and should only be used for disposable local prototyping
+because it does not create a migration file.
+
 ## Things that will bite you
 
 **The muscle list is frozen.** `lib/muscles.ts` is the single definition of
@@ -53,8 +63,8 @@ once. Changing it means a migration, an SVG regeneration and a reseed.
 
 **Everything is stored in kilograms.** `user.unitPref` is display only.
 
-**Migrations use `DATABASE_URL_UNPOOLED`.** Neon's pooler runs in transaction
-mode, where DDL and advisory locks misbehave.
+**Migrations use `DATABASE_URL_UNPOOLED`.** Neon recommends a direct connection
+for ORM migration tools; application queries use the pooled `DATABASE_URL`.
 
 **Re-run `npm test` after touching exercise tagging.** It is the check
 that catches the heatmap silently inheriting a bad muscle factor.
