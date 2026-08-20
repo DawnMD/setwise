@@ -7,11 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed.ts",
-    "db:verify": "tsx scripts/verify-effective-sets.ts",
     "db:verify:logging": "tsx scripts/verify-logging.ts",
     "db:verify:plan": "tsx scripts/verify-plan.ts",
     "svg:generate": "tsx scripts/generate-body-svg.ts"
@@ -51,6 +52,7 @@
     "eslint-config-next": "16.3.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }
