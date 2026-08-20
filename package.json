@@ -12,6 +12,7 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed.ts",
     "db:verify": "tsx scripts/verify-effective-sets.ts",
+    "db:verify:logging": "tsx scripts/verify-logging.ts",
     "svg:generate": "tsx scripts/generate-body-svg.ts"
   },
   "dependencies": {
