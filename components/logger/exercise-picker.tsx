@@ -1,10 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import * as React from "react";
 
 import { MUSCLES, type MuscleSlug } from "@/lib/muscles";
 import { orpc } from "@/lib/orpc";
+import { CustomExerciseForm } from "@/components/catalogue/custom-exercise-form";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -45,6 +48,7 @@ export function ExercisePicker({
   const [query, setQuery] = React.useState("");
   const [debounced, setDebounced] = React.useState("");
   const [muscle, setMuscle] = React.useState<MuscleSlug | null>(null);
+  const [creating, setCreating] = React.useState(false);
 
   React.useEffect(() => {
     const id = window.setTimeout(() => setDebounced(query.trim()), 200);
@@ -128,7 +132,21 @@ export function ExercisePicker({
               </>
             )}
           </CommandList>
+
+          {/* Below the results, not above them. Searching first is right almost
+              every time: the catalogue has 800 exercises and the one you want
+              is usually already in it under a name you did not guess. */}
+          <Button variant="outline" size="touch" onClick={() => setCreating(true)}>
+            <Plus data-icon="inline-start" />
+            Create an exercise
+          </Button>
         </Command>
+
+        <CustomExerciseForm
+          open={creating}
+          onOpenChange={setCreating}
+          onCreated={(exercise) => onPick(exercise)}
+        />
       </DrawerContent>
     </Drawer>
   );
