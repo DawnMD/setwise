@@ -79,6 +79,14 @@ bodyweight_logs(id, user_id, weight, logged_on, note)
 personal_records(id, user_id, exercise_id, kind, value, set_id, achieved_at)
 -- kind: 'max_weight' | 'best_e1rm' | 'max_reps_at_weight' | 'session_volume'
 
+body_profiles(user_id PK, height_cm, sex, birth_date, activity_level, goal,
+              rate_kg_per_week, protein_g_per_kg, fat_g_per_kg,
+              calorie_override NULL, onboarded_at NULL, prompted_at NULL)
+-- sex: 'male' | 'female'          -- nullable; only Mifflin-St Jeor reads it
+-- activity_level: 'sedentary' | 'light' | 'moderate' | 'very' | 'athlete'
+-- goal: 'lose' | 'maintain' | 'gain'
+-- every field nullable: each onboarding step is skippable
+
 friendships(id, requester_id, addressee_id, status, created_at)
 -- status: 'pending' | 'accepted' | 'blocked'
 -- unique on least/greatest pair so A->B and B->A can't both exist
@@ -120,6 +128,22 @@ group by m.slug;
 **Relative intensity per set**: `weight / (best e1rm for that exercise in the last 90 days)`. Report the window's average. Show it next to average RPE, never blended into one number.
 
 **Heatmap bands** by weekly effective sets: 0 is grey, 1 to 9 is low, 10 to 19 is the productive range, 20 or more is high. These come from common hypertrophy volume landmarks and are a starting point, not gospel. Let the user turn on a relative mode later that compares against their own trailing 8-week median.
+
+**BMI**: `kg / (cm / 100)^2`, banded on the WHO cutoffs — under 18.5, 18.5 to 24.9, 25 to 29.9, 30 and over. It reads high on muscular builds, which is this app's whole audience, so it is reported with that caveat attached and never as a verdict.
+
+**Basal metabolic rate** (Mifflin-St Jeor), the reason sex and birth date are asked for at all:
+
+```
+bmr = 10 * kg + 6.25 * cm - 5 * age + (male ? 5 : -161)
+```
+
+**Total daily energy**: `bmr * activity`, where activity is 1.2 sedentary, 1.375 light, 1.55 moderate, 1.725 very, 1.9 athlete.
+
+**Calorie target**: `tdee + rate_kg_per_week * 7700 / 7`, taking 7700 kcal to the kilogram. Floor it at BMR and say so on screen when it clamps, rather than handing someone a number that reads as instruction to eat below their resting requirement.
+
+The weight in all three is the seven-day trend, not the last weigh-in. The trend is already computed for the chart and is already the honest number; keying a calorie target to a raw reading makes it swing on water.
+
+**Macro split**, anchored to bodyweight rather than to percentages: `protein_g = protein_g_per_kg * kg` (default 1.8), `fat_g = fat_g_per_kg * kg` (default 0.8), carbohydrate takes whatever calories are left at 4, 9 and 4 kcal per gram. When protein and fat alone exceed the target, fat gives way first and carbohydrate floors at zero. Return the shortfall rather than a negative gram count.
 
 ## Write path
 
@@ -304,7 +328,40 @@ Three things this list did not ask for and the phase needed anyway:
 
 What shipped, and the calls the list left open: [phase-4.md](phase-4.md).
 
-### Phase 5: social
+### Phase 5: onboarding and the body screen
+
+Nothing in this app knows anything about the person using it, and a new account lands on an empty logger with no idea what to do first.
+
+- A profile table of its own: height in centimetres, sex, birth date, activity level, goal and pace. Every field nullable, because every step that fills it is skippable. It does not go on the auth table, whose additional fields are all text.
+- A first-run wizard after sign-up, saving as it advances, so someone who quits at the goal question keeps their height. It does not ask for units: `unit_pref` is display-only and still unwired, and asking a question the app then ignores is worse than not asking.
+- BMI, BMR by Mifflin-St Jeor, TDEE, and a calorie target, with a macro split anchored to bodyweight in g/kg for protein and fat and carbohydrate taking the remainder. All editable, all recalculated as bodyweight moves.
+- Weight gets its own section rather than the last block on the stats screen, and logging today's weigh-in is the first thing on it.
+
+Five decisions the list above does not make on its own:
+
+- **Targets, not tracking.** No food diary, no food database, no barcode scanner. Those are cut from v1 and they stay cut. This phase calculates numbers and gets out of the way.
+- **Calories key off the seven-day trend, not this morning's reading.** The trend already exists and is already the honest number. A calorie target keyed to a raw weigh-in swings on water, in a place where swinging reads as instruction.
+- **Missing data shows as missing.** No default height, no assumed sex. A card that cannot be computed names the field it wants and links to the step that asks for it. BMI needs only height and weight, so it appears while BMR still cannot.
+- **BMI is stated, never ruled on.** It reads high on muscular builds, which is the entire audience of this app. The caveat is permanent and sits next to the number, not behind an info icon.
+- **Accounts that predate this get told.** The prompt on the home screen dismisses for a fortnight, not forever; the body screen and settings keep theirs until the profile is filled. A section that quietly stays empty for everyone who already signed up is a section nobody discovers.
+
+Done when: a fresh account goes from sign-up to a calorie target without leaving the app, and an older one is told what it is missing rather than shown a blank card.
+
+### Phase 6: the home screen
+
+- One glance: the workout in progress or the next planned day, this week's sets and tonnage, where bodyweight is going, today's calorie and protein target, and any muscle gone untrained.
+- One procedure behind it. The landing screen composes the existing query helpers on the server rather than firing six round trips from the client.
+- `/` becomes that screen instead of a redirect to `/train`.
+- Bottom nav goes to five: Home, Train, Progress, Plan, Body. Three was the honest count when there were three screens.
+
+Two things this screen must not become:
+
+- **No streak, no flame, no badge.** The rule from the UI direction section holds hardest here, because the home screen is exactly where every other fitness app puts one. It punishes deload weeks, and a deload is correct training.
+- **No number that lives only here.** Everything on it summarises a screen that owns it and taps through to that screen. A dashboard that becomes the only place a value appears is a dashboard nobody can correct a typo from.
+
+Done when: you can open the app, read where you stand without scrolling, and start the right workout in one tap.
+
+### Phase 7: social
 
 Only after there's history worth showing.
 
@@ -315,7 +372,7 @@ Only after there's history worth showing.
 
 No feed, no comments, no likes. Those bring moderation work you don't want to own.
 
-### Phase 6: hardening
+### Phase 8: hardening
 
 - Reconnect handling: when `navigator.onLine` flips back true, retry any failed sets automatically
 - Keyboard focus visible everywhere, `prefers-reduced-motion` respected

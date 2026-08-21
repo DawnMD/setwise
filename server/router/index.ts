@@ -10,7 +10,7 @@ import { statsRouter } from "./stats";
  * spans sessions, sets and personal records and belongs to none of those.
  *
  * This file only composes. Nothing is defined here, so adding `social` in
- * phase 5 is one import and one key.
+ * phase 7 is one import and one key.
  */
 export const router = {
   session: sessionRouter,

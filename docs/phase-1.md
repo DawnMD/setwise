@@ -132,4 +132,4 @@ They import nothing from the database, so they are safe in a client bundle.
   at creation; deleting set 2 of 4 leaves the rest at 0, 2, 3. Ordering is still
   correct, and the display number is derived, so nothing shows wrong.
 - **No reconnect handling.** A failed set waits for a manual retry.
-  `navigator.onLine` auto-retry is Phase 6.
+  `navigator.onLine` auto-retry is Phase 8.

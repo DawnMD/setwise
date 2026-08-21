@@ -18,7 +18,7 @@ export const user = pgTable(
     username: text("username"),
   },
   (table) => [
-    // Phase 5 addresses people by username, and humans do not preserve case.
+    // Phase 7 addresses people by username, and humans do not preserve case.
     uniqueIndex("user_username_lower_uq").on(sql`lower(${table.username})`),
     // Better Auth's additional fields are always text, so the allowed values
     // are enforced here rather than by an enum type.
