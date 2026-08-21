@@ -1,6 +1,7 @@
 import { bodyweightRouter } from "./bodyweight";
 import { catalogueRouter } from "./catalogue";
 import { planRouter } from "./plan";
+import { profileRouter } from "./profile";
 import { sessionRouter } from "./session";
 import { statsRouter } from "./stats";
 import "@tanstack/react-start/server-only";
@@ -19,6 +20,7 @@ export const router = {
   catalogue: catalogueRouter,
   stats: statsRouter,
   bodyweight: bodyweightRouter,
+  profile: profileRouter,
 };
 
 export type AppRouter = typeof router;
