@@ -6,12 +6,24 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import * as schema from "../../db/schema";
 import { uuidv7 } from "../../lib/uuid";
-import { openTestDatabase } from "./database";
+import { openSharedTestDatabase } from "./database";
 import { getRoutineDetail, listRoutines, startableDays } from "../../server/queries/plan";
 import { getSessionDetail, recentSessions } from "../../server/queries/session";
 import { router } from "../../server/router";
 
 const authState = vi.hoisted(() => ({ userId: "" }));
+
+// Procedures reach for the app's own database, which always speaks Neon's
+// WebSocket protocol. CI runs against a plain Postgres service with no Neon
+// proxy in front of it, so the router is handed the test connection instead.
+vi.mock("../../db", async () => {
+  const [{ openSharedTestDatabase }, schema] = await Promise.all([
+    import("./database"),
+    import("../../db/schema"),
+  ]);
+
+  return { db: openSharedTestDatabase().db, schema };
+});
 
 vi.mock("../../lib/auth", () => ({
   auth: {
@@ -21,7 +33,7 @@ vi.mock("../../lib/auth", () => ({
   },
 }));
 
-const { client, db } = openTestDatabase();
+const { client, db } = openSharedTestDatabase();
 const userId = `test-rest-${randomUUID()}`;
 const otherUserId = `test-rest-other-${randomUUID()}`;
 const api = createRouterClient(router, { context: { headers: new Headers() } });
