@@ -6,6 +6,7 @@ import type { StatWindow } from "@/db/validators";
 import { formatDelta, formatTonnage, formatWeight, toIsoDay } from "@/lib/format";
 import { BODYWEIGHT_TREND_DAYS } from "@/lib/math";
 import { orpc } from "@/lib/orpc";
+import { useTimeZone } from "@/hooks/use-time-zone";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,11 +28,9 @@ import { WeighInList } from "./weigh-in-list";
  * because 30 days has to mean one thing per screen.
  */
 export function BodyweightSection({ window }: { window: StatWindow }) {
-  // Resolved once. Sets are timestamps, so bucketing them into days is a
-  // question only the reader's own zone can answer.
-  const [timeZone] = React.useState(
-    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-  );
+  // Sets are timestamps, so bucketing them into days is a question only the
+  // reader's own zone can answer.
+  const timeZone = useTimeZone();
   const [editing, setEditing] = React.useState<WeighIn | null>(null);
 
   const queryClient = useQueryClient();
