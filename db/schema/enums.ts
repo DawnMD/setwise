@@ -1,8 +1,20 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
 import { ACTIVITY_KINDS } from "@/lib/activity";
+import { ACTIVITY_LEVELS, GOALS, SEXES } from "@/lib/nutrition";
 
 export const activityKindEnum = pgEnum("activity_kind", ACTIVITY_KINDS);
+
+/**
+ * The three profile enums. Their values are defined beside the formulas that
+ * consume them, so a new activity band cannot be added to the database without
+ * someone having to give it a factor.
+ */
+export const sexEnum = pgEnum("sex", SEXES);
+
+export const activityLevelEnum = pgEnum("activity_level", ACTIVITY_LEVELS);
+
+export const goalEnum = pgEnum("goal", GOALS);
 
 export const bodySideEnum = pgEnum("body_side", ["front", "back", "both"]);
 

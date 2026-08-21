@@ -4,4 +4,5 @@ export * from "./muscles";
 export * from "./exercises";
 export * from "./training";
 export * from "./body";
+export * from "./profile";
 export * from "./social";

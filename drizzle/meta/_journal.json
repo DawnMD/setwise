@@ -36,6 +36,13 @@
       "when": 1787328256806,
       "tag": "0004_remove_offline_resilience",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787334266542,
+      "tag": "0005_user_profile",
+      "breakpoints": true
     }
   ]
 }
