@@ -73,7 +73,10 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
       // the next server render.
       await queryClient.invalidateQueries();
       await router.invalidate();
-      await navigate({ to: "/train", replace: true });
+      // A new account goes to the wizard, an existing one to the logger. Every
+      // step of the wizard can be skipped, so this costs a returning user
+      // nothing and saves a new one from finding an empty Body screen.
+      await navigate({ to: isSignUp ? "/onboarding" : "/train", replace: true });
     } catch {
       form.setError("root.server", {
         type: "server",

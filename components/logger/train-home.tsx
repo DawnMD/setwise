@@ -6,6 +6,7 @@ import * as React from "react";
 
 import { formatWeight, formatWhen } from "@/lib/format";
 import { orpc } from "@/lib/orpc";
+import { useTimeZone } from "@/hooks/use-time-zone";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { ProfilePrompt } from "@/components/profile/profile-prompt";
 
 import { Elapsed } from "./elapsed";
 import { LogRestDialog, type RestLogTarget } from "./log-rest-dialog";
@@ -29,9 +31,7 @@ export function TrainHome() {
   const navigate = useNavigate();
   const [error, setError] = React.useState<string | null>(null);
   const [restTarget, setRestTarget] = React.useState<RestLogTarget | null>(null);
-  const [timeZone] = React.useState(
-    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-  );
+  const timeZone = useTimeZone();
 
   const active = useQuery(orpc.session.active.queryOptions({ staleTime: 0 }));
   const recent = useQuery(orpc.session.recent.queryOptions({ input: { limit: 10 } }));
@@ -72,6 +72,14 @@ export function TrainHome() {
           <Settings />
         </Link>
       </header>
+
+      {/*
+        Dismissible here and nowhere else. Train is the screen the app opens on
+        until phase 6 builds a Home, and nagging someone about their date of
+        birth every time they arrive to lift is how a good prompt becomes
+        furniture people stop reading.
+      */}
+      <ProfilePrompt dismissible />
 
       {active.isPending ? (
         <Skeleton className="h-28 w-full" />

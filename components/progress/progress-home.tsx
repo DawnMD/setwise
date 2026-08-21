@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ChartNoAxesColumn } from "lucide-react";
+import { ChartNoAxesColumn, Scale } from "lucide-react";
 import * as React from "react";
 
 import type { StatWindow } from "@/db/validators";
@@ -16,8 +16,6 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
-
-import { BodyweightSection } from "@/components/bodyweight/bodyweight-section";
 
 import { ExerciseTrend } from "./exercise-trend";
 import { IntensitySummary } from "./intensity-summary";
@@ -129,12 +127,12 @@ export function ProgressHome() {
       {/*
         Outside the volume branch, not inside it. A week with no working sets is
         exactly the week someone is most likely to be watching the scale, and
-        an empty heatmap is no reason to hide their weigh-ins.
+        an empty heatmap is no reason to hide the way to their weigh-ins.
       */}
-      <section className="flex flex-col gap-2">
-        <h2 className="font-heading text-sm font-semibold text-muted-foreground">Bodyweight</h2>
-        <BodyweightSection window={window} />
-      </section>
+      <Button variant="outline" size="touch" className="w-full" render={<Link to="/body" />}>
+        <Scale data-icon="inline-start" />
+        Bodyweight and targets
+      </Button>
     </div>
   );
 }

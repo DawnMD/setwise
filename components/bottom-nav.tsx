@@ -1,16 +1,20 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { CalendarDays, ChartNoAxesColumn, Dumbbell } from "lucide-react";
+import { CalendarDays, ChartNoAxesColumn, Dumbbell, Scale } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 /**
- * Three items, because that is genuinely the count of things this app does, not
- * because three looks tidy. Bottom-anchored: everything a thumb reaches lives
- * in the bottom third, and there is never a top-right save button.
+ * Four items, because that is genuinely the count of things this app does, not
+ * because four looks tidy. Bottom-anchored: everything a thumb reaches lives in
+ * the bottom third, and there is never a top-right save button.
+ *
+ * Body earned a tab in phase 5. Weighing in is a daily act, and it was buried
+ * under a heatmap at the bottom of Progress.
  */
 const ITEMS = [
   { to: "/train", label: "Train", icon: Dumbbell },
   { to: "/progress", label: "Progress", icon: ChartNoAxesColumn },
+  { to: "/body", label: "Body", icon: Scale },
   { to: "/plan", label: "Plan", icon: CalendarDays },
 ] as const;
 

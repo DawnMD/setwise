@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Download } from "lucide-react";
 
+import { ProfilePrompt } from "@/components/profile/profile-prompt";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
@@ -24,6 +25,11 @@ function SettingsPage() {
           <CardDescription>{session.user.email}</CardDescription>
         </CardHeader>
       </Card>
+
+      {/* Not dismissible. Settings is where someone comes to find the switch
+          they are missing, so this is the one screen that should always be able
+          to say which answers the calorie target is still waiting on. */}
+      <ProfilePrompt />
 
       <Card>
         <CardHeader>
