@@ -2,7 +2,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { sets, workoutSessions } from "@/db/schema";
-import { sessionStartInput, setInput, uuid } from "@/db/validators";
+import { sessionStartInput, setInput, timeZone, uuid } from "@/db/validators";
 import { protectedProcedure } from "../orpc";
 import { findDay } from "../queries/plan";
 import {
@@ -15,7 +15,10 @@ import {
   findSession,
   getSessionDetail,
   lastPerformance,
+  logRestDay,
   recentSessions,
+  restLoggedToday,
+  RestDayLogError,
   upsertSet,
 } from "../queries/session";
 
@@ -43,6 +46,22 @@ const sessionProcedure = protectedProcedure.errors({
   DAY_NOT_FOUND: {
     message: "That routine day isn't yours, or no longer exists.",
   },
+  DAY_IS_REST: {
+    message: "A rest day can't start a workout.",
+  },
+  DAY_IS_WORKOUT: {
+    message: "Only a planned rest day can be logged as rest.",
+  },
+  SESSION_IS_REST: {
+    message: "Sets can't be added to a rest entry.",
+  },
+  REST_ALREADY_LOGGED: {
+    message: "You already logged rest today.",
+    data: z.object({ sessionId: uuid }),
+  },
+  SESSION_ID_CONFLICT: {
+    message: "That activity id is already in use.",
+  },
 });
 
 export const sessionRouter = {
@@ -67,7 +86,10 @@ export const sessionRouter = {
    */
   start: sessionProcedure.input(sessionStartInput).handler(async ({ input, context, errors }) => {
     const existing = await findSession(context.db, context.userId, input.id);
-    if (existing) return existing;
+    if (existing) {
+      if (existing.kind === "rest") throw errors.SESSION_IS_REST();
+      return existing;
+    }
 
     const [open] = await context.db
       .select({ id: workoutSessions.id })
@@ -82,8 +104,10 @@ export const sessionRouter = {
     // The foreign key only proves the day exists, not that it is the caller's.
     // Without this check a routine day id guessed from someone else's plan
     // would attach their template to this workout.
-    if (input.routineDayId && !(await findDay(context.db, context.userId, input.routineDayId))) {
-      throw errors.DAY_NOT_FOUND();
+    if (input.routineDayId) {
+      const day = await findDay(context.db, context.userId, input.routineDayId);
+      if (!day) throw errors.DAY_NOT_FOUND();
+      if (day.kind === "rest") throw errors.DAY_IS_REST();
     }
 
     const [row] = await context.db
@@ -97,6 +121,31 @@ export const sessionRouter = {
       .returning();
 
     return row;
+  }),
+
+  /** Records an instantaneous planned or ad-hoc rest activity. */
+  logRestDay: sessionProcedure
+    .input(z.object({ id: uuid, routineDayId: uuid.nullable(), timeZone }))
+    .handler(async ({ input, context, errors }) => {
+      try {
+        return await logRestDay(context.db, context.userId, input);
+      } catch (error) {
+        if (!(error instanceof RestDayLogError)) throw error;
+        if (error.code === "SESSION_ALREADY_ACTIVE" && error.sessionId) {
+          throw errors.SESSION_ALREADY_ACTIVE({ data: { sessionId: error.sessionId } });
+        }
+        if (error.code === "DAY_NOT_FOUND") throw errors.DAY_NOT_FOUND();
+        if (error.code === "DAY_IS_WORKOUT") throw errors.DAY_IS_WORKOUT();
+        if (error.code === "REST_ALREADY_LOGGED" && error.sessionId) {
+          throw errors.REST_ALREADY_LOGGED({ data: { sessionId: error.sessionId } });
+        }
+        throw errors.SESSION_ID_CONFLICT();
+      }
+    }),
+
+  /** Used by every rest entry point so the UI presents one daily action. */
+  restToday: sessionProcedure.input(z.object({ timeZone })).handler(async ({ input, context }) => {
+    return restLoggedToday(context.db, context.userId, input.timeZone);
   }),
 
   get: sessionProcedure
@@ -132,6 +181,7 @@ export const sessionRouter = {
   logSet: sessionProcedure.input(setInput).handler(async ({ input, context, errors }) => {
     const session = await findSession(context.db, context.userId, input.sessionId);
     if (!session) throw errors.SESSION_NOT_FOUND();
+    if (session.kind === "rest") throw errors.SESSION_IS_REST();
     if (session.endedAt) throw errors.SESSION_FINISHED();
 
     if (!(await exerciseIsVisible(context.db, context.userId, input.exerciseId))) {

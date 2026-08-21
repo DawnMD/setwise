@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { user } from "./auth";
+import { activityKindEnum } from "./enums";
 import { exercises } from "./exercises";
 
 export const routines = pgTable(
@@ -39,6 +40,7 @@ export const routineDays = pgTable(
       .references(() => routines.id, { onDelete: "cascade" }),
     dayIndex: smallint("day_index").notNull(),
     name: text("name").notNull(),
+    kind: activityKindEnum("kind").default("workout").notNull(),
   },
   (table) => [uniqueIndex("routine_days_order_uq").on(table.routineId, table.dayIndex)],
 );
@@ -63,9 +65,9 @@ export const routineExercises = pgTable(
 );
 
 /**
- * A workout session. Named `workout_sessions` rather than the plan's `sessions`
- * because Better Auth already owns a `session` table; two tables a single
- * character apart is a bug waiting to be written.
+ * A workout or rest activity. The historical `workout_sessions` name remains
+ * because Better Auth already owns a `session` table and renaming history would
+ * add migration risk without changing the contract.
  *
  * `routineDayId` is nullable: an ad-hoc session belongs to no plan, and is
  * `set null` on delete so deleting a routine never destroys training history.
@@ -80,6 +82,7 @@ export const workoutSessions = pgTable(
     routineDayId: uuid("routine_day_id").references(() => routineDays.id, {
       onDelete: "set null",
     }),
+    kind: activityKindEnum("kind").default("workout").notNull(),
     startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
     endedAt: timestamp("ended_at", { withTimezone: true }),
     notes: text("notes"),

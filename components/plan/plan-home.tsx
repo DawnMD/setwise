@@ -127,8 +127,9 @@ function RoutineRow({
     name: string;
     isArchived: boolean;
     dayCount: number;
+    restDayCount: number;
     exerciseCount: number;
-    lastRunAt: Date | null;
+    lastActivityAt: Date | null;
   };
 }) {
   return (
@@ -136,11 +137,12 @@ function RoutineRow({
       <ItemContent>
         <ItemTitle className="text-[15px]">{routine.name}</ItemTitle>
         <ItemDescription>
-          {routine.dayCount} {routine.dayCount === 1 ? "day" : "days"} · {routine.exerciseCount}{" "}
+          {routine.dayCount} {routine.dayCount === 1 ? "day" : "days"} · {routine.restDayCount}{" "}
+          {routine.restDayCount === 1 ? "rest day" : "rest days"} · {routine.exerciseCount}{" "}
           {routine.exerciseCount === 1 ? "exercise" : "exercises"}
-          {routine.lastRunAt
-            ? ` · last run ${formatWhen(new Date(routine.lastRunAt)).toLowerCase()}`
-            : " · never run"}
+          {routine.lastActivityAt
+            ? ` · last activity ${formatWhen(new Date(routine.lastActivityAt)).toLowerCase()}`
+            : " · no activity yet"}
         </ItemDescription>
       </ItemContent>
       {routine.isArchived ? (

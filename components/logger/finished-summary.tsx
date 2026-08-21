@@ -31,6 +31,30 @@ export function FinishedSummary({
   detail: LoggerSession;
   records: VolumeRecord[];
 }) {
+  if (detail.kind === "rest") {
+    return (
+      <div className="mx-auto flex w-full max-w-[520px] flex-col gap-4 px-4 py-4">
+        <header className="py-2">
+          <h1 className="font-heading text-lg font-semibold">Rest day logged</h1>
+          <p className="text-xs text-muted-foreground">
+            {formatWhen(new Date(detail.endedAt ?? detail.startedAt))}
+          </p>
+        </header>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{detail.plan?.dayName ?? "Rest day"}</CardTitle>
+            {detail.plan ? <CardDescription>{detail.plan.routineName}</CardDescription> : null}
+          </CardHeader>
+        </Card>
+
+        <Link href="/train" className={buttonVariants({ size: "touch", className: "mt-2 w-full" })}>
+          Done
+        </Link>
+      </div>
+    );
+  }
+
   const working = detail.sets.filter((set) => !set.isWarmup);
   const tonnage = working.reduce((total, set) => total + set.weight * set.reps, 0);
   const duration = detail.endedAt

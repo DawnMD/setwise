@@ -15,6 +15,13 @@
       "when": 1787150810716,
       "tag": "0001_exercise_source_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787292669500,
+      "tag": "0002_next_sunfire",
+      "breakpoints": true
     }
   ]
 }

@@ -161,9 +161,10 @@ describe("plan builder acceptance", () => {
     const upcoming = await startableDays(db, userId);
     expect(upcoming.map((day) => day.name)).toEqual(["Push", "Legs"]);
 
+    const weekAgo = new Date(Date.now() - 7 * 86_400_000);
     await db
       .update(schema.workoutSessions)
-      .set({ startedAt: new Date(Date.now() - 7 * 86_400_000) })
+      .set({ startedAt: weekAgo, endedAt: weekAgo })
       .where(eq(schema.workoutSessions.id, sessionId));
     await db.insert(schema.workoutSessions).values({
       id: uuidv7(),
@@ -182,8 +183,9 @@ describe("plan builder acceptance", () => {
       expect.objectContaining({
         id: routine.id,
         dayCount: 3,
+        restDayCount: 0,
         exerciseCount: 3,
-        lastRunAt: expect.any(Date),
+        lastActivityAt: expect.any(Date),
       }),
     ]);
 
