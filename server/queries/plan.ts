@@ -1,7 +1,8 @@
-import { and, asc, countDistinct, eq, max, sql } from "drizzle-orm";
+import { and, asc, countDistinct, eq, sql } from "drizzle-orm";
 
 import type { DbClient } from "@/db";
 import { exercises, routineDays, routineExercises, routines, workoutSessions } from "@/db/schema";
+import type { ActivityKind } from "@/lib/activity";
 
 export type RoutineSummary = {
   id: string;
@@ -9,8 +10,9 @@ export type RoutineSummary = {
   notes: string | null;
   isArchived: boolean;
   dayCount: number;
+  restDayCount: number;
   exerciseCount: number;
-  lastRunAt: Date | null;
+  lastActivityAt: Date | null;
 };
 
 export type PlannedExercise = {
@@ -29,6 +31,7 @@ export type PlannedDay = {
   id: string;
   name: string;
   dayIndex: number;
+  kind: ActivityKind;
   exercises: PlannedExercise[];
 };
 
@@ -64,6 +67,7 @@ export async function findDay(db: DbClient, userId: string, dayId: string) {
       routineId: routineDays.routineId,
       dayIndex: routineDays.dayIndex,
       name: routineDays.name,
+      kind: routineDays.kind,
       routineName: routines.name,
     })
     .from(routineDays)
@@ -91,8 +95,8 @@ export async function findRoutineExercise(db: DbClient, userId: string, id: stri
 /**
  * The plan list.
  *
- * `lastRunAt` is the reason this is one query with two aggregates rather than a
- * simple select: "when did I last run this" is the only thing that tells you
+ * `lastActivityAt` is the reason this is one query with two aggregates rather
+ * than a simple select: "when did I last use this" is the thing that tells you
  * which of four routines is the live one, and it is the first thing you look
  * for on this screen.
  */
@@ -104,8 +108,13 @@ export async function listRoutines(db: DbClient, userId: string): Promise<Routin
       notes: routines.notes,
       isArchived: routines.isArchived,
       dayCount: countDistinct(routineDays.id),
+      restDayCount: sql<number>`(
+        count(distinct ${routineDays.id}) filter (where ${routineDays.kind} = 'rest')
+      )::int`,
       exerciseCount: countDistinct(routineExercises.id),
-      lastRunAt: max(workoutSessions.startedAt),
+      lastActivityAt: sql<Date | null>`(
+          max(${workoutSessions.startedAt}) filter (where ${workoutSessions.endedAt} is not null)
+        )`.mapWith(workoutSessions.startedAt),
     })
     .from(routines)
     .leftJoin(routineDays, eq(routineDays.routineId, routines.id))
@@ -130,7 +139,12 @@ export async function getRoutineDetail(
   if (!routine) return null;
 
   const days = await db
-    .select({ id: routineDays.id, name: routineDays.name, dayIndex: routineDays.dayIndex })
+    .select({
+      id: routineDays.id,
+      name: routineDays.name,
+      dayIndex: routineDays.dayIndex,
+      kind: routineDays.kind,
+    })
     .from(routineDays)
     .where(eq(routineDays.routineId, routineId))
     .orderBy(asc(routineDays.dayIndex));
@@ -174,6 +188,7 @@ export async function getRoutineDetail(
 export type SessionPlan = {
   dayId: string;
   dayName: string;
+  kind: ActivityKind;
   routineId: string;
   routineName: string;
   exercises: PlannedExercise[];
@@ -223,6 +238,7 @@ export async function sessionPlan(
   return {
     dayId: day.id,
     dayName: day.name,
+    kind: day.kind,
     routineId: day.routineId,
     routineName: day.routineName,
     exercises: planned,
@@ -254,6 +270,7 @@ export type StartableDay = {
   id: string;
   name: string;
   dayIndex: number;
+  kind: ActivityKind;
   routineId: string;
   routineName: string;
   exerciseCount: number;
@@ -276,16 +293,19 @@ export async function startableDays(db: DbClient, userId: string): Promise<Start
   // output alias would work in Postgres but ties the query to how Drizzle
   // happens to quote it.
   const lastRun = sql<Date | null>`(
-    select max(s.started_at)
-    from workout_sessions s
-    where s.routine_day_id = ${routineDays.id} and s.user_id = ${userId}
-  )`;
+      select max(s.started_at)
+      from workout_sessions s
+      where s.routine_day_id = ${routineDays.id}
+        and s.user_id = ${userId}
+        and s.ended_at is not null
+    )`.mapWith(workoutSessions.startedAt);
 
   const rows = await db
     .select({
       id: routineDays.id,
       name: routineDays.name,
       dayIndex: routineDays.dayIndex,
+      kind: routineDays.kind,
       routineId: routines.id,
       routineName: routines.name,
       exerciseCount: sql<number>`(
@@ -299,5 +319,5 @@ export async function startableDays(db: DbClient, userId: string): Promise<Start
     // Nulls first: a day you have never run is the one most likely to be next.
     .orderBy(sql`${lastRun} asc nulls first`, asc(routines.createdAt), asc(routineDays.dayIndex));
 
-  return rows.filter((row) => row.exerciseCount > 0);
+  return rows.filter((row) => row.kind === "rest" || row.exerciseCount > 0);
 }

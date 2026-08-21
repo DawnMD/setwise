@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { isDefinedError } from "@orpc/client";
-import { Settings } from "lucide-react";
+import { BedDouble, Settings } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -11,6 +11,7 @@ import { formatWeight, formatWhen } from "@/lib/format";
 import { orpc } from "@/lib/orpc";
 import { uuidv7 } from "@/lib/uuid";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
@@ -19,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 
 import { Elapsed } from "./elapsed";
+import { LogRestDialog, type RestLogTarget } from "./log-rest-dialog";
 
 /**
  * The screen the app opens on.
@@ -30,10 +32,18 @@ import { Elapsed } from "./elapsed";
 export function TrainHome() {
   const router = useRouter();
   const [error, setError] = React.useState<string | null>(null);
+  const [restTarget, setRestTarget] = React.useState<RestLogTarget | null>(null);
+  const [timeZone] = React.useState(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+  );
 
   const active = useQuery(orpc.session.active.queryOptions({ staleTime: 0 }));
   const recent = useQuery(orpc.session.recent.queryOptions({ input: { limit: 10 } }));
   const upcoming = useQuery(orpc.plan.upcoming.queryOptions({ staleTime: 60_000 }));
+  const restToday = useQuery(
+    orpc.session.restToday.queryOptions({ input: { timeZone }, staleTime: 60_000 }),
+  );
+  const hasPlannedRest = upcoming.data?.some((day) => day.kind === "rest") ?? false;
 
   const start = useMutation(
     orpc.session.start.mutationOptions({
@@ -63,7 +73,14 @@ export function TrainHome() {
         </Link>
       </header>
 
-      {active.data ? (
+      {active.isPending ? (
+        <Skeleton className="h-28 w-full" />
+      ) : active.isError ? (
+        <Alert variant="destructive">
+          <AlertTitle>Couldn&apos;t check your workout</AlertTitle>
+          <AlertDescription>Check your connection and try again.</AlertDescription>
+        </Alert>
+      ) : active.data ? (
         <Card>
           <CardHeader>
             <CardTitle>Workout in progress</CardTitle>
@@ -85,39 +102,79 @@ export function TrainHome() {
         <div className="flex flex-col gap-2">
           {/* Least recently run first, so the day at the top is almost always
               the right one and the rotation looks after itself. */}
-          {upcoming.data?.map((day, index) => (
-            <Item key={day.id} variant="outline" className="min-h-14">
-              <ItemContent>
-                <ItemTitle className="text-[15px]">{day.name}</ItemTitle>
-                <ItemDescription>
-                  {day.routineName} · {day.exerciseCount}{" "}
-                  {day.exerciseCount === 1 ? "exercise" : "exercises"}
-                  {day.lastRunAt
-                    ? ` · last run ${formatWhen(new Date(day.lastRunAt)).toLowerCase()}`
-                    : " · never run"}
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <Button
-                  variant={index === 0 ? "default" : "outline"}
-                  size="touch"
-                  disabled={start.isPending || active.isPending}
-                  onClick={() => {
-                    setError(null);
-                    start.mutate({ id: uuidv7(), routineDayId: day.id, notes: null });
-                  }}
-                >
-                  Start
-                </Button>
-              </ItemActions>
-            </Item>
-          ))}
+          {upcoming.isPending ? (
+            <div className="flex flex-col gap-2">
+              {[0, 1].map((row) => (
+                <Skeleton key={row} className="h-14 w-full" />
+              ))}
+            </div>
+          ) : upcoming.isError ? (
+            <Alert variant="destructive">
+              <AlertTitle>Couldn&apos;t load upcoming days</AlertTitle>
+              <AlertDescription>Check your connection and try again.</AlertDescription>
+            </Alert>
+          ) : (
+            upcoming.data.map((day, index) => (
+              <Item key={day.id} variant="outline" className="min-h-14">
+                <ItemContent>
+                  <ItemTitle className="text-[15px]">
+                    {day.name}
+                    {day.kind === "rest" ? <Badge variant="secondary">Rest</Badge> : null}
+                  </ItemTitle>
+                  <ItemDescription>
+                    {day.routineName}
+                    {day.kind === "workout"
+                      ? ` · ${day.exerciseCount} ${day.exerciseCount === 1 ? "exercise" : "exercises"}`
+                      : ""}
+                    {day.lastRunAt
+                      ? ` · last ${day.kind === "rest" ? "rested" : "run"} ${formatWhen(new Date(day.lastRunAt)).toLowerCase()}`
+                      : ` · never ${day.kind === "rest" ? "rested" : "run"}`}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <Button
+                    variant={index === 0 ? "default" : "outline"}
+                    size="touch"
+                    disabled={
+                      start.isPending ||
+                      (day.kind === "rest" &&
+                        (restToday.isPending || restToday.isError || restToday.data !== null))
+                    }
+                    onClick={() => {
+                      setError(null);
+                      if (day.kind === "rest") {
+                        setRestTarget({
+                          id: uuidv7(),
+                          routineDayId: day.id,
+                          dayName: day.name,
+                          routineName: day.routineName,
+                        });
+                      } else {
+                        start.mutate({ id: uuidv7(), routineDayId: day.id, notes: null });
+                      }
+                    }}
+                  >
+                    {day.kind === "rest" && restToday.isPending ? (
+                      <Spinner data-icon="inline-start" />
+                    ) : null}
+                    {day.kind === "rest"
+                      ? restToday.data
+                        ? "Rest logged"
+                        : restToday.isPending
+                          ? "Checking…"
+                          : "Log rest"
+                      : "Start"}
+                  </Button>
+                </ItemActions>
+              </Item>
+            ))
+          )}
 
           <Button
             variant={upcoming.data && upcoming.data.length > 0 ? "secondary" : "default"}
             size="touch"
             className="w-full"
-            disabled={start.isPending || active.isPending}
+            disabled={start.isPending}
             onClick={() => {
               setError(null);
               start.mutate({ id: uuidv7(), routineDayId: null, notes: null });
@@ -130,6 +187,42 @@ export function TrainHome() {
                 ? "Start an empty workout"
                 : "Start workout"}
           </Button>
+          {upcoming.data && hasPlannedRest && restToday.isError ? (
+            <Alert variant="destructive">
+              <AlertTitle>Couldn&apos;t check today&apos;s rest</AlertTitle>
+              <AlertDescription>Check your connection and try again.</AlertDescription>
+            </Alert>
+          ) : null}
+          {upcoming.data && !hasPlannedRest ? (
+            restToday.isError ? (
+              <Alert variant="destructive">
+                <AlertTitle>Couldn&apos;t check today&apos;s rest</AlertTitle>
+                <AlertDescription>Check your connection and try again.</AlertDescription>
+              </Alert>
+            ) : (
+              <Button
+                variant="outline"
+                size="touch"
+                className="w-full"
+                disabled={start.isPending || restToday.isPending || restToday.data !== null}
+                onClick={() => {
+                  setError(null);
+                  setRestTarget({ id: uuidv7(), routineDayId: null });
+                }}
+              >
+                {restToday.isPending ? (
+                  <Spinner data-icon="inline-start" />
+                ) : (
+                  <BedDouble data-icon="inline-start" />
+                )}
+                {restToday.data
+                  ? "Rest logged today"
+                  : restToday.isPending
+                    ? "Checking today’s rest…"
+                    : "Log rest day"}
+              </Button>
+            )
+          ) : null}
           {error ? (
             <Alert variant="destructive">
               <AlertTitle>Couldn&apos;t start a workout</AlertTitle>
@@ -140,7 +233,7 @@ export function TrainHome() {
       )}
 
       <section className="mt-4 flex flex-col gap-2">
-        <h2 className="font-heading text-sm font-semibold">Recent workouts</h2>
+        <h2 className="font-heading text-sm font-semibold">Recent activity</h2>
 
         {recent.isPending ? (
           <div className="flex flex-col gap-2">
@@ -155,8 +248,10 @@ export function TrainHome() {
           </Alert>
         ) : recent.data.length === 0 ? (
           <Empty className="border">
-            <EmptyTitle>No workouts yet</EmptyTitle>
-            <EmptyDescription>Start one and it will show up here.</EmptyDescription>
+            <EmptyTitle>No activity yet</EmptyTitle>
+            <EmptyDescription>
+              Start a workout or log rest and it will show up here.
+            </EmptyDescription>
           </Empty>
         ) : (
           recent.data.map((session) => (
@@ -168,25 +263,39 @@ export function TrainHome() {
             >
               <ItemContent>
                 <ItemTitle className="text-[15px]">
-                  {formatWhen(new Date(session.startedAt))}
-                  {session.endedAt === null ? " · unfinished" : ""}
+                  {session.kind === "rest"
+                    ? (session.dayName ?? "Rest day")
+                    : formatWhen(new Date(session.startedAt))}
+                  {session.kind === "workout" && session.endedAt === null ? " · unfinished" : ""}
                 </ItemTitle>
                 <ItemDescription>
-                  {session.exerciseNames.length > 0
-                    ? session.exerciseNames.slice(0, 3).join(", ")
-                    : "No sets logged"}
+                  {session.kind === "rest"
+                    ? session.routineName
+                      ? `${session.routineName} · ${formatWhen(new Date(session.startedAt))}`
+                      : formatWhen(new Date(session.startedAt))
+                    : session.exerciseNames.length > 0
+                      ? session.exerciseNames.slice(0, 3).join(", ")
+                      : "No sets logged"}
                 </ItemDescription>
               </ItemContent>
-              <ItemContent className="numeric flex-none text-right">
-                <ItemTitle className="text-xs text-muted-foreground">
-                  {session.workingSetCount} sets
-                </ItemTitle>
-                <ItemDescription>{formatWeight(Math.round(session.tonnage))} kg</ItemDescription>
-              </ItemContent>
+              {session.kind === "rest" ? (
+                <ItemActions>
+                  <Badge variant="secondary">Rest</Badge>
+                </ItemActions>
+              ) : (
+                <ItemContent className="numeric flex-none text-right">
+                  <ItemTitle className="text-xs text-muted-foreground">
+                    {session.workingSetCount} sets
+                  </ItemTitle>
+                  <ItemDescription>{formatWeight(Math.round(session.tonnage))} kg</ItemDescription>
+                </ItemContent>
+              )}
             </Item>
           ))
         )}
       </section>
+
+      <LogRestDialog target={restTarget} onOpenChange={(open) => !open && setRestTarget(null)} />
     </div>
   );
 }

@@ -1,9 +1,10 @@
 import { and, asc, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 
-import type { DbClient } from "@/db";
-import { exercises, sets, workoutSessions } from "@/db/schema";
+import type { Db, DbClient } from "@/db";
+import { exercises, routineDays, routines, sets, workoutSessions } from "@/db/schema";
 import type { SetInput } from "@/db/validators";
-import { sessionPlan, type SessionPlan } from "./plan";
+import type { ActivityKind } from "@/lib/activity";
+import { findDay, sessionPlan, type SessionPlan } from "./plan";
 
 export type SetRow = {
   id: string;
@@ -26,6 +27,7 @@ export type SessionExercise = {
 
 export type SessionDetail = {
   id: string;
+  kind: ActivityKind;
   startedAt: Date;
   endedAt: Date | null;
   notes: string | null;
@@ -64,6 +66,99 @@ export async function findSession(db: DbClient, userId: string, sessionId: strin
   return row ?? null;
 }
 
+export type RestDayLogErrorCode =
+  | "SESSION_ALREADY_ACTIVE"
+  | "DAY_NOT_FOUND"
+  | "DAY_IS_WORKOUT"
+  | "REST_ALREADY_LOGGED"
+  | "SESSION_ID_CONFLICT";
+
+export class RestDayLogError extends Error {
+  constructor(
+    readonly code: RestDayLogErrorCode,
+    readonly sessionId?: string,
+  ) {
+    super(code);
+    this.name = "RestDayLogError";
+  }
+}
+
+/** The user's rest activity for their current local calendar day, if one exists. */
+export async function restLoggedToday(db: DbClient, userId: string, timeZone: string) {
+  const [row] = await db
+    .select()
+    .from(workoutSessions)
+    .where(
+      and(
+        eq(workoutSessions.userId, userId),
+        eq(workoutSessions.kind, "rest"),
+        sql`(${workoutSessions.startedAt} at time zone ${timeZone})::date = (now() at time zone ${timeZone})::date`,
+      ),
+    )
+    .orderBy(desc(workoutSessions.startedAt))
+    .limit(1);
+
+  return row ?? null;
+}
+
+/** Stores one instantaneous rest activity per local day and makes same-id retries a no-op. */
+export async function logRestDay(
+  db: Db,
+  userId: string,
+  input: { id: string; routineDayId: string | null; timeZone: string },
+) {
+  return db.transaction(async (tx) => {
+    // The rule is user-and-local-day based, so it cannot be represented by a
+    // simple unique index. Serializing this user's rest writes closes the race
+    // between two open tabs without locking anyone else's activity.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`rest-day:${userId}`}))`);
+
+    const existing = await findSession(tx, userId, input.id);
+    if (existing) {
+      if (existing.kind === "rest") return existing;
+      throw new RestDayLogError("SESSION_ID_CONFLICT");
+    }
+
+    const [open] = await tx
+      .select({ id: workoutSessions.id })
+      .from(workoutSessions)
+      .where(and(eq(workoutSessions.userId, userId), isNull(workoutSessions.endedAt)))
+      .limit(1);
+
+    if (open) throw new RestDayLogError("SESSION_ALREADY_ACTIVE", open.id);
+
+    if (input.routineDayId) {
+      const day = await findDay(tx, userId, input.routineDayId);
+      if (!day) throw new RestDayLogError("DAY_NOT_FOUND");
+      if (day.kind !== "rest") throw new RestDayLogError("DAY_IS_WORKOUT");
+    }
+
+    const restToday = await restLoggedToday(tx, userId, input.timeZone);
+    if (restToday) throw new RestDayLogError("REST_ALREADY_LOGGED", restToday.id);
+
+    const completedAt = new Date();
+    const [created] = await tx
+      .insert(workoutSessions)
+      .values({
+        id: input.id,
+        userId,
+        routineDayId: input.routineDayId,
+        kind: "rest",
+        startedAt: completedAt,
+        endedAt: completedAt,
+      })
+      .onConflictDoNothing({ target: workoutSessions.id })
+      .returning();
+
+    if (created) return created;
+
+    // A concurrent retry can lose the insert race and still be successful.
+    const retried = await findSession(tx, userId, input.id);
+    if (retried?.kind === "rest") return retried;
+    throw new RestDayLogError("SESSION_ID_CONFLICT");
+  });
+}
+
 export async function getSessionDetail(
   db: DbClient,
   userId: string,
@@ -94,6 +189,7 @@ export async function getSessionDetail(
 
   return {
     id: session.id,
+    kind: session.kind,
     startedAt: session.startedAt,
     endedAt: session.endedAt,
     notes: session.notes,
@@ -190,15 +286,18 @@ export async function exerciseIsVisible(
 
 export type SessionSummary = {
   id: string;
+  kind: ActivityKind;
   startedAt: Date;
   endedAt: Date | null;
+  routineName: string | null;
+  dayName: string | null;
   setCount: number;
   workingSetCount: number;
   tonnage: number;
   exerciseNames: string[];
 };
 
-/** The recent-workouts list on the train screen. */
+/** The recent-activity list on the train screen. */
 export async function recentSessions(
   db: DbClient,
   userId: string,
@@ -207,8 +306,11 @@ export async function recentSessions(
   const rows = await db
     .select({
       id: workoutSessions.id,
+      kind: workoutSessions.kind,
       startedAt: workoutSessions.startedAt,
       endedAt: workoutSessions.endedAt,
+      routineName: routines.name,
+      dayName: routineDays.name,
       setCount: sql<number>`count(${sets.id})::int`,
       workingSetCount: sql<number>`(count(${sets.id}) filter (where ${sets.isWarmup} = false))::int`,
       tonnage: sql<number>`coalesce((sum(${sets.weight} * ${sets.reps}) filter (where ${sets.isWarmup} = false)), 0)::float8`,
@@ -217,10 +319,12 @@ export async function recentSessions(
       >`coalesce(array_agg(distinct ${exercises.name}) filter (where ${exercises.name} is not null), '{}'::text[])`,
     })
     .from(workoutSessions)
+    .leftJoin(routineDays, eq(routineDays.id, workoutSessions.routineDayId))
+    .leftJoin(routines, eq(routines.id, routineDays.routineId))
     .leftJoin(sets, eq(sets.sessionId, workoutSessions.id))
     .leftJoin(exercises, eq(exercises.id, sets.exerciseId))
     .where(eq(workoutSessions.userId, userId))
-    .groupBy(workoutSessions.id)
+    .groupBy(workoutSessions.id, routineDays.name, routines.name)
     .orderBy(desc(workoutSessions.startedAt))
     .limit(limit);
 

@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isDefinedError } from "@orpc/client";
-import { ChevronDown, ChevronUp, MoreVertical, Play, Plus } from "lucide-react";
+import { BedDouble, ChevronDown, ChevronUp, MoreVertical, Play, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
@@ -10,6 +10,7 @@ import { orpc } from "@/lib/orpc";
 import { describeTargets, type Targets } from "@/lib/targets";
 import { uuidv7 } from "@/lib/uuid";
 import { ExercisePicker } from "@/components/logger/exercise-picker";
+import { LogRestDialog, type RestLogTarget } from "@/components/logger/log-rest-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -21,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import {
@@ -30,9 +32,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Empty, EmptyContent, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { RoutineNameForm } from "./routine-name-form";
@@ -47,7 +56,8 @@ type PlannedExercise = {
 
 type Dialog =
   | { kind: "rename-routine" }
-  | { kind: "add-day" }
+  | { kind: "add-workout-day" }
+  | { kind: "add-rest-day" }
   | { kind: "rename-day"; dayId: string; name: string }
   | { kind: "delete-day"; dayId: string; name: string }
   | { kind: "delete-routine" }
@@ -70,8 +80,15 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
 
   const [activeDay, setActiveDay] = React.useState<string | null>(null);
   const [dialog, setDialog] = React.useState<Dialog>(null);
+  const [restTarget, setRestTarget] = React.useState<RestLogTarget | null>(null);
+  const [timeZone] = React.useState(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+  );
   const [pickerOpen, setPickerOpen] = React.useState(false);
   const [startError, setStartError] = React.useState<string | null>(null);
+  const restToday = useQuery(
+    orpc.session.restToday.queryOptions({ input: { timeZone }, staleTime: 60_000 }),
+  );
 
   const refresh = React.useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: options.queryKey });
@@ -182,8 +199,11 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
               <DropdownMenuItem onClick={() => setDialog({ kind: "rename-routine" })}>
                 Rename routine
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDialog({ kind: "add-day" })}>
-                Add a day
+              <DropdownMenuItem onClick={() => setDialog({ kind: "add-workout-day" })}>
+                Add workout day
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDialog({ kind: "add-rest-day" })}>
+                Add rest day
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() =>
@@ -210,9 +230,17 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
             Add the first one — Push, Upper, Legs, whatever it is.
           </EmptyDescription>
           <EmptyContent>
-            <Button size="touch" onClick={() => setDialog({ kind: "add-day" })}>
+            <Button size="touch" onClick={() => setDialog({ kind: "add-workout-day" })}>
               <Plus data-icon="inline-start" />
-              Add a day
+              Add workout day
+            </Button>
+            <Button
+              variant="secondary"
+              size="touch"
+              onClick={() => setDialog({ kind: "add-rest-day" })}
+            >
+              <BedDouble data-icon="inline-start" />
+              Add rest day
             </Button>
           </EmptyContent>
         </Empty>
@@ -222,6 +250,7 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
             {days.map((day) => (
               <TabsTrigger key={day.id} value={day.id} className="h-11 shrink-0">
                 {day.name}
+                {day.kind === "rest" ? <Badge variant="secondary">Rest</Badge> : null}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -280,7 +309,17 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
                 </DropdownMenu>
               </div>
 
-              {day.exercises.length === 0 ? (
+              {day.kind === "rest" ? (
+                <Empty className="border border-dashed">
+                  <EmptyMedia variant="icon">
+                    <BedDouble />
+                  </EmptyMedia>
+                  <EmptyTitle>Recovery day</EmptyTitle>
+                  <EmptyDescription>
+                    Take the day off training and come back recovered for the next one.
+                  </EmptyDescription>
+                </Empty>
+              ) : day.exercises.length === 0 ? (
                 <Empty className="border border-dashed">
                   <EmptyTitle>Nothing on {day.name} yet</EmptyTitle>
                   <EmptyDescription>
@@ -348,15 +387,17 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
                 ))
               )}
 
-              <Button
-                variant="secondary"
-                size="touch"
-                className="w-full"
-                onClick={() => setPickerOpen(true)}
-              >
-                <Plus data-icon="inline-start" />
-                Add exercise
-              </Button>
+              {day.kind === "workout" ? (
+                <Button
+                  variant="secondary"
+                  size="touch"
+                  className="w-full"
+                  onClick={() => setPickerOpen(true)}
+                >
+                  <Plus data-icon="inline-start" />
+                  Add exercise
+                </Button>
+              ) : null}
             </TabsContent>
           ))}
         </Tabs>
@@ -369,21 +410,55 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
         </Alert>
       ) : null}
 
+      {currentDay?.kind === "rest" && restToday.isError ? (
+        <Alert variant="destructive">
+          <AlertTitle>Couldn&apos;t check today&apos;s rest</AlertTitle>
+          <AlertDescription>Check your connection and try again.</AlertDescription>
+        </Alert>
+      ) : null}
+
       {/* Running the day is the point of the screen, so it sits in the bottom
           third under the thumb rather than beside the day's name. */}
-      {currentDay && currentDay.exercises.length > 0 ? (
+      {currentDay &&
+      (currentDay.kind === "rest" ||
+        (currentDay.kind === "workout" && currentDay.exercises.length > 0)) ? (
         <div className="sticky bottom-0 -mx-4 mt-auto border-t bg-card px-4 py-3">
           <Button
             size="touch"
             className="w-full"
-            disabled={startSession.isPending}
+            disabled={
+              (currentDay.kind === "workout" && startSession.isPending) ||
+              (currentDay.kind === "rest" &&
+                (restToday.isPending || restToday.isError || restToday.data !== null))
+            }
             onClick={() => {
-              setStartError(null);
-              startSession.mutate({ id: uuidv7(), routineDayId: currentDay.id, notes: null });
+              if (currentDay.kind === "rest") {
+                setRestTarget({
+                  id: uuidv7(),
+                  routineDayId: currentDay.id,
+                  dayName: currentDay.name,
+                  routineName: detail.name,
+                });
+              } else {
+                setStartError(null);
+                startSession.mutate({ id: uuidv7(), routineDayId: currentDay.id, notes: null });
+              }
             }}
           >
-            <Play data-icon="inline-start" />
-            Start {currentDay.name}
+            {currentDay.kind === "rest" && restToday.isPending ? (
+              <Spinner data-icon="inline-start" />
+            ) : currentDay.kind === "rest" ? (
+              <BedDouble data-icon="inline-start" />
+            ) : (
+              <Play data-icon="inline-start" />
+            )}
+            {currentDay.kind === "rest"
+              ? restToday.data
+                ? "Rest logged today"
+                : restToday.isPending
+                  ? "Checking today’s rest…"
+                  : "Log rest day"
+              : `Start ${currentDay.name}`}
           </Button>
         </div>
       ) : null}
@@ -410,15 +485,27 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
       />
 
       <RoutineNameForm
-        open={dialog?.kind === "add-day"}
+        open={dialog?.kind === "add-workout-day"}
         onOpenChange={(open) => !open && close()}
-        title="Add a day"
+        title="Add workout day"
         kind="day"
         label="Day name"
         placeholder="Push"
         saveLabel="Add day"
         pending={addDay.isPending}
-        onSave={(name) => addDay.mutateAsync({ routineId: detail.id, name })}
+        onSave={(name) => addDay.mutateAsync({ routineId: detail.id, name, kind: "workout" })}
+      />
+
+      <RoutineNameForm
+        open={dialog?.kind === "add-rest-day"}
+        onOpenChange={(open) => !open && close()}
+        title="Add rest day"
+        kind="day"
+        label="Day name"
+        initialValue="Rest day"
+        saveLabel="Add rest day"
+        pending={addDay.isPending}
+        onSave={(name) => addDay.mutateAsync({ routineId: detail.id, name, kind: "rest" })}
       />
 
       <RoutineNameForm
@@ -508,6 +595,12 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <LogRestDialog
+        target={restTarget}
+        onOpenChange={(open) => !open && setRestTarget(null)}
+        onLogged={refresh}
+      />
     </div>
   );
 }

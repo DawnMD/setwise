@@ -10,6 +10,7 @@
 
 import { z } from "zod";
 
+import { ACTIVITY_KINDS } from "@/lib/activity";
 import { MUSCLE_SLUGS } from "@/lib/muscles";
 
 /** `numeric(6, 2)`: four digits before the point, two after. */
@@ -23,6 +24,8 @@ export const RPE_MAX = 10;
 export const RPE_STEP = 0.5;
 
 export const uuid = z.uuid();
+
+export const activityKind = z.enum(ACTIVITY_KINDS);
 
 /**
  * Weight is always kilograms. `user.unitPref` is a display concern, so a unit

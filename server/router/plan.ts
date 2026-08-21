@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import type { DbClient } from "@/db";
 import { routineDays, routineExercises, routines } from "@/db/schema";
-import { dayName, routineExerciseTargets, routineName, uuid } from "@/db/validators";
+import { activityKind, dayName, routineExerciseTargets, routineName, uuid } from "@/db/validators";
 import { protectedProcedure } from "../orpc";
 import { exerciseIsVisible } from "../queries/session";
 import {
@@ -25,6 +25,9 @@ const planProcedure = protectedProcedure.errors({
   },
   EXERCISE_NOT_FOUND: {
     message: "That exercise isn't in your catalogue.",
+  },
+  DAY_IS_REST: {
+    message: "Exercises can't be added to a rest day.",
   },
 });
 
@@ -134,7 +137,7 @@ export const planRouter = {
     }),
 
   addDay: planProcedure
-    .input(z.object({ routineId: uuid, name: dayName }))
+    .input(z.object({ routineId: uuid, name: dayName, kind: activityKind.default("workout") }))
     .handler(async ({ input, context, errors }) => {
       const routine = await findRoutine(context.db, context.userId, input.routineId);
       if (!routine) throw errors.ROUTINE_NOT_FOUND();
@@ -143,7 +146,7 @@ export const planRouter = {
 
       const [row] = await context.db
         .insert(routineDays)
-        .values({ routineId: input.routineId, dayIndex, name: input.name })
+        .values({ routineId: input.routineId, dayIndex, name: input.name, kind: input.kind })
         .returning();
       return row;
     }),
@@ -212,6 +215,7 @@ export const planRouter = {
     .handler(async ({ input, context, errors }) => {
       const day = await findDay(context.db, context.userId, input.routineDayId);
       if (!day) throw errors.DAY_NOT_FOUND();
+      if (day.kind === "rest") throw errors.DAY_IS_REST();
 
       if (!(await exerciseIsVisible(context.db, context.userId, input.exerciseId))) {
         throw errors.EXERCISE_NOT_FOUND();

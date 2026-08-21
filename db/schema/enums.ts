@@ -1,5 +1,9 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
+import { ACTIVITY_KINDS } from "@/lib/activity";
+
+export const activityKindEnum = pgEnum("activity_kind", ACTIVITY_KINDS);
+
 export const bodySideEnum = pgEnum("body_side", ["front", "back", "both"]);
 
 export const muscleRoleEnum = pgEnum("muscle_role", ["primary", "secondary"]);
