@@ -11,12 +11,12 @@ This is the master plan for Setwise. It records what has shipped, what the produ
 | 2     | Plans and rest days        | Built                                             |
 | 3     | Progress analytics         | Built                                             |
 | 4     | Bodyweight                 | Built                                             |
-| 5     | Onboarding and body screen | Not started                                       |
+| 5     | Onboarding and body screen | Built                                             |
 | 6     | Home screen                | Not started                                       |
 | 7     | Social                     | Database groundwork only                          |
 | 8     | Hardening                  | In progress                                       |
 
-Phases 3 and 4 currently share the Progress screen. Phase 7 has friendship and visibility tables plus usernames, but no router, route, or UI. Those are foundations, not a finished social feature.
+Phase 5 moved bodyweight out of Progress onto its own Body screen, so phase 3 now has the Progress screen to itself. Phase 7 has friendship and visibility tables plus usernames, but no router, route, or UI. Those are foundations, not a finished social feature.
 
 ## Decisions that are settled
 
@@ -55,7 +55,7 @@ Framework code lives under `src`. Reusable product code remains in `components`,
 
 ### oRPC rules
 
-Put validation next to the Drizzle schema and reuse it at the API boundary. Define errors on the procedure that owns them. Group procedures by product area, not by table: `session`, `plan`, `stats`, `bodyweight`, and eventually `social`.
+Put validation next to the Drizzle schema and reuse it at the API boundary. Define errors on the procedure that owns them. Group procedures by product area, not by table: `session`, `plan`, `catalogue`, `stats`, `bodyweight`, `profile`, and eventually `social`.
 
 ## Data model and invariants
 
@@ -80,6 +80,7 @@ user
     sets
   bodyweight_logs
   personal_records
+  user_profiles (one row, every column nullable)
   friendships
   visibility
 ```
@@ -98,7 +99,7 @@ Postgres enforces the rules that would corrupt history if they were left to the 
 
 The load-bearing indexes remain `sets(exercise_id, performed_at)` and `workout_sessions(user_id, started_at)`.
 
-Phase 5 still needs a profile table. Its fields are height, sex, birth date, activity level, goal, target rate, protein grams per kilogram, fat grams per kilogram, an optional calorie override, and onboarding timestamps. Every field is nullable because every onboarding step can be skipped.
+`user_profiles` holds height, sex, birth date, activity level, goal, target rate, protein grams per kilogram, fat grams per kilogram, an optional calorie override, two onboarding timestamps, and the prompt dismissal date. Every field is nullable because every onboarding step can be skipped. The target rate is stored unsigned and takes its direction from the goal, so a row cannot say "lose" and "+0.5 kg a week" at once.
 
 ## Training math
 
@@ -129,7 +130,7 @@ Heatmap bands use weekly effective sets:
 
 These are useful landmarks, not a training prescription. A later relative mode may compare a user with their own trailing eight-week median.
 
-Phase 5 calculations use the seven-day bodyweight trend, not the latest weigh-in.
+Body calculations use the seven-day bodyweight trend, not the latest weigh-in. An empty trailing week produces no target rather than reaching further back for a stale weigh-in.
 
 ```text
 BMI = kg / (height_m * height_m)
@@ -141,7 +142,7 @@ TDEE = BMR * activity_factor
 calorie_target = TDEE + target_kg_per_week * 7700 / 7
 ```
 
-Activity factors are 1.2 sedentary, 1.375 light, 1.55 moderate, 1.725 very, and 1.9 athlete. The calorie target cannot fall below BMR without a clear explanation on screen.
+Activity factors are 1.2 sedentary, 1.375 light, 1.55 moderate, 1.725 very, and 1.9 athlete. A target that falls below BMR is shown with an explanation rather than raised, because the rate is the thing to change. Targets round to ten calories; the inputs never had four digits of precision.
 
 Protein defaults to 1.8 g/kg and fat to 0.8 g/kg. Carbohydrate gets the remaining calories at 4, 9, and 4 kcal per gram. If protein and fat exceed the target, reduce fat first, floor carbohydrate at zero, and report the shortfall.
 
@@ -190,9 +191,9 @@ Buttons name the result: "Finish workout", "Save set", "Log rest day". Empty sta
 
 ## Verification and release bar
 
-`pnpm test` runs the Postgres integration suite. It covers training math, ownership, plan ordering, confirmed set writes, PR maintenance, rest-day limits, bodyweight bucketing and trends, stable CSV output, and the muscle migration.
+`pnpm test` runs the Postgres integration suite. It covers training math, energy and macro math, ownership, plan ordering, confirmed set writes, PR maintenance, rest-day limits, bodyweight bucketing and trends, profile patch semantics, stable CSV output, and the muscle migration.
 
-`pnpm test:e2e` runs the Playwright Chromium smoke suite against the production server. It covers sign-up, sign-in, guarded routes, set creation and editing, in-memory draft boundaries, theme, export, sign-out, and client navigation.
+`pnpm test:e2e` runs the Playwright Chromium smoke suite against the production server. It covers sign-up, sign-in, guarded routes, the onboarding wizard, set creation and editing, in-memory draft boundaries, theme, export, sign-out, and client navigation.
 
 A change is ready when all of this passes:
 
@@ -240,7 +241,7 @@ Built:
 - CSV export for confirmed set history.
 - Clear failure state in the open drawer.
 
-The logger no longer uses optimistic rows, UUIDv7 write IDs, retry upserts, or persisted drafts. The remaining acceptance item is a full one-handed workout in a real gym. That test is overdue and should happen before phase 5 starts.
+The logger no longer uses optimistic rows, UUIDv7 write IDs, retry upserts, or persisted drafts. The remaining acceptance item is a full one-handed workout in a real gym. That test is overdue. Phase 5 shipped without it, so it now blocks the phase 8 sign-off.
 
 Phase notes: [phase-1.md](phase-1.md).
 
@@ -287,29 +288,28 @@ Built:
 - The same 7, 30, and 90-day control used by progress analytics.
 - Theme controls and authenticated CSV downloads in Settings.
 
-Bodyweight still lives inside Progress. Moving it to a dedicated Body screen belongs to phase 5.
-
 Phase notes: [phase-4.md](phase-4.md).
-
-## Work remaining
 
 ### Phase 5: onboarding and the body screen
 
-Build the profile and the calculations that depend on it:
+Built:
 
-- Add the nullable profile table described above.
-- Run a first-use wizard after sign-up and save after each step.
-- Let every step be skipped.
-- Calculate BMI, BMR, TDEE, calorie target, and macro targets.
-- Recalculate targets from the seven-day weight trend.
-- Add overrides for people who already know their targets.
-- Move bodyweight into a dedicated Body screen with today's weigh-in first.
-- Tell existing accounts what information is missing.
-- Let the home prompt be dismissed for two weeks. Keep the prompt on Body and Settings until the profile is complete.
+- A nullable `user_profiles` table, one row per user.
+- A five-step wizard after sign-up, saved a step at a time, every step skippable.
+- BMI, BMR, TDEE, calorie target, and macro targets, all from one library.
+- Targets recalculated from the seven-day weight trend.
+- Calorie, protein, and fat overrides for people who already know their numbers.
+- A dedicated Body screen with today's weigh-in first, and Body as the fourth tab.
+- A prompt that names the answers an existing account is missing.
+- Two-week dismissal on Train, permanent on Body and Settings.
 
 This phase calculates targets. It does not track food.
 
-Done when a new account can reach a calorie target without leaving Setwise, and an old account gets a useful prompt instead of a blank card.
+The dismissible prompt lives on Train because Train is where the app opens. Phase 6 should move that copy to Home.
+
+Phase notes: [phase-5.md](phase-5.md).
+
+## Work remaining
 
 ### Phase 6: home screen
 
@@ -318,11 +318,11 @@ Build one useful first screen:
 - Show an active workout or the next planned day.
 - Show this week's sets and tonnage.
 - Show the bodyweight direction.
-- Show today's calorie and protein targets when phase 5 has enough data.
+- Show today's calorie and protein targets when the profile has enough data.
 - Show any muscle with no work in the selected weekly window.
 - Fetch the summary through one server procedure.
 - Change `/` from a redirect to the Home screen.
-- Expand navigation to Home, Train, Progress, Plan, and Body.
+- Add Home to the navigation, which already carries Train, Progress, Body, and Plan.
 
 Every number on Home must link to the screen that owns it. Home is a summary, not a second place to edit data.
 
@@ -374,9 +374,8 @@ CSV export remains account portability. It is not an offline workout store.
 ## Order of work
 
 1. Finish the real-gym acceptance pass and fix what it exposes.
-2. Build phase 5.
-3. Build phase 6.
-4. Finish the phase 8 accessibility, browser, migration, and deployment checks.
-5. Build phase 7 only when users have enough history to make sharing useful.
+2. Build phase 6.
+3. Finish the phase 8 accessibility, browser, migration, and deployment checks.
+4. Build phase 7 only when users have enough history to make sharing useful.
 
 The riskiest existing data problem is still exercise tagging. Bad primary and secondary muscle factors flow straight into the heatmap. Hand-check the exercises people actually use before spending time polishing the long tail.
