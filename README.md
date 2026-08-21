@@ -28,6 +28,11 @@ npm run db:seed
 npm run dev
 ```
 
+`db:migrate` writes the eighteen muscle regions itself, so a migrated database
+can log training and save custom exercises straight away. `db:seed` adds the
+~800-exercise global catalogue on top and re-asserts the same muscle rows; it is
+idempotent and safe to run late or not at all.
+
 `BETTER_AUTH_SECRET` needs a real value before deploying: `openssl rand -base64 32`.
 Better Auth resolves its base URL per request. On Vercel, keep **Automatically
 expose System Environment Variables** enabled so the generated deployment,
@@ -44,7 +49,7 @@ branch and production domains are allowlisted without overriding
 | `npm run db:generate`  | Generate a migration from schema changes                 |
 | `npm run db:migrate`   | Apply committed migrations with Drizzle Kit              |
 | `npm run db:push`      | Sync directly after confirmation; local prototyping only |
-| `npm run db:seed`      | Seed muscles and the exercise catalogue. Idempotent.     |
+| `npm run db:seed`      | Seed the exercise catalogue. Optional, idempotent.       |
 | `npm test`             | Run all Vitest integration tests once                    |
 | `npm run test:watch`   | Re-run Vitest integration tests as files change          |
 | `npm run db:studio`    | Drizzle Studio                                           |
