@@ -10,6 +10,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 export type MuscleRole = "primary" | "secondary";
 
+export type MuscleSelection = { primary: MuscleSlug[]; secondary: MuscleSlug[] };
+
 /**
  * Tagging an exercise by tapping the body.
  *
@@ -35,7 +37,8 @@ export function MusclePicker({
   primary: MuscleSlug[];
   secondary: MuscleSlug[];
   invalid?: boolean;
-  onChange: (next: { primary: MuscleSlug[]; secondary: MuscleSlug[] }) => void;
+  /** Takes an updater, so the caller resolves it against its own current state. */
+  onChange: (update: (current: MuscleSelection) => MuscleSelection) => void;
 }) {
   const roleOf = React.useCallback(
     (slug: MuscleSlug): MuscleRole | null =>
@@ -43,23 +46,40 @@ export function MusclePicker({
     [primary, secondary],
   );
 
+  /**
+   * Cycling is expressed against whatever the selection is at the moment the
+   * tap is applied, not against the props this render closed over.
+   *
+   * Two taps inside one render — a fast double-tap, or a tap on the figure
+   * followed by one on a chip — would otherwise both read the same stale props
+   * and the second would overwrite the first. The muscle you tagged vanishes
+   * without a word, which is the silent under-reporting this screen exists to
+   * prevent.
+   */
   const cycle = React.useCallback(
     (slug: MuscleSlug) => {
-      const role = roleOf(slug);
-      const withoutSlug = {
-        primary: primary.filter((entry) => entry !== slug),
-        secondary: secondary.filter((entry) => entry !== slug),
-      };
+      onChange((current) => {
+        const role = current.primary.includes(slug)
+          ? "primary"
+          : current.secondary.includes(slug)
+            ? "secondary"
+            : null;
 
-      if (role === null) {
-        onChange({ ...withoutSlug, primary: [...withoutSlug.primary, slug] });
-      } else if (role === "primary") {
-        onChange({ ...withoutSlug, secondary: [...withoutSlug.secondary, slug] });
-      } else {
-        onChange(withoutSlug);
-      }
+        const withoutSlug = {
+          primary: current.primary.filter((entry) => entry !== slug),
+          secondary: current.secondary.filter((entry) => entry !== slug),
+        };
+
+        if (role === null) {
+          return { ...withoutSlug, primary: [...withoutSlug.primary, slug] };
+        }
+        if (role === "primary") {
+          return { ...withoutSlug, secondary: [...withoutSlug.secondary, slug] };
+        }
+        return withoutSlug;
+      });
     },
-    [onChange, primary, roleOf, secondary],
+    [onChange],
   );
 
   /**

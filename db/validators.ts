@@ -251,9 +251,24 @@ export const customExerciseInput = z.object({
   name: exerciseName,
   equipment: equipment.nullable(),
   movementPattern: movementPattern.nullable(),
-  primaryMuscles: z.array(z.enum(MUSCLE_SLUGS)).min(1, "Pick at least one primary muscle.").max(6),
-  secondaryMuscles: z.array(z.enum(MUSCLE_SLUGS)).max(8),
+  primaryMuscles: z
+    .array(z.enum(MUSCLE_SLUGS))
+    .min(1, "Pick at least one primary muscle.")
+    .max(6)
+    .transform(uniqueSlugs),
+  secondaryMuscles: z.array(z.enum(MUSCLE_SLUGS)).max(8).transform(uniqueSlugs),
 });
+
+/**
+ * A muscle tagged twice is the same tag, not two of them.
+ *
+ * `exercise_muscles` is keyed on (exercise, muscle), so a repeat would fail on
+ * insert; collapsing it here means a double-tap in the picker can never turn
+ * into an error the user has no way to act on.
+ */
+function uniqueSlugs<T extends string>(slugs: T[]): T[] {
+  return [...new Set(slugs)];
+}
 
 export type CustomExerciseInput = z.infer<typeof customExerciseInput>;
 export type RoutineExerciseTargets = z.infer<typeof routineExerciseTargets>;

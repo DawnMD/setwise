@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { exerciseMuscles, exercises, muscles } from "@/db/schema";
 import { customExerciseInput, PRIMARY_FACTOR, SECONDARY_FACTOR, uuid } from "@/db/validators";
-import { MUSCLE_SLUGS } from "@/lib/muscles";
+import { MUSCLE_SLUGS, muscleBySlug } from "@/lib/muscles";
 import { protectedProcedure, publicProcedure } from "../orpc";
 
 export const catalogueRouter = {
@@ -95,7 +95,12 @@ export const catalogueRouter = {
         message: "You already have an exercise with that name.",
       },
       UNKNOWN_MUSCLE: {
-        message: "That muscle isn't one of the eighteen regions.",
+        message: "This database is out of step with the app's eighteen muscle regions.",
+        data: z.object({ missing: z.array(z.string()) }),
+      },
+      MUSCLES_NOT_SEEDED: {
+        message: "The muscle list is missing from the database.",
+        data: z.object({ found: z.number(), expected: z.number() }),
       },
     })
     .input(customExerciseInput)
@@ -105,15 +110,39 @@ export const catalogueRouter = {
       const secondary = input.secondaryMuscles.filter(
         (slug) => !input.primaryMuscles.includes(slug),
       );
+      const wanted = [...input.primaryMuscles, ...secondary];
 
       const rows = await context.db
         .select({ id: muscles.id, slug: muscles.slug })
         .from(muscles)
-        .where(inArray(muscles.slug, [...input.primaryMuscles, ...secondary]));
+        .where(inArray(muscles.slug, wanted));
 
       const idBySlug = new Map(rows.map((row) => [row.slug, row.id]));
-      if (idBySlug.size !== input.primaryMuscles.length + secondary.length) {
-        throw errors.UNKNOWN_MUSCLE();
+      const missing = wanted.filter((slug) => !idBySlug.has(slug));
+
+      // Every slug here already passed `z.enum(MUSCLE_SLUGS)`, so a miss is
+      // never a bad tag from the picker — it is this database disagreeing with
+      // `lib/muscles.ts`. Saying which region is missing, and whether the table
+      // was seeded at all, is the difference between a one-command fix and an
+      // afternoon: the old message blamed the user's tagging for a deployment
+      // problem they could not see.
+      if (missing.length > 0) {
+        const [{ seeded }] = await context.db
+          .select({ seeded: sql<number>`count(*)::int` })
+          .from(muscles);
+
+        if (seeded < MUSCLE_SLUGS.length) {
+          throw errors.MUSCLES_NOT_SEEDED({
+            message: `This database has ${seeded} of the ${MUSCLE_SLUGS.length} muscle regions. Run \`npm run db:seed\` against it.`,
+            data: { found: seeded, expected: MUSCLE_SLUGS.length },
+          });
+        }
+
+        const named = missing.map((slug) => muscleBySlug(slug)?.displayName ?? slug);
+        throw errors.UNKNOWN_MUSCLE({
+          message: `This database has no muscle called ${named.join(", ")}. It is out of step with the app's eighteen regions.`,
+          data: { missing },
+        });
       }
 
       const slug = slugify(input.name);

@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { isDefinedError } from "@orpc/client";
+import { isDefinedError, ORPCError } from "@orpc/client";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { customExerciseInput, type CustomExerciseInput } from "@/db/validators";
@@ -51,6 +51,40 @@ type Equipment = (typeof EQUIPMENT)[number];
 type Pattern = (typeof PATTERNS)[number]["value"];
 
 /**
+ * Why an unnamed failure happened, for the errors the router does not declare.
+ *
+ * "Check your connection and try again" is right for exactly one cause and
+ * misleading for every other, and a wrong diagnosis costs more than none: it
+ * sends someone to their wifi settings over a field the server rejected. A
+ * rejected input names the field it came from; only a genuinely unrecognisable
+ * failure falls through to the network guess.
+ */
+function reasonFor(error: unknown): string {
+  if (error instanceof ORPCError) {
+    if (error.code === "BAD_REQUEST") {
+      const issues = (error.data as { issues?: Array<{ path?: unknown[]; message: string }> })
+        ?.issues;
+      const first = issues?.[0];
+      if (first) {
+        const field = FIELD_LABELS[String(first.path?.[0] ?? "")];
+        return field ? `${field}: ${first.message}` : first.message;
+      }
+    }
+    if (error.code === "UNAUTHORIZED") return error.message;
+  }
+
+  return "Couldn't save the exercise. Check your connection and try again.";
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  name: "Name",
+  equipment: "Equipment",
+  movementPattern: "Pattern",
+  primaryMuscles: "Muscles trained",
+  secondaryMuscles: "Muscles trained",
+};
+
+/**
  * Creating an exercise the catalogue does not have.
  *
  * Equipment matters beyond labelling: the plate maths only appears for
@@ -93,9 +127,9 @@ export function CustomExerciseForm({
       onError: (mutationError) => {
         form.setError("root.server", {
           type: "server",
-          message: isDefinedError(mutationError)
-            ? mutationError.message
-            : "Couldn't save the exercise. Check your connection and try again.",
+          // A named error from the router already carries a reason written for
+          // the person reading it. Anything else has to be diagnosed.
+          message: isDefinedError(mutationError) ? mutationError.message : reasonFor(mutationError),
         });
       },
     }),
@@ -228,7 +262,15 @@ export function CustomExerciseForm({
                         primary={primaryField.value}
                         secondary={secondaryField.value}
                         invalid={fieldState.invalid || secondaryState.invalid}
-                        onChange={(next) => {
+                        onChange={(update) => {
+                          // Read back through the form rather than through the
+                          // render's props: `getValues` is current the instant
+                          // `onChange` returns, so two taps landing in one
+                          // render still compose instead of overwriting.
+                          const next = update({
+                            primary: form.getValues("primaryMuscles"),
+                            secondary: form.getValues("secondaryMuscles"),
+                          });
                           primaryField.onChange(next.primary);
                           secondaryField.onChange(next.secondary);
                         }}
