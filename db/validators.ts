@@ -12,6 +12,7 @@ import { z } from "zod";
 
 import { ACTIVITY_KINDS } from "@/lib/activity";
 import { MUSCLE_SLUGS } from "@/lib/muscles";
+import { ACTIVITY_LEVELS, ageInYears, GOALS, SEXES } from "@/lib/nutrition";
 
 /** `numeric(6, 2)`: four digits before the point, two after. */
 export const WEIGHT_MAX = 9999.99;
@@ -265,3 +266,98 @@ function uniqueSlugs<T extends string>(slugs: T[]): T[] {
 
 export type CustomExerciseInput = z.infer<typeof customExerciseInput>;
 export type RoutineExerciseTargets = z.infer<typeof routineExerciseTargets>;
+
+/**
+ * The profile.
+ *
+ * These bounds are the `user_profiles` check constraints restated in Zod, so
+ * the wizard refuses a slipped decimal point before the network sees it and the
+ * database refuses it again if anything else ever writes the row.
+ */
+
+export const HEIGHT_MIN_CM = 100;
+export const HEIGHT_MAX_CM = 250;
+export const HEIGHT_STEP_CM = 1;
+
+export const heightCm = z
+  .number()
+  .min(HEIGHT_MIN_CM, "That doesn't look like a height in centimetres.")
+  .max(HEIGHT_MAX_CM, "That doesn't look like a height in centimetres.")
+  .refine((cm) => Math.abs(cm * 10 - Math.round(cm * 10)) < 1e-6, {
+    message: "Height goes to one decimal place.",
+  });
+
+export const sex = z.enum(SEXES);
+export const activityLevel = z.enum(ACTIVITY_LEVELS);
+export const goal = z.enum(GOALS);
+
+/**
+ * The floor is an account age, not a judgement about who trains. The ceiling
+ * exists so a mistyped year lands as an error rather than as a BMR calculated
+ * for a four-hundred-year-old.
+ */
+export const MIN_AGE = 13;
+export const MAX_AGE = 120;
+
+export const birthDate = isoDay
+  .refine((day) => {
+    const age = ageInYears(day);
+    return age !== null && age >= MIN_AGE && age <= MAX_AGE;
+  }, `Setwise needs a date of birth between ${MIN_AGE} and ${MAX_AGE} years ago.`)
+  .describe("The user's date of birth, used only for the age term in BMR.");
+
+/**
+ * Kilograms per week, unsigned: `goal` carries the direction.
+ *
+ * The ceiling is 1.5 because past roughly a percent of bodyweight a week the
+ * thing being lost stops being mostly fat, and a lifting app has no business
+ * making that easy to type.
+ */
+export const TARGET_RATE_MAX = 1.5;
+export const TARGET_RATE_STEP = 0.05;
+
+export const targetRateKg = z
+  .number()
+  .min(0, "A rate can't be negative — pick a goal instead.")
+  .max(TARGET_RATE_MAX, `${TARGET_RATE_MAX} kg a week is as fast as Setwise will plan for.`)
+  .refine((rate) => Math.abs(rate * 100 - Math.round(rate * 100)) < 1e-6, {
+    message: "Rate goes to two decimal places.",
+  });
+
+export const proteinPerKg = z
+  .number()
+  .min(0.5, "That's below what a lifter should be eating.")
+  .max(4, "That's more protein than anyone needs.");
+
+export const fatPerKg = z
+  .number()
+  .min(0.2, "Fat that low is a hormonal problem, not a diet.")
+  .max(3, "That's out of range for a fat target.");
+
+export const calorieOverride = z
+  .number()
+  .int("Calories are whole numbers.")
+  .min(800, "That's below what anyone should be eating without supervision.")
+  .max(8000, "That's out of range for a daily target.");
+
+/**
+ * A patch, not a full profile.
+ *
+ * Every onboarding step saves on its own and every step can be skipped, so a
+ * write says only what it knows. Absent means "leave it alone", explicit null
+ * means "clear it" — the difference matters on a form where blanking a field is
+ * a deliberate act and not touching it is the common one.
+ */
+export const profilePatch = z.object({
+  heightCm: heightCm.nullable().optional(),
+  sex: sex.nullable().optional(),
+  birthDate: birthDate.nullable().optional(),
+  activityLevel: activityLevel.nullable().optional(),
+  goal: goal.nullable().optional(),
+  targetRateKg: targetRateKg.nullable().optional(),
+  proteinPerKg: proteinPerKg.nullable().optional(),
+  fatPerKg: fatPerKg.nullable().optional(),
+  calorieOverride: calorieOverride.nullable().optional(),
+});
+
+export type ProfilePatch = z.infer<typeof profilePatch>;
