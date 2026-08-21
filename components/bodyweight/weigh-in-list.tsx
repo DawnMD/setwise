@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 
 import { formatWeight, formatWhen, parseIsoDay } from "@/lib/format";

@@ -6,6 +6,7 @@ import { STAT_WINDOWS } from "@/db/validators";
 import { type MuscleSlug, MUSCLES } from "@/lib/muscles";
 import { E1RM_MAX_REPS, E1RM_MIN_REPS } from "@/lib/math";
 import { volumeBand, type VolumeBand } from "@/lib/math";
+import "@tanstack/react-start/server-only";
 
 /**
  * The trailing window the relative-intensity reference is read over, fixed at

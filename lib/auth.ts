@@ -1,6 +1,8 @@
+import "@tanstack/react-start/server-only";
+
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { nextCookies } from "better-auth/next-js";
+import { tanstackStartCookies } from "better-auth/tanstack-start";
 
 import { db, schema } from "@/db";
 
@@ -58,7 +60,7 @@ export const auth = betterAuth({
     },
   },
 
-  plugins: [nextCookies()],
+  plugins: [tanstackStartCookies()],
 });
 
 export type Session = typeof auth.$Infer.Session;

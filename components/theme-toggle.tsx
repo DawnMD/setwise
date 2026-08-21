@@ -1,8 +1,6 @@
-"use client";
-
 import { Monitor, Moon, Sun } from "lucide-react";
-import { useTheme } from "next-themes";
 
+import { useTheme } from "@/components/theme-provider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const THEMES = [
@@ -25,7 +23,7 @@ export function ThemeToggle() {
       spacing={0}
       value={[theme ?? "system"]}
       onValueChange={([next]) => {
-        if (next) setTheme(next);
+        if (next === "system" || next === "light" || next === "dark") setTheme(next);
       }}
       aria-label="Theme"
       className="w-full"

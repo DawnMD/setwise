@@ -1,5 +1,3 @@
-"use client";
-
 import { formatEffectiveSets, formatTonnage } from "@/lib/format";
 import type { MuscleSlug } from "@/lib/muscles";
 import { cn } from "@/lib/utils";

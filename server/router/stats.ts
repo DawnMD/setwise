@@ -10,6 +10,7 @@ import {
   untrainedMuscles,
 } from "../queries/stats";
 import { protectedProcedure, publicProcedure } from "../orpc";
+import "@tanstack/react-start/server-only";
 
 /**
  * Volume and intensity, read across whatever window the user has selected. The

@@ -15,6 +15,7 @@ import {
   startableDays,
   swapDayOrder,
 } from "../queries/plan";
+import "@tanstack/react-start/server-only";
 
 const planProcedure = protectedProcedure.errors({
   ROUTINE_NOT_FOUND: {

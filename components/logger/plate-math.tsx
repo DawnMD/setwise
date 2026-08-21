@@ -1,5 +1,3 @@
-"use client";
-
 import { describeLoading, loadBar } from "@/lib/plates";
 import { formatWeight } from "@/lib/format";
 

@@ -1,5 +1,3 @@
-"use client";
-
 import { RPE_MAX, RPE_MIN, RPE_STEP } from "@/db/validators";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";

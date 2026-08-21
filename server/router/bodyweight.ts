@@ -3,6 +3,7 @@ import { z } from "zod";
 import { bodyweightLogInput, isoDay, statWindow, timeZone } from "@/db/validators";
 import { protectedProcedure } from "../orpc";
 import { bodyweightSeries, logBodyweight, removeBodyweight } from "../queries/bodyweight";
+import "@tanstack/react-start/server-only";
 
 const bodyweightProcedure = protectedProcedure.errors({
   LOG_NOT_FOUND: {

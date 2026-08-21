@@ -1,5 +1,3 @@
-"use client";
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Scale } from "lucide-react";
 import * as React from "react";

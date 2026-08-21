@@ -3,6 +3,7 @@ import { catalogueRouter } from "./catalogue";
 import { planRouter } from "./plan";
 import { sessionRouter } from "./session";
 import { statsRouter } from "./stats";
+import "@tanstack/react-start/server-only";
 
 /**
  * Routers are grouped by feature, not by table, and each lives in its own file.

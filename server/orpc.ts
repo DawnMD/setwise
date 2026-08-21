@@ -2,6 +2,7 @@ import { ORPCError, os } from "@orpc/server";
 
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
+import "@tanstack/react-start/server-only";
 
 export type ORPCContext = {
   headers: Headers;
