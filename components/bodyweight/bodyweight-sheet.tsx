@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { CalendarIcon } from "lucide-react";
 
 import {
   BODYWEIGHT_MAX,
@@ -12,6 +13,7 @@ import {
 import { formatWeight, formatWhen, parseIsoDay, toIsoDay } from "@/lib/format";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Drawer,
   DrawerContent,
@@ -19,8 +21,9 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Spinner } from "@/components/ui/spinner";
 import { NumberPad } from "@/components/logger/number-pad";
 
@@ -72,6 +75,7 @@ function OpenBodyweightSheet({
     initial.weight === null ? "" : formatWeight(initial.weight),
   );
   const [loggedOn, setLoggedOn] = React.useState(initial.loggedOn);
+  const [dayPickerOpen, setDayPickerOpen] = React.useState(false);
   const [note, setNote] = React.useState(initial.note ?? "");
   const [failed, setFailed] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -83,6 +87,8 @@ function OpenBodyweightSheet({
   const problem = weight === "" || check.success ? null : check.error.issues[0]?.message;
 
   const busy = pending || saving;
+  const selectedDay = parseIsoDay(loggedOn);
+  const today = parseIsoDay(toIsoDay());
 
   const save = async () => {
     if (!check.success) return;
@@ -132,33 +138,55 @@ function OpenBodyweightSheet({
           max={BODYWEIGHT_MAX}
         />
 
-        <div className="grid grid-cols-2 gap-2">
-          <Field>
+        <FieldGroup className="grid grid-cols-2 gap-2">
+          <Field className="min-w-0" data-disabled={isEdit || undefined}>
             <FieldLabel htmlFor="bodyweight-day">Day</FieldLabel>
-            {/* A real date input, not the custom pad: this is a picker rather
-                than a keyboard, and it already knows what today is. */}
-            <Input
-              id="bodyweight-day"
-              type="date"
-              className="h-11 text-base"
-              value={loggedOn}
-              max={toIsoDay()}
-              disabled={isEdit}
-              onChange={(event) => setLoggedOn(event.target.value || initial.loggedOn)}
-            />
+            <Popover open={dayPickerOpen} onOpenChange={setDayPickerOpen}>
+              <PopoverTrigger
+                render={
+                  <Button
+                    id="bodyweight-day"
+                    variant="outline"
+                    size="touch"
+                    className="w-full justify-between"
+                    disabled={isEdit}
+                  />
+                }
+              >
+                {selectedDay.toLocaleDateString(undefined, {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+                <CalendarIcon data-icon="inline-end" />
+              </PopoverTrigger>
+              <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                <Calendar
+                  mode="single"
+                  required
+                  selected={selectedDay}
+                  defaultMonth={selectedDay}
+                  disabled={{ after: today }}
+                  onSelect={(date) => {
+                    setLoggedOn(toIsoDay(date));
+                    setDayPickerOpen(false);
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
           </Field>
-          <Field>
+          <Field className="min-w-0">
             <FieldLabel htmlFor="bodyweight-note">Note</FieldLabel>
             <Input
               id="bodyweight-note"
-              className="h-11 text-base"
+              className="h-11 max-w-full text-base"
               placeholder="Optional"
               maxLength={280}
               value={note}
               onChange={(event) => setNote(event.target.value)}
             />
           </Field>
-        </div>
+        </FieldGroup>
 
         {failed ? (
           <Alert variant="destructive">
