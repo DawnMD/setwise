@@ -5,7 +5,6 @@ import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import * as schema from "../../db/schema";
-import { uuidv7 } from "../../lib/uuid";
 import { openSharedTestDatabase } from "./database";
 import { getRoutineDetail, listRoutines, startableDays } from "../../server/queries/plan";
 import { getSessionDetail, recentSessions } from "../../server/queries/session";
@@ -66,7 +65,7 @@ describe("rest-day acceptance", () => {
       .from(schema.exercises)
       .where(eq(schema.exercises.sourceId, "Barbell_Bench_Press_-_Medium_Grip"))
       .limit(1);
-    if (!bench) throw new Error("Seed is missing bench press. Run npm run db:seed.");
+    if (!bench) throw new Error("Seed is missing bench press. Run pnpm db:seed.");
     benchId = bench.id;
 
     const [routine] = await db
@@ -90,7 +89,7 @@ describe("rest-day acceptance", () => {
 
     const oldWorkout = new Date(Date.now() - 7 * 86_400_000);
     await db.insert(schema.workoutSessions).values({
-      id: uuidv7(),
+      id: randomUUID(),
       userId,
       routineDayId: workoutDayId,
       startedAt: oldWorkout,
@@ -142,21 +141,15 @@ describe("rest-day acceptance", () => {
     ]);
     expect(before.some((day) => day.id === emptyWorkoutDayId)).toBe(false);
 
-    plannedRestId = uuidv7();
     const logged = await api.session.logRestDay({
-      id: plannedRestId,
       routineDayId: restDayId,
       timeZone,
     });
-    const retried = await api.session.logRestDay({
-      id: plannedRestId,
-      routineDayId: restDayId,
-      timeZone,
-    });
+    plannedRestId = logged.id;
 
     expect(logged.kind).toBe("rest");
+    expect(logged.id).toMatch(/^[0-9a-f-]{36}$/);
     expect(logged.startedAt.getTime()).toBe(logged.endedAt?.getTime());
-    expect(retried.id).toBe(logged.id);
 
     const stored = await db
       .select()
@@ -164,9 +157,7 @@ describe("rest-day acceptance", () => {
       .where(eq(schema.workoutSessions.id, plannedRestId));
     expect(stored).toHaveLength(1);
     expect(await api.session.restToday({ timeZone })).toMatchObject({ id: plannedRestId });
-    await expect(
-      api.session.logRestDay({ id: uuidv7(), routineDayId: null, timeZone }),
-    ).rejects.toMatchObject({
+    await expect(api.session.logRestDay({ routineDayId: null, timeZone })).rejects.toMatchObject({
       code: "REST_ALREADY_LOGGED",
       data: { sessionId: plannedRestId },
     });
@@ -184,7 +175,7 @@ describe("rest-day acceptance", () => {
       .where(eq(schema.workoutSessions.id, plannedRestId));
 
     const before = (await startableDays(db, userId)).map((day) => day.id);
-    const adHoc = await api.session.logRestDay({ id: uuidv7(), routineDayId: null, timeZone });
+    const adHoc = await api.session.logRestDay({ routineDayId: null, timeZone });
     const after = (await startableDays(db, userId)).map((day) => day.id);
 
     expect(adHoc).toMatchObject({ kind: "rest", routineDayId: null });
@@ -202,20 +193,19 @@ describe("rest-day acceptance", () => {
       .returning();
 
     await expect(
-      api.session.logRestDay({ id: uuidv7(), routineDayId: otherRest.id, timeZone }),
+      api.session.logRestDay({ routineDayId: otherRest.id, timeZone }),
     ).rejects.toMatchObject({ code: "DAY_NOT_FOUND" });
     await expect(
-      api.session.logRestDay({ id: uuidv7(), routineDayId: workoutDayId, timeZone }),
+      api.session.logRestDay({ routineDayId: workoutDayId, timeZone }),
     ).rejects.toMatchObject({ code: "DAY_IS_WORKOUT" });
-    await expect(
-      api.session.start({ id: uuidv7(), routineDayId: restDayId, notes: null }),
-    ).rejects.toMatchObject({ code: "DAY_IS_REST" });
+    await expect(api.session.start({ routineDayId: restDayId, notes: null })).rejects.toMatchObject(
+      { code: "DAY_IS_REST" },
+    );
     await expect(
       api.plan.addExercise({ routineDayId: restDayId, exerciseId: benchId }),
     ).rejects.toMatchObject({ code: "DAY_IS_REST" });
     await expect(
-      api.session.logSet({
-        id: uuidv7(),
+      api.session.createSet({
         sessionId: plannedRestId,
         exerciseId: benchId,
         setIndex: 0,
@@ -223,18 +213,62 @@ describe("rest-day acceptance", () => {
         reps: 5,
         rpe: null,
         isWarmup: false,
-        clientCreatedAt: new Date(),
       }),
     ).rejects.toMatchObject({ code: "SESSION_IS_REST" });
   });
 
-  it("refuses rest while a workout is active and reports activity kinds", async () => {
-    const activeId = uuidv7();
-    const active = await api.session.start({ id: activeId, routineDayId: null, notes: null });
-    expect(active.kind).toBe("workout");
+  it("creates, updates, and deletes sets only through an owned workout", async () => {
+    const session = await api.session.start({ routineDayId: null, notes: null });
+    const created = await api.session.createSet({
+      sessionId: session.id,
+      exerciseId: benchId,
+      setIndex: 0,
+      weight: 100,
+      reps: 5,
+      rpe: 8,
+      isWarmup: false,
+    });
+
+    expect(created.set.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(created.records.length).toBeGreaterThan(0);
+
+    const updated = await api.session.updateSet({
+      id: created.set.id,
+      sessionId: session.id,
+      exerciseId: benchId,
+      setIndex: 0,
+      weight: 102.5,
+      reps: 5,
+      rpe: 8,
+      isWarmup: false,
+    });
+    expect(updated.set).toMatchObject({ id: created.set.id, weight: 102.5 });
+    expect(
+      await db.select().from(schema.sets).where(eq(schema.sets.sessionId, session.id)),
+    ).toHaveLength(1);
+
+    authState.userId = otherUserId;
     await expect(
-      api.session.logRestDay({ id: uuidv7(), routineDayId: null, timeZone }),
-    ).rejects.toMatchObject({
+      api.session.deleteSet({ id: created.set.id, sessionId: session.id }),
+    ).rejects.toMatchObject({ code: "SESSION_NOT_FOUND" });
+    expect(
+      await db.select().from(schema.sets).where(eq(schema.sets.id, created.set.id)),
+    ).toHaveLength(1);
+
+    authState.userId = userId;
+    await api.session.deleteSet({ id: created.set.id, sessionId: session.id });
+    expect(
+      await db.select().from(schema.sets).where(eq(schema.sets.id, created.set.id)),
+    ).toHaveLength(0);
+    await api.session.discard({ id: session.id });
+  });
+
+  it("refuses rest while a workout is active and reports activity kinds", async () => {
+    const active = await api.session.start({ routineDayId: null, notes: null });
+    const activeId = active.id;
+    expect(activeId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(active.kind).toBe("workout");
+    await expect(api.session.logRestDay({ routineDayId: null, timeZone })).rejects.toMatchObject({
       code: "SESSION_ALREADY_ACTIVE",
       data: { sessionId: activeId },
     });

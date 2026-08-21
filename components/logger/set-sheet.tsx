@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 
 import { WEIGHT_MAX } from "@/db/validators";
@@ -8,6 +6,7 @@ import { formatDelta, formatWeight, formatWhen } from "@/lib/format";
 import { type Ghost, overloadDelta } from "@/lib/overload";
 import { DEFAULT_BAR_KG } from "@/lib/plates";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Drawer,
   DrawerContent,
@@ -17,6 +16,7 @@ import {
 } from "@/components/ui/drawer";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
+import { Spinner } from "@/components/ui/spinner";
 
 import { NumberPad } from "./number-pad";
 import { PlateMath } from "./plate-math";
@@ -59,6 +59,8 @@ export function SetSheet({
   ghostWhen,
   initial,
   saveLabel = "Save set",
+  pending,
+  saveError,
   onSave,
   onOpenChangeComplete,
 }: {
@@ -73,6 +75,8 @@ export function SetSheet({
   ghostWhen: Date | null;
   initial: SetDraft;
   saveLabel?: string;
+  pending: boolean;
+  saveError: boolean;
   onSave: (draft: SetDraft) => void;
 }) {
   const [field, setField] = React.useState<PadField>("weight");
@@ -172,8 +176,17 @@ export function SetSheet({
 
           {!isWarmup ? <RpeSlider value={rpe} onChange={setRpe} /> : null}
 
-          <Button size="touch" className="w-full" disabled={!canSave} onClick={save}>
-            {saveLabel}
+          {saveError ? (
+            <Alert variant="destructive">
+              <AlertDescription>
+                Set didn&apos;t save. Check your connection and save again.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          <Button size="touch" className="w-full" disabled={!canSave || pending} onClick={save}>
+            {pending ? <Spinner data-icon="inline-start" /> : null}
+            {pending ? "Saving…" : saveLabel}
           </Button>
         </div>
       </DrawerContent>

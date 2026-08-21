@@ -1,15 +1,11 @@
-"use client";
-
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { isDefinedError } from "@orpc/client";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { BedDouble, Settings } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { formatWeight, formatWhen } from "@/lib/format";
 import { orpc } from "@/lib/orpc";
-import { uuidv7 } from "@/lib/uuid";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -30,7 +26,7 @@ import { LogRestDialog, type RestLogTarget } from "./log-rest-dialog";
  * half-built version of it would be worse than none.
  */
 export function TrainHome() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [error, setError] = React.useState<string | null>(null);
   const [restTarget, setRestTarget] = React.useState<RestLogTarget | null>(null);
   const [timeZone] = React.useState(
@@ -47,12 +43,16 @@ export function TrainHome() {
 
   const start = useMutation(
     orpc.session.start.mutationOptions({
-      onSuccess: (session) => router.push(`/train/${session.id}`),
+      onSuccess: (session) =>
+        void navigate({ to: "/train/$sessionId", params: { sessionId: session.id } }),
       onError: (mutationError) => {
         // A typed error, matched rather than string-parsed: if a workout is
         // already open, the only sensible thing is to go to it.
         if (isDefinedError(mutationError) && mutationError.code === "SESSION_ALREADY_ACTIVE") {
-          router.push(`/train/${mutationError.data.sessionId}`);
+          void navigate({
+            to: "/train/$sessionId",
+            params: { sessionId: mutationError.data.sessionId },
+          });
           return;
         }
         setError("Couldn't start a workout. Check your connection and try again.");
@@ -65,7 +65,7 @@ export function TrainHome() {
       <header className="flex items-center justify-between py-2">
         <h1 className="font-heading text-2xl font-semibold tracking-tight">Setwise</h1>
         <Link
-          href="/settings"
+          to="/settings"
           aria-label="Settings"
           className={buttonVariants({ variant: "ghost", size: "icon-touch" })}
         >
@@ -91,7 +91,8 @@ export function TrainHome() {
           </CardHeader>
           <CardContent>
             <Link
-              href={`/train/${active.data.id}`}
+              to="/train/$sessionId"
+              params={{ sessionId: active.data.id }}
               className={buttonVariants({ size: "touch", className: "w-full" })}
             >
               Carry on
@@ -144,13 +145,12 @@ export function TrainHome() {
                       setError(null);
                       if (day.kind === "rest") {
                         setRestTarget({
-                          id: uuidv7(),
                           routineDayId: day.id,
                           dayName: day.name,
                           routineName: day.routineName,
                         });
                       } else {
-                        start.mutate({ id: uuidv7(), routineDayId: day.id, notes: null });
+                        start.mutate({ routineDayId: day.id, notes: null });
                       }
                     }}
                   >
@@ -177,7 +177,7 @@ export function TrainHome() {
             disabled={start.isPending}
             onClick={() => {
               setError(null);
-              start.mutate({ id: uuidv7(), routineDayId: null, notes: null });
+              start.mutate({ routineDayId: null, notes: null });
             }}
           >
             {start.isPending ? <Spinner data-icon="inline-start" /> : null}
@@ -207,7 +207,7 @@ export function TrainHome() {
                 disabled={start.isPending || restToday.isPending || restToday.data !== null}
                 onClick={() => {
                   setError(null);
-                  setRestTarget({ id: uuidv7(), routineDayId: null });
+                  setRestTarget({ routineDayId: null });
                 }}
               >
                 {restToday.isPending ? (
@@ -259,7 +259,7 @@ export function TrainHome() {
               key={session.id}
               variant="outline"
               className="min-h-14"
-              render={<Link href={`/train/${session.id}`} />}
+              render={<Link to="/train/$sessionId" params={{ sessionId: session.id }} />}
             >
               <ItemContent>
                 <ItemTitle className="text-[15px]">

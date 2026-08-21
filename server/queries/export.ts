@@ -3,13 +3,13 @@ import { asc, eq } from "drizzle-orm";
 import type { DbClient } from "@/db";
 import { bodyweightLogs, exercises, sets, workoutSessions } from "@/db/schema";
 import { estimateOneRepMax } from "@/lib/math";
+import "@tanstack/react-start/server-only";
 
 /**
  * Every set the user has ever logged, flattened.
  *
- * Without offline storage this file is the user's only backup, so it is one row
- * per set with the session denormalised onto it: readable in a spreadsheet with
- * no joins, and re-importable by anything.
+ * One row per set with the session denormalised onto it: readable in a
+ * spreadsheet with no joins, and portable to other tools.
  */
 const COLUMNS = [
   "session_id",

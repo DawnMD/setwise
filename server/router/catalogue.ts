@@ -6,6 +6,7 @@ import { syncMuscles } from "@/db/sync-muscles";
 import { customExerciseInput, PRIMARY_FACTOR, SECONDARY_FACTOR, uuid } from "@/db/validators";
 import { MUSCLE_SLUGS, muscleBySlug } from "@/lib/muscles";
 import { protectedProcedure, publicProcedure } from "../orpc";
+import "@tanstack/react-start/server-only";
 
 export const catalogueRouter = {
   /**

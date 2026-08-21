@@ -4,6 +4,7 @@ import type { DbClient } from "@/db";
 import { bodyweightLogs } from "@/db/schema";
 import type { BodyweightLogInput } from "@/db/validators";
 import { BODYWEIGHT_TREND_DAYS } from "@/lib/math";
+import "@tanstack/react-start/server-only";
 
 /**
  * How far back of extra history the trend line needs before the window starts.

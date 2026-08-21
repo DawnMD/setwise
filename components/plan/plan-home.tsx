@@ -1,9 +1,6 @@
-"use client";
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { CalendarDays, Plus } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { formatWhen } from "@/lib/format";
@@ -30,7 +27,7 @@ import { RoutineNameForm } from "./routine-name-form";
  * running in March" is a question people ask, and the answer costs one row.
  */
 export function PlanHome() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [creating, setCreating] = React.useState(false);
 
@@ -41,7 +38,7 @@ export function PlanHome() {
       onSuccess: (routine) => {
         void queryClient.invalidateQueries({ queryKey: orpc.plan.list.key() });
         setCreating(false);
-        router.push(`/plan/${routine.id}`);
+        void navigate({ to: "/plan/$routineId", params: { routineId: routine.id } });
       },
     }),
   );
@@ -133,7 +130,11 @@ function RoutineRow({
   };
 }) {
   return (
-    <Item variant="outline" className="min-h-16" render={<Link href={`/plan/${routine.id}`} />}>
+    <Item
+      variant="outline"
+      className="min-h-16"
+      render={<Link to="/plan/$routineId" params={{ routineId: routine.id }} />}
+    >
       <ItemContent>
         <ItemTitle className="text-[15px]">{routine.name}</ItemTitle>
         <ItemDescription>

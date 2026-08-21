@@ -5,6 +5,7 @@ import { personalRecords, sets, workoutSessions } from "@/db/schema";
 import { E1RM_MAX_REPS, E1RM_MIN_REPS, estimateOneRepMax } from "@/lib/math";
 
 import type { SetRow } from "./session";
+import "@tanstack/react-start/server-only";
 
 export type PrKind = "max_weight" | "best_e1rm" | "max_reps_at_weight" | "session_volume";
 
@@ -59,9 +60,8 @@ async function previousBests(db: DbClient, userId: string, set: SetRow) {
 /**
  * Detects and stores records for one saved set.
  *
- * Existing rows for this set id are deleted first, so re-saving the same set —
- * the retry the whole write path is designed around — cannot log the same PR
- * twice.
+ * Existing rows for this set id are deleted first so editing a saved set
+ * recalculates its record state instead of leaving stale achievements behind.
  */
 export async function recordSetPersonalRecords(
   db: DbClient,

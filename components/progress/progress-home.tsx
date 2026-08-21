@@ -1,8 +1,6 @@
-"use client";
-
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { ChartNoAxesColumn } from "lucide-react";
-import Link from "next/link";
 import * as React from "react";
 
 import type { StatWindow } from "@/db/validators";
@@ -72,7 +70,7 @@ export function ProgressHome() {
             Warm-ups don&apos;t count toward volume. Log a workout, or widen the window to 90 days.
           </EmptyDescription>
           <EmptyContent>
-            <Button size="touch" render={<Link href="/train" />}>
+            <Button size="touch" render={<Link to="/train" />}>
               Start a workout
             </Button>
           </EmptyContent>

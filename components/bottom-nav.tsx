@@ -1,8 +1,5 @@
-"use client";
-
+import { Link, useRouterState } from "@tanstack/react-router";
 import { CalendarDays, ChartNoAxesColumn, Dumbbell } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
@@ -12,13 +9,13 @@ import { cn } from "@/lib/utils";
  * in the bottom third, and there is never a top-right save button.
  */
 const ITEMS = [
-  { href: "/train", label: "Train", icon: Dumbbell },
-  { href: "/progress", label: "Progress", icon: ChartNoAxesColumn },
-  { href: "/plan", label: "Plan", icon: CalendarDays },
+  { to: "/train", label: "Train", icon: Dumbbell },
+  { to: "/progress", label: "Progress", icon: ChartNoAxesColumn },
+  { to: "/plan", label: "Plan", icon: CalendarDays },
 ] as const;
 
 export function BottomNav() {
-  const pathname = usePathname();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (
     <nav
@@ -27,11 +24,11 @@ export function BottomNav() {
     >
       <ul className="mx-auto flex w-full max-w-[520px]">
         {ITEMS.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
           return (
-            <li key={item.href} className="flex-1">
+            <li key={item.to} className="flex-1">
               <Link
-                href={item.href}
+                to={item.to}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium",

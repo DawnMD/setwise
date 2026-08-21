@@ -1,5 +1,3 @@
-"use client";
-
 import { formatPercent, formatRpe } from "@/lib/format";
 
 export type IntensitySummaryData = {

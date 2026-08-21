@@ -1,10 +1,10 @@
 import { config } from "dotenv";
-config({ path: ".env.local", quiet: true });
 import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { createNeonPool } from "./db/neon";
 import * as schema from "./db/schema";
+config({ path: ".env.local", quiet: true });
 
 const EMAIL = "phase3-preview@example.invalid";
 
@@ -94,7 +94,6 @@ async function main() {
             reps: 5,
             isWarmup: true,
             performedAt: at,
-            clientCreatedAt: at,
           });
         }
         for (let s = 0; s < count; s += 1) {
@@ -108,7 +107,6 @@ async function main() {
             rpe: s === count - 1 ? 8.5 : 7.5,
             isWarmup: false,
             performedAt: at,
-            clientCreatedAt: at,
           });
         }
       }

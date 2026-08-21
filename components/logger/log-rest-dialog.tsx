@@ -1,8 +1,6 @@
-"use client";
-
 import { isDefinedError } from "@orpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "@tanstack/react-router";
 import * as React from "react";
 
 import { orpc } from "@/lib/orpc";
@@ -20,7 +18,6 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 
 export type RestLogTarget = {
-  id: string;
   routineDayId: string | null;
   dayName?: string;
   routineName?: string;
@@ -35,7 +32,7 @@ export function LogRestDialog({
   onOpenChange: (open: boolean) => void;
   onLogged?: () => void;
 }) {
-  const router = useRouter();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [timeZone] = React.useState(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
@@ -53,7 +50,10 @@ export function LogRestDialog({
       },
       onError: (error) => {
         if (isDefinedError(error) && error.code === "SESSION_ALREADY_ACTIVE") {
-          router.push(`/train/${error.data.sessionId}`);
+          void navigate({
+            to: "/train/$sessionId",
+            params: { sessionId: error.data.sessionId },
+          });
           return;
         }
         if (isDefinedError(error) && error.code === "REST_ALREADY_LOGGED") {
@@ -107,7 +107,6 @@ export function LogRestDialog({
             onClick={() => {
               if (target) {
                 logRest.mutate({
-                  id: target.id,
                   routineDayId: target.routineDayId,
                   timeZone,
                 });

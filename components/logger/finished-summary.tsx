@@ -1,6 +1,4 @@
-"use client";
-
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 
 import { formatElapsed, formatWeight, formatWhen } from "@/lib/format";
 import { estimateOneRepMax } from "@/lib/math";
@@ -48,7 +46,7 @@ export function FinishedSummary({
           </CardHeader>
         </Card>
 
-        <Link href="/train" className={buttonVariants({ size: "touch", className: "mt-2 w-full" })}>
+        <Link to="/train" className={buttonVariants({ size: "touch", className: "mt-2 w-full" })}>
           Done
         </Link>
       </div>
@@ -131,7 +129,7 @@ export function FinishedSummary({
         );
       })}
 
-      <Link href="/train" className={buttonVariants({ size: "touch", className: "mt-2 w-full" })}>
+      <Link to="/train" className={buttonVariants({ size: "touch", className: "mt-2 w-full" })}>
         Done
       </Link>
     </div>

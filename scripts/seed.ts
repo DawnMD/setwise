@@ -6,7 +6,7 @@
  * `overrides.ts` and the corrections land without touching anyone's training
  * history, because nothing here writes to a user-owned table.
  *
- *   npm run db:seed
+ *   pnpm db:seed
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";

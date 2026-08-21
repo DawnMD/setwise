@@ -1,5 +1,3 @@
-"use client";
-
 import { STAT_WINDOWS, type StatWindow } from "@/db/validators";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 

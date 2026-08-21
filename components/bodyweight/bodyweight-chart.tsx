@@ -1,5 +1,3 @@
-"use client";
-
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 
 import { formatDayShort } from "@/lib/format";

@@ -1,18 +1,14 @@
-"use client";
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
 import * as React from "react";
 
-import type { SetInput } from "@/db/validators";
+import type { CreateSetInput, UpdateSetInput } from "@/db/validators";
 import { useRestTimer } from "@/hooks/use-rest-timer";
 import { useWakeLock } from "@/hooks/use-wake-lock";
 import { formatWeight } from "@/lib/format";
 import { orpc } from "@/lib/orpc";
 import type { Targets } from "@/lib/targets";
-import { uuidv7 } from "@/lib/uuid";
-import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
@@ -35,60 +31,30 @@ import { FinishedSummary } from "./finished-summary";
 import { RestTimer } from "./rest-timer";
 import type { SetDraft } from "./set-sheet";
 import { SetSheetForExercise } from "./set-sheet-for-exercise";
-import type { LoggerExercise, LoggerSession, LoggerSet, RowStatus } from "./types";
+import type { LoggerExercise, LoggerSet } from "./types";
 
-type PendingWrite = { status: RowStatus; input: SetInput };
-
-/** Which set the sheet is pointed at. Null when it is closed and unmounted. */
 type Editing = { exercise: LoggerExercise; set: LoggerSet | null };
 
-const lineupKey = (sessionId: string) => `setwise:lineup:${sessionId}`;
-
-/**
- * Exercises picked but not yet logged against exist only on the client: an
- * exercise with no sets is not part of anyone's training history, so it does
- * not earn a row in the database. Keeping the pick order in `localStorage` is
- * what stops a stray refresh from wiping a lineup someone just set up.
- */
-function readLineup(sessionId: string): LoggerExercise[] | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(lineupKey(sessionId));
-    return raw ? (JSON.parse(raw) as LoggerExercise[]) : null;
-  } catch {
-    return null;
-  }
-}
-
 export function ActiveSession({ sessionId }: { sessionId: string }) {
-  const router = useRouter();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const rest = useRestTimer();
 
   const options = orpc.session.get.queryOptions({ input: { id: sessionId } });
   const sessionQuery = useQuery(options);
-  const queryKey = options.queryKey;
   const detail = sessionQuery.data;
   const isOpen = detail !== undefined && detail.endedAt === null;
 
   useWakeLock(isOpen);
 
-  const [picked, setPicked] = React.useState<LoggerExercise[] | null>(() => readLineup(sessionId));
-  const [pending, setPending] = React.useState<Record<string, PendingWrite>>({});
+  const [picked, setPicked] = React.useState<LoggerExercise[] | null>(null);
   const [prSetIds, setPrSetIds] = React.useState<ReadonlySet<string>>(() => new Set());
   const [editing, setEditing] = React.useState<Editing | null>(null);
   const [sheetOpen, setSheetOpen] = React.useState(false);
+  const [saveError, setSaveError] = React.useState(false);
   const [pickerOpen, setPickerOpen] = React.useState(false);
-  const [confirm, setConfirm] = React.useState<"finish" | "unsaved" | "discard" | null>(null);
+  const [confirm, setConfirm] = React.useState<"finish" | "discard" | null>(null);
 
-  /**
-   * The pick order wins, with anything the server knows about appended.
-   *
-   * Derived rather than synced into state: an effect merging the two would let
-   * the order flip for a beat every time a set saves and the server's list
-   * grows. The tail covers a lost `localStorage` — a reload on another phone
-   * still shows the whole workout, just in logged order.
-   */
   const plannedLineup = React.useMemo(
     () =>
       detail?.plan?.exercises.map((entry) => ({
@@ -113,14 +79,8 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
       if (!seen.has(entry.id)) merged.push(entry);
     }
     return merged;
-  }, [picked, plannedLineup, detail]);
+  }, [detail, picked, plannedLineup]);
 
-  React.useEffect(() => {
-    if (!isOpen) return;
-    window.localStorage.setItem(lineupKey(sessionId), JSON.stringify(lineup));
-  }, [lineup, sessionId, isOpen]);
-
-  /** Targets by exercise id, so a block can find its own without a scan. */
   const targetsByExercise = React.useMemo(() => {
     const map = new Map<string, Targets>();
     for (const entry of detail?.plan?.exercises ?? []) {
@@ -145,98 +105,40 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
     return map;
   }, [detail]);
 
-  const failedIds = React.useMemo(
-    () => Object.keys(pending).filter((id) => pending[id].status === "failed"),
-    [pending],
-  );
-
-  const writeSetToCache = React.useCallback(
-    (set: LoggerSet, exercise: LoggerExercise) => {
-      queryClient.setQueryData(queryKey, (old: LoggerSession | undefined) => {
-        if (!old) return old;
-        const known = old.sets.some((entry) => entry.id === set.id);
-        return {
-          ...old,
-          sets: known
-            ? old.sets.map((entry) => (entry.id === set.id ? set : entry))
-            : [...old.sets, set],
-          exercises: old.exercises.some((entry) => entry.id === exercise.id)
-            ? old.exercises
-            : [...old.exercises, exercise],
-        };
-      });
+  const afterSave = React.useCallback(
+    async (result: { set: LoggerSet; records: Array<{ previous: number | null }> }) => {
+      await queryClient.invalidateQueries({ queryKey: options.queryKey });
+      if (result.records.some((record) => record.previous !== null)) {
+        setPrSetIds((current) => new Set(current).add(result.set.id));
+      }
+      if (!result.set.isWarmup) rest.start();
+      setSaveError(false);
+      setSheetOpen(false);
     },
-    [queryClient, queryKey],
+    [options.queryKey, queryClient, rest],
   );
 
-  const dropFromCache = React.useCallback(
-    (setId: string) => {
-      queryClient.setQueryData(queryKey, (old: LoggerSession | undefined) =>
-        old ? { ...old, sets: old.sets.filter((entry) => entry.id !== setId) } : old,
-      );
-    },
-    [queryClient, queryKey],
-  );
-
-  /**
-   * Optimistic, and deliberately not rolled back on failure.
-   *
-   * The plan says to roll the cache back and show a retry affordance. Removing
-   * the row would take the user's numbers off the screen at the exact moment
-   * they need to read them back, so the row stays and turns red instead. Same
-   * contract — nothing that failed is ever shown as saved — with the data still
-   * in front of them.
-   */
-  const logSet = useMutation(
-    orpc.session.logSet.mutationOptions({
-      onMutate: async (input) => {
-        await queryClient.cancelQueries({ queryKey });
-        setPending((current) => ({ ...current, [input.id]: { status: "saving", input } }));
-      },
-      onError: (_error, input) => {
-        setPending((current) => ({ ...current, [input.id]: { status: "failed", input } }));
-      },
-      onSuccess: (result, input) => {
-        setPending((current) => {
-          const next = { ...current };
-          delete next[input.id];
-          return next;
-        });
-
-        const exercise = lineup.find((entry) => entry.id === input.exerciseId) ?? {
-          id: input.exerciseId,
-          name: "Exercise",
-          equipment: null,
-        };
-        writeSetToCache(result.set, exercise);
-
-        // Only celebrate records that beat something. A first-ever set is
-        // stored as a record so the history is complete, but telling someone
-        // every set of their first workout is a PR makes the badge worthless.
-        if (result.records.some((record) => record.previous !== null)) {
-          setPrSetIds((current) => new Set(current).add(result.set.id));
-        }
-
-        if (!result.set.isWarmup) rest.start();
-      },
+  const createSet = useMutation(
+    orpc.session.createSet.mutationOptions({
+      onSuccess: afterSave,
+      onError: () => setSaveError(true),
     }),
   );
-
-  const deleteSet = useMutation(
-    orpc.session.deleteSet.mutationOptions({
-      onSuccess: (_result, input) => dropFromCache(input.id),
+  const updateSet = useMutation(
+    orpc.session.updateSet.mutationOptions({
+      onSuccess: afterSave,
+      onError: () => setSaveError(true),
     }),
   );
-
   const finish = useMutation(orpc.session.finish.mutationOptions());
   const discard = useMutation(orpc.session.discard.mutationOptions());
 
+  const saving = createSet.isPending || updateSet.isPending;
+
   const submit = (exercise: LoggerExercise, draft: SetDraft, existing: LoggerSet | null) => {
+    setSaveError(false);
     const siblings = setsByExercise.get(exercise.id) ?? [];
-    const input: SetInput = {
-      // A new set gets a client-generated id; an edit keeps the one it has, so
-      // the upsert rewrites that row rather than adding a second one.
-      id: existing?.id ?? uuidv7(),
+    const values: CreateSetInput = {
       sessionId,
       exerciseId: exercise.id,
       setIndex: existing?.setIndex ?? siblings.length,
@@ -244,33 +146,14 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
       reps: draft.reps,
       rpe: draft.rpe,
       isWarmup: draft.isWarmup,
-      clientCreatedAt: existing?.clientCreatedAt ?? new Date(),
     };
 
-    // Into the cache before the request, so the row is on screen immediately and
-    // the UI never waits on the network.
-    writeSetToCache({ ...input, performedAt: existing?.performedAt ?? new Date() }, exercise);
-    setSheetOpen(false);
-    logSet.mutate(input);
-  };
-
-  const retry = (setId: string) => {
-    const write = pending[setId];
-    if (write) logSet.mutate(write.input);
-  };
-
-  const removeSet = (setId: string) => {
-    if (pending[setId]?.status === "failed") {
-      // It never reached the server, so there is nothing there to delete.
-      setPending((current) => {
-        const next = { ...current };
-        delete next[setId];
-        return next;
-      });
-      dropFromCache(setId);
-      return;
+    if (existing) {
+      const input: UpdateSetInput = { ...values, id: existing.id };
+      updateSet.mutate(input);
+    } else {
+      createSet.mutate(values);
     }
-    deleteSet.mutate({ id: setId, sessionId });
   };
 
   const doFinish = () => {
@@ -279,9 +162,8 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
       { id: sessionId, notes: null },
       {
         onSuccess: () => {
-          window.localStorage.removeItem(lineupKey(sessionId));
           rest.stop();
-          void queryClient.invalidateQueries({ queryKey });
+          void queryClient.invalidateQueries({ queryKey: options.queryKey });
         },
       },
     );
@@ -293,9 +175,8 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
       { id: sessionId },
       {
         onSuccess: () => {
-          window.localStorage.removeItem(lineupKey(sessionId));
           rest.stop();
-          router.replace("/train");
+          void navigate({ to: "/train", replace: true });
         },
       },
     );
@@ -320,7 +201,11 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
             It may have been discarded on another device. Check your connection and try again.
           </EmptyDescription>
           <EmptyContent>
-            <Button variant="outline" size="touch" onClick={() => router.replace("/train")}>
+            <Button
+              variant="outline"
+              size="touch"
+              onClick={() => void navigate({ to: "/train", replace: true })}
+            >
               Back to training
             </Button>
           </EmptyContent>
@@ -375,18 +260,17 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
                 sessionId={sessionId}
                 sets={setsByExercise.get(exercise.id) ?? []}
                 target={targetsByExercise.get(exercise.id) ?? null}
-                statusOf={(setId) => pending[setId]?.status ?? "saved"}
                 prSetIds={prSetIds}
                 onAddSet={(target) => {
+                  setSaveError(false);
                   setEditing({ exercise: target, set: null });
                   setSheetOpen(true);
                 }}
                 onEditSet={(set) => {
+                  setSaveError(false);
                   setEditing({ exercise, set });
                   setSheetOpen(true);
                 }}
-                onRetrySet={retry}
-                onDeleteSet={removeSet}
                 onRemove={(exerciseId) =>
                   setPicked((current) =>
                     (current ?? plannedLineup).filter((entry) => entry.id !== exerciseId),
@@ -406,21 +290,8 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
             </Button>
           </div>
         )}
-
-        {failedIds.length > 0 ? (
-          <Alert variant="destructive" className="mt-4">
-            <AlertTitle>
-              {failedIds.length === 1
-                ? "1 set didn't save"
-                : `${failedIds.length} sets didn't save`}
-            </AlertTitle>
-            <AlertDescription>Tap the red row to retry.</AlertDescription>
-          </Alert>
-        ) : null}
       </div>
 
-      {/* The rest timer and the finish button both sit above the nav, in the
-          bottom third. There is never a top-right save button. */}
       <div className="sticky bottom-0 z-10 mt-auto">
         {rest.running ? (
           <RestTimer
@@ -437,7 +308,7 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
             size="touch"
             className="mx-auto w-full max-w-[520px]"
             disabled={finish.isPending}
-            onClick={() => setConfirm(failedIds.length > 0 ? "unsaved" : "finish")}
+            onClick={() => setConfirm("finish")}
           >
             {finish.isPending ? <Spinner data-icon="inline-start" /> : null}
             {finish.isPending ? "Finishing…" : "Finish workout"}
@@ -455,8 +326,7 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
               ? (current ?? plannedLineup)
               : [...(current ?? plannedLineup), exercise],
           );
-          // Straight into the set sheet: picking an exercise and then not
-          // logging against it is not something anyone does mid-workout.
+          setSaveError(false);
           setEditing({ exercise, set: null });
           setSheetOpen(true);
         }}
@@ -464,15 +334,17 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
 
       {editing ? (
         <SetSheetForExercise
-          // Keyed per target, so opening a different row starts from that row's
-          // values rather than the previous one's.
           key={editing.set?.id ?? `new-${editing.exercise.id}`}
           sessionId={sessionId}
           exercise={editing.exercise}
           siblings={setsByExercise.get(editing.exercise.id) ?? []}
           editingSet={editing.set}
           open={sheetOpen}
-          onOpenChange={setSheetOpen}
+          pending={saving}
+          saveError={saveError}
+          onOpenChange={(open) => {
+            if (!saving) setSheetOpen(open);
+          }}
           onClosed={() => setEditing(null)}
           onSave={(draft) => submit(editing.exercise, draft, editing.set)}
         />
@@ -490,33 +362,6 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
             <AlertDialogCancel size="touch">Keep going</AlertDialogCancel>
             <AlertDialogAction size="touch" onClick={doFinish}>
               Finish workout
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        // Derived, not just `confirm === "unsaved"`: retrying the last failed
-        // set from inside this dialog should dismiss it, not leave it up saying
-        // zero sets are unsaved.
-        open={confirm === "unsaved" && failedIds.length > 0}
-        onOpenChange={(open) => !open && setConfirm(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Some sets didn&apos;t save</AlertDialogTitle>
-            <AlertDialogDescription>
-              {failedIds.length} {failedIds.length === 1 ? "set is" : "sets are"} still only on this
-              phone. Finishing now loses {failedIds.length === 1 ? "it" : "them"}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel size="touch">Keep going</AlertDialogCancel>
-            <Button variant="secondary" size="touch" onClick={() => failedIds.forEach(retry)}>
-              Retry all
-            </Button>
-            <AlertDialogAction variant="destructive" size="touch" onClick={doFinish}>
-              Finish anyway
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

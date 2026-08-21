@@ -1,5 +1,3 @@
-"use client";
-
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import * as React from "react";
@@ -21,7 +19,7 @@ import {
 } from "@/components/ui/card";
 
 import { SetRow } from "./set-row";
-import type { LoggerExercise, LoggerSet, RowStatus } from "./types";
+import type { LoggerExercise, LoggerSet } from "./types";
 
 /**
  * One exercise and its sets.
@@ -35,12 +33,9 @@ export function ExerciseBlock({
   sessionId,
   sets,
   target,
-  statusOf,
   prSetIds,
   onAddSet,
   onEditSet,
-  onRetrySet,
-  onDeleteSet,
   onRemove,
 }: {
   exercise: LoggerExercise;
@@ -48,12 +43,9 @@ export function ExerciseBlock({
   sets: LoggerSet[];
   /** What the routine day asks for here, if this session came from one. */
   target: Targets | null;
-  statusOf: (setId: string) => RowStatus;
   prSetIds: ReadonlySet<string>;
   onAddSet: (exercise: LoggerExercise) => void;
   onEditSet: (set: LoggerSet) => void;
-  onRetrySet: (setId: string) => void;
-  onDeleteSet: (setId: string) => void;
   onRemove: (exerciseId: string) => void;
 }) {
   const last = useQuery(
@@ -123,12 +115,9 @@ export function ExerciseBlock({
               key={set.id}
               set={set}
               label={set.isWarmup ? "W" : String((ordinals.get(set.id) ?? 0) + 1)}
-              status={statusOf(set.id)}
               ghost={ghostForPosition(lastSets, ordinals.get(set.id) ?? 0, set.isWarmup)}
               isPr={prSetIds.has(set.id)}
               onEdit={() => onEditSet(set)}
-              onRetry={() => onRetrySet(set.id)}
-              onDelete={() => onDeleteSet(set.id)}
             />
           ))}
         </CardContent>

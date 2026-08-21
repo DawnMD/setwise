@@ -75,7 +75,7 @@ export const routineExercises = pgTable(
 export const workoutSessions = pgTable(
   "workout_sessions",
   {
-    id: uuid("id").primaryKey(),
+    id: uuid("id").primaryKey().defaultRandom(),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -90,18 +90,10 @@ export const workoutSessions = pgTable(
   (table) => [index("workout_sessions_user_started_idx").on(table.userId, table.startedAt)],
 );
 
-/**
- * `id` is a client-generated UUIDv7, and it is the idempotency key for the
- * whole write path. The server upserts on it, so a retry after a timeout is a
- * no-op instead of a duplicate set quietly inflating someone's volume.
- *
- * `clientCreatedAt` records when the phone believed the set happened, which is
- * what orders rows correctly if a write lands late.
- */
 export const sets = pgTable(
   "sets",
   {
-    id: uuid("id").primaryKey(),
+    id: uuid("id").primaryKey().defaultRandom(),
     sessionId: uuid("session_id")
       .notNull()
       .references(() => workoutSessions.id, { onDelete: "cascade" }),
@@ -115,7 +107,6 @@ export const sets = pgTable(
     rpe: numeric("rpe", { precision: 3, scale: 1, mode: "number" }),
     isWarmup: boolean("is_warmup").default(false).notNull(),
     performedAt: timestamp("performed_at", { withTimezone: true }).defaultNow().notNull(),
-    clientCreatedAt: timestamp("client_created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     // The plan's two load-bearing indexes. Every stats query starts at one of

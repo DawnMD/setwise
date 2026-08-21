@@ -1,5 +1,3 @@
-"use client";
-
 import { useNow } from "@/hooks/use-now";
 import { formatElapsed } from "@/lib/format";
 

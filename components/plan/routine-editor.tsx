@@ -1,14 +1,11 @@
-"use client";
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isDefinedError } from "@orpc/client";
+import { useNavigate } from "@tanstack/react-router";
 import { BedDouble, ChevronDown, ChevronUp, MoreVertical, Play, Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { orpc } from "@/lib/orpc";
 import { describeTargets, type Targets } from "@/lib/targets";
-import { uuidv7 } from "@/lib/uuid";
 import { ExercisePicker } from "@/components/logger/exercise-picker";
 import { LogRestDialog, type RestLogTarget } from "@/components/logger/log-rest-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -72,7 +69,7 @@ type Dialog =
  * editing every time you add an exercise to the third.
  */
 export function RoutineEditor({ routineId }: { routineId: string }) {
-  const router = useRouter();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const options = orpc.plan.get.queryOptions({ input: { id: routineId } });
@@ -122,17 +119,21 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
     orpc.plan.deleteRoutine.mutationOptions({
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: orpc.plan.list.key() });
-        router.replace("/plan");
+        void navigate({ to: "/plan", replace: true });
       },
     }),
   );
 
   const startSession = useMutation(
     orpc.session.start.mutationOptions({
-      onSuccess: (session) => router.push(`/train/${session.id}`),
+      onSuccess: (session) =>
+        void navigate({ to: "/train/$sessionId", params: { sessionId: session.id } }),
       onError: (error) => {
         if (isDefinedError(error) && error.code === "SESSION_ALREADY_ACTIVE") {
-          router.push(`/train/${error.data.sessionId}`);
+          void navigate({
+            to: "/train/$sessionId",
+            params: { sessionId: error.data.sessionId },
+          });
           return;
         }
         setStartError("Couldn't start a workout. Check your connection and try again.");
@@ -157,7 +158,11 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
           <EmptyTitle>That routine couldn&apos;t be loaded</EmptyTitle>
           <EmptyDescription>It may have been deleted. Check your connection.</EmptyDescription>
           <EmptyContent>
-            <Button variant="outline" size="touch" onClick={() => router.replace("/plan")}>
+            <Button
+              variant="outline"
+              size="touch"
+              onClick={() => void navigate({ to: "/plan", replace: true })}
+            >
               Back to plan
             </Button>
           </EmptyContent>
@@ -434,14 +439,13 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
             onClick={() => {
               if (currentDay.kind === "rest") {
                 setRestTarget({
-                  id: uuidv7(),
                   routineDayId: currentDay.id,
                   dayName: currentDay.name,
                   routineName: detail.name,
                 });
               } else {
                 setStartError(null);
-                startSession.mutate({ id: uuidv7(), routineDayId: currentDay.id, notes: null });
+                startSession.mutate({ routineDayId: currentDay.id, notes: null });
               }
             }}
           >

@@ -1,8 +1,6 @@
-"use client";
-
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -40,6 +38,8 @@ type AuthValues = z.input<typeof signUpSchema>;
  */
 export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
   const router = useRouter();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const isSignUp = mode === "sign-up";
   const form = useForm<AuthValues>({
     resolver: zodResolver(isSignUp ? signUpSchema : signInSchema),
@@ -71,8 +71,9 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
 
       // The server layout reads the session, so the cookie has to be visible to
       // the next server render.
-      router.replace("/train");
-      router.refresh();
+      await queryClient.invalidateQueries();
+      await router.invalidate();
+      await navigate({ to: "/train", replace: true });
     } catch {
       form.setError("root.server", {
         type: "server",
@@ -182,7 +183,7 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
       <p className="mt-6 text-center text-sm text-muted-foreground">
         {isSignUp ? "Already have an account? " : "No account yet? "}
         <Link
-          href={isSignUp ? "/sign-in" : "/sign-up"}
+          to={isSignUp ? "/sign-in" : "/sign-up"}
           className={buttonVariants({ variant: "link", size: "sm" })}
         >
           {isSignUp ? "Sign in" : "Create one"}

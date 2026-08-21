@@ -1,96 +1,105 @@
 # Setwise
 
-A workout log built around progressive overload. Last session's number sits next
-to the field where you type this session's.
-
-Phases 0 to 4 are done: the foundation, the logger, the plan builder, the stats
-screen, the bodyweight log. See [docs/plan.md](docs/plan.md) for the full build
-plan, and the phase notes for what shipped in each and what it cost:
-[phase 0](docs/phase-0.md), [phase 1](docs/phase-1.md),
-[phase 2](docs/phase-2.md), [phase 4](docs/phase-4.md). Phase 3 shipped without
-notes of its own.
+Setwise is a mobile-first workout log built around progressive overload. The previous
+performance sits beside the fields for the next set, while plans, trends, bodyweight, and CSV
+exports remain attached to one authenticated account.
 
 ## Stack
 
-Next.js App Router, Drizzle on Neon Postgres, oRPC, Better Auth, TanStack Query,
-Tailwind, shadcn/ui on Base UI (preset `b2eYKQAHg1`).
+- TanStack Start and TanStack Router, built by Vite and served by Nitro
+- React 19 with the React Compiler and TanStack Query
+- oRPC for the typed browser-to-server API
+- Better Auth with server-executed session guards
+- Drizzle ORM on Neon Postgres
+- Tailwind CSS and shadcn/Base UI (`base-lyra`)
+- Vercel deployment and pnpm tooling
 
-Source sits at the repo root — `app/`, `components/`, `db/`, `hooks/`, `lib/`,
-`server/` — with no `src/` wrapper. `@/*` resolves to `./*`.
+The TanStack framework shell lives in `src/`: file routes are in `src/routes`, router setup is in
+`src/router.tsx`, and global styles are in `src/styles.css`. Reusable application code remains in
+the root-level `components`, `hooks`, `lib`, `db`, `server`, and `data` directories. The `@/*`
+alias resolves from the repository root.
 
-## Setup
+The root document, auth checks, and public auth pages render on the server. Authenticated routes
+use TanStack Start's data-only SSR boundary: authorization still runs on the server, while the
+feature UI renders in the browser and fetches through oRPC and TanStack Query.
+
+## Prerequisites and setup
+
+- Node.js 22.12 or newer
+- pnpm 11.22.0 or newer
+- A Postgres database; Neon pooled and direct URLs are supported
 
 ```bash
-npm install
-cp .env.example .env.local   # fill in your Neon connection strings
-npm run db:migrate
-npm run db:seed
-npm run dev
+pnpm install
+cp .env.example .env.local
+pnpm db:migrate
+pnpm db:seed
+pnpm dev
 ```
 
-`db:migrate` writes the eighteen muscle regions itself, so a migrated database
-can log training and save custom exercises straight away. `db:seed` adds the
-~800-exercise global catalogue on top and re-asserts the same muscle rows; it is
-idempotent and safe to run late or not at all.
+Fill in `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL` in
+`.env.local`. Drizzle loads `.env.local` before `.env`. Runtime secrets are unprefixed server
+variables; never expose them through a `VITE_` name.
 
-`BETTER_AUTH_SECRET` needs a real value before deploying: `openssl rand -base64 32`.
-Better Auth resolves its base URL per request. On Vercel, keep **Automatically
-expose System Environment Variables** enabled so the generated deployment,
-branch and production domains are allowlisted without overriding
-`BETTER_AUTH_URL` for every preview.
+`db:migrate` creates the muscle-region rows needed for custom exercises. `db:seed` adds the global
+exercise catalogue and is idempotent. Generate a production auth secret with
+`openssl rand -base64 32`.
 
-## Scripts
+## Commands
 
-| Script                 | What it does                                             |
-| ---------------------- | -------------------------------------------------------- |
-| `npm run dev`          | Dev server on :3000                                      |
-| `npm run db:check`     | Check committed migration history for collisions         |
-| `npm run db:export`    | Print the schema's SQL DDL without changing the database |
-| `npm run db:generate`  | Generate a migration from schema changes                 |
-| `npm run db:migrate`   | Apply committed migrations with Drizzle Kit              |
-| `npm run db:push`      | Sync directly after confirmation; local prototyping only |
-| `npm run db:seed`      | Seed the exercise catalogue. Optional, idempotent.       |
-| `npm test`             | Run all Vitest integration tests once                    |
-| `npm run test:watch`   | Re-run Vitest integration tests as files change          |
-| `npm run db:studio`    | Drizzle Studio                                           |
-| `npm run svg:generate` | Redraw the body SVGs from `scripts/generate-body-svg.ts` |
+| Command                               | Purpose                                                               |
+| ------------------------------------- | --------------------------------------------------------------------- |
+| `pnpm dev`                            | Run the Vite development server on port 3000                          |
+| `pnpm build`                          | Build the Nitro server and type-check the repository                  |
+| `pnpm start`                          | Run `.output/server/index.mjs`                                        |
+| `pnpm preview`                        | Preview through Vite                                                  |
+| `pnpm lint`                           | Run the ESLint flat configuration                                     |
+| `pnpm format:check`                   | Check formatting                                                      |
+| `pnpm test`                           | Run the Vitest/Postgres integration suite                             |
+| `pnpm test:e2e`                       | Run the Playwright Chromium smoke suite against the production server |
+| `pnpm db:check`                       | Validate committed migration history                                  |
+| `pnpm db:generate -- --name=<change>` | Generate a migration from schema changes                              |
+| `pnpm db:migrate`                     | Apply committed migrations                                            |
+| `pnpm db:seed`                        | Seed the exercise catalogue                                           |
+| `pnpm db:studio`                      | Open Drizzle Studio                                                   |
+| `pnpm svg:generate`                   | Regenerate body-map SVG assets                                        |
 
-The integration tests use the database in `.env.local`. Migrate and seed it
-before the first run. Every fixture is attached to a throwaway user and cleaned
-up after its test file finishes.
+Integration and browser tests use the configured Postgres database. Migrate and seed it before
+running them. Database changes follow a code-first workflow: edit `db/schema`, generate and review
+the SQL, run `pnpm db:check`, apply it, and commit the schema, migration, journal, and snapshot
+together.
 
-The normal schema workflow is code first: edit `db/schema`, run
-`npm run db:generate -- --name=<change>`, review the generated SQL, run
-`npm run db:check`, then apply it with `npm run db:migrate`. Commit the schema,
-SQL migration and `drizzle/meta` snapshot together. `db:push` deliberately asks
-for confirmation and should only be used for disposable local prototyping
-because it does not create a migration file.
+## Workout write model
 
-## Things that will bite you
+Workout writes require a reliable connection. Session, rest-day, and set IDs are generated by
+Postgres. A set row appears only after the server confirms its insert or update. If saving fails,
+the drawer stays open with its entered values and an inline error; pressing Save again starts a
+new request.
 
-**The muscle list is frozen.** `lib/muscles.ts` is the single definition of
-the eighteen regions. It drives table rows, SVG path ids and the muscle picker at
-once. Changing it means a migration, an SVG regeneration and a reseed.
+There is no optimistic failed row, automatic reconnect behavior, or persisted workout state. A
+response lost after the database commits can therefore produce a duplicate if Save is pressed
+again. Setwise never presents an unconfirmed write as saved.
 
-**Everything is stored in kilograms.** `user.unitPref` is display only.
+Picked-but-unsaved exercises and the rest timer live only for the mounted training screen and
+reset on navigation or reload. Theme preference is the only local browser preference that is
+persisted. Screen wake lock remains available during an active session. CSV export is an account
+export, not an offline workout store.
 
-**Migrations use `DATABASE_URL_UNPOOLED`.** Neon recommends a direct connection
-for ORM migration tools; application queries use the pooled `DATABASE_URL`.
+## Deployment
 
-**Re-run `npm test` after touching exercise tagging.** It is the check
-that catches the heatmap silently inheriting a bad muscle factor.
+The repository targets Vercel with the `tanstack-start` framework preset. Nitro selects its Vercel
+output during the build; no custom output directory is needed. Keep Vercel's automatically exposed
+system environment variables enabled so Better Auth can trust preview, branch, and production
+hosts without a separate auth URL for every deployment.
 
-**Set ids are minted on the client**, as UUIDv7, and the server upserts on them.
-That is what makes a retry after a timeout a no-op instead of a duplicate set.
-Never let the server generate one.
+Apply migration `0004_remove_offline_resilience` before serving this version. Verify auth cookies,
+the `/api/auth/*`, `/api/rpc/*`, and `/api/export` endpoints, direct protected-route loads, client
+navigation, and the browser smoke suite on a preview before production promotion.
 
-**Nothing here has been used in a real gym yet.** The plan is right that this is
-the step that finds the flaws, and it has now gone unbuilt for two phases.
+## Project invariants
 
-**`--accent` and `--border` belong to shadcn.** The preset writes both. App
-colours use `--overload`, `--pr` and `--band-*`; a failed save uses the preset's
-`--destructive`.
-
-**Use the `touch` size on anything reachable mid-set.** The lyra style tops out
-at 36px and this app needs 44. `Button`, `Slider` and `NativeSelect` each carry
-one.
+- All stored weights are kilograms; unit preference is display-only.
+- `lib/muscles.ts` defines the eighteen muscle regions used by schema rows, SVG paths, and pickers.
+- Application colours use `--overload`, `--pr`, and `--band-*`; shadcn owns the core theme tokens.
+- Mid-workout controls retain the custom touch-sized variants.
+- The generated `src/routeTree.gen.ts` is committed but excluded from linting and formatting.
