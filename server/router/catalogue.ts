@@ -2,6 +2,7 @@ import { and, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { exerciseMuscles, exercises, muscles } from "@/db/schema";
+import { syncMuscles } from "@/db/sync-muscles";
 import { customExerciseInput, PRIMARY_FACTOR, SECONDARY_FACTOR, uuid } from "@/db/validators";
 import { MUSCLE_SLUGS, muscleBySlug } from "@/lib/muscles";
 import { protectedProcedure, publicProcedure } from "../orpc";
@@ -98,10 +99,6 @@ export const catalogueRouter = {
         message: "This database is out of step with the app's eighteen muscle regions.",
         data: z.object({ missing: z.array(z.string()) }),
       },
-      MUSCLES_NOT_SEEDED: {
-        message: "The muscle list is missing from the database.",
-        data: z.object({ found: z.number(), expected: z.number() }),
-      },
     })
     .input(customExerciseInput)
     .handler(async ({ input, context, errors }) => {
@@ -117,30 +114,28 @@ export const catalogueRouter = {
         .from(muscles)
         .where(inArray(muscles.slug, wanted));
 
-      const idBySlug = new Map(rows.map((row) => [row.slug, row.id]));
-      const missing = wanted.filter((slug) => !idBySlug.has(slug));
+      let idBySlug: Map<string, number> = new Map(rows.map((row) => [row.slug, row.id]));
+      let missing = wanted.filter((slug) => !idBySlug.has(slug));
 
       // Every slug here already passed `z.enum(MUSCLE_SLUGS)`, so a miss is
-      // never a bad tag from the picker — it is this database disagreeing with
-      // `lib/muscles.ts`. Saying which region is missing, and whether the table
-      // was seeded at all, is the difference between a one-command fix and an
-      // afternoon: the old message blamed the user's tagging for a deployment
-      // problem they could not see.
+      // never a bad tag from the picker — it is this database missing reference
+      // data the app itself defines. The eighteen regions are fixed and known
+      // here, so write them and carry on rather than refusing the exercise and
+      // sending someone off to run `db:seed`, which also pulls in eight hundred
+      // catalogue exercises they did not ask for.
       if (missing.length > 0) {
-        const [{ seeded }] = await context.db
-          .select({ seeded: sql<number>`count(*)::int` })
-          .from(muscles);
+        idBySlug = await syncMuscles(context.db);
+        missing = wanted.filter((slug) => !idBySlug.has(slug));
+      }
 
-        if (seeded < MUSCLE_SLUGS.length) {
-          throw errors.MUSCLES_NOT_SEEDED({
-            message: `This database has ${seeded} of the ${MUSCLE_SLUGS.length} muscle regions. Run \`npm run db:seed\` against it.`,
-            data: { found: seeded, expected: MUSCLE_SLUGS.length },
-          });
-        }
-
+      // Still missing after writing them: this is not the table the app expects
+      // — an older migration, or a database it does not own. Naming the region
+      // beats blaming the user's tagging for a deployment problem they cannot
+      // see.
+      if (missing.length > 0) {
         const named = missing.map((slug) => muscleBySlug(slug)?.displayName ?? slug);
         throw errors.UNKNOWN_MUSCLE({
-          message: `This database has no muscle called ${named.join(", ")}. It is out of step with the app's eighteen regions.`,
+          message: `This database has no muscle called ${named.join(", ")}, and would not accept one. It is out of step with the app's eighteen regions.`,
           data: { missing },
         });
       }

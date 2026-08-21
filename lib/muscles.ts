@@ -3,8 +3,10 @@
  *
  * This list is load-bearing in three places at once: the `muscles` table rows,
  * the `id` on every path in the body SVGs, and the muscle picker. Adding or
- * renaming a region here means a migration, an SVG edit, and a reseed. Decide
- * once.
+ * renaming a region here means an SVG edit and a new data migration alongside
+ * `drizzle/0002_seed_muscles.sql`, which carries a copy of these rows so a
+ * migrated database can save a custom exercise without being seeded first.
+ * `tests/integration/muscles.test.ts` fails when the two drift. Decide once.
  */
 
 export const MUSCLE_SLUGS = [

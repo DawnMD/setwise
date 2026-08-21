@@ -15,6 +15,7 @@ import { config } from "dotenv";
 import { and, inArray, isNull, sql } from "drizzle-orm";
 
 import * as schema from "../db/schema";
+import { syncMuscles } from "../db/sync-muscles";
 import { openToolingDatabase } from "../db/tooling";
 import { EXERCISE_OVERRIDES, type MovementPattern } from "../lib/exercise-seed/overrides";
 import {
@@ -23,7 +24,7 @@ import {
   SOURCE_MUSCLE_MAP,
   type SourceMuscleTag,
 } from "../lib/exercise-seed/source-map";
-import { MUSCLES, type MuscleSlug } from "../lib/muscles";
+import type { MuscleSlug } from "../lib/muscles";
 
 config({ path: ".env.local", quiet: true });
 
@@ -106,30 +107,11 @@ async function main() {
 
   try {
     // ---------------------------------------------------------------- muscles
-    await db
-      .insert(schema.muscles)
-      .values(
-        MUSCLES.map((m) => ({
-          slug: m.slug,
-          displayName: m.displayName,
-          svgPathId: m.svgPathId,
-          bodySide: m.bodySide,
-        })),
-      )
-      .onConflictDoUpdate({
-        target: schema.muscles.slug,
-        set: {
-          displayName: sql`excluded.display_name`,
-          svgPathId: sql`excluded.svg_path_id`,
-          bodySide: sql`excluded.body_side`,
-        },
-      });
-
-    const muscleRows = await db
-      .select({ id: schema.muscles.id, slug: schema.muscles.slug })
-      .from(schema.muscles);
-    const muscleId = new Map(muscleRows.map((m) => [m.slug as MuscleSlug, m.id]));
-    console.log(`muscles: ${muscleRows.length}`);
+    // Already written by the `0002_seed_muscles` migration on a migrated
+    // database. Repeated here through the same upsert so a database built with
+    // `db:push`, which never runs migrations, gets them too.
+    const muscleId = await syncMuscles(db);
+    console.log(`muscles: ${muscleId.size}`);
 
     // --------------------------------------------------------------- exercises
     const file = path.join(process.cwd(), "data", "free-exercise-db.json");
