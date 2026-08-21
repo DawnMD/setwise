@@ -14,7 +14,7 @@
  *
  * A bought illustration can replace all of this by keeping the group ids.
  *
- *   npm run svg:generate
+ *   pnpm svg:generate
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";

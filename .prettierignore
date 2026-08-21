@@ -2,3 +2,9 @@ data/free-exercise-db.json
 drizzle/meta/
 lib/body-svg.generated.ts
 scripts/preview-body-svg.mjs
+src/routeTree.gen.ts
+.output
+dist
+.tanstack
+playwright-report
+test-results
