@@ -5,7 +5,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import * as schema from "../../db/schema";
 import { describeTargets } from "../../lib/targets";
-import { uuidv7 } from "../../lib/uuid";
 import {
   findDay,
   getRoutineDetail,
@@ -78,7 +77,7 @@ describe("plan builder acceptance", () => {
     const squatId = bySourceId.get("Barbell_Squat");
     const deadliftId = bySourceId.get("Barbell_Deadlift");
     if (!benchId || !squatId || !deadliftId) {
-      throw new Error("Seed is missing the big three. Run npm run db:seed.");
+      throw new Error("Seed is missing the big three. Run pnpm db:seed.");
     }
 
     const [routine] = await db
@@ -142,7 +141,7 @@ describe("plan builder acceptance", () => {
     expect(await findDay(db, userId, push.id)).not.toBeNull();
     expect(await findDay(db, otherUserId, push.id)).toBeNull();
 
-    const sessionId = uuidv7();
+    const sessionId = randomUUID();
     await db.insert(schema.workoutSessions).values({
       id: sessionId,
       userId,
@@ -167,7 +166,7 @@ describe("plan builder acceptance", () => {
       .set({ startedAt: weekAgo, endedAt: weekAgo })
       .where(eq(schema.workoutSessions.id, sessionId));
     await db.insert(schema.workoutSessions).values({
-      id: uuidv7(),
+      id: randomUUID(),
       userId,
       routineDayId: push.id,
       startedAt: new Date(Date.now() - 2 * 86_400_000),

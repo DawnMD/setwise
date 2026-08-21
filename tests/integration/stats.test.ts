@@ -115,7 +115,7 @@ describe("muscle volume queries", () => {
     for (const [sourceId, weight, reps, count, age, isWarmup] of WEEK) {
       const exerciseId = bySourceId.get(sourceId);
       if (!exerciseId) {
-        throw new Error(`Seed is missing exercise ${sourceId}. Run npm run db:seed.`);
+        throw new Error(`Seed is missing exercise ${sourceId}. Run pnpm db:seed.`);
       }
 
       exerciseIds.set(sourceId, exerciseId);
@@ -130,7 +130,6 @@ describe("muscle volume queries", () => {
           reps,
           isWarmup,
           performedAt: daysAgo(age),
-          clientCreatedAt: daysAgo(age),
         });
       }
     }
@@ -169,7 +168,6 @@ describe("muscle volume queries", () => {
         reps: 15,
         isWarmup: false,
         performedAt: daysAgo(SPREAD_DAYS_AGO),
-        clientCreatedAt: daysAgo(SPREAD_DAYS_AGO),
       });
     }
 

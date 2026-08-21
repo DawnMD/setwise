@@ -7,9 +7,9 @@ import * as schema from "../../db/schema";
 import { estimateOneRepMax } from "../../lib/math";
 import { overloadDelta } from "../../lib/overload";
 import { DEFAULT_BAR_KG, loadBar } from "../../lib/plates";
-import { uuidv7, uuidv7Timestamp } from "../../lib/uuid";
+import { exportSetsCsv } from "../../server/queries/export";
 import { recordSetPersonalRecords } from "../../server/queries/prs";
-import { lastPerformance, upsertSet } from "../../server/queries/session";
+import { createSet, lastPerformance, updateSet } from "../../server/queries/session";
 import { openTestDatabase } from "./database";
 
 const { client, db } = openTestDatabase();
@@ -47,7 +47,7 @@ describe("logger acceptance", () => {
       .where(eq(schema.exercises.sourceId, "Barbell_Bench_Press_-_Medium_Grip"))
       .limit(1);
     if (!bench) {
-      throw new Error("Seed is missing the bench press. Run npm run db:seed.");
+      throw new Error("Seed is missing the bench press. Run pnpm db:seed.");
     }
     benchId = bench.id;
 
@@ -70,7 +70,6 @@ describe("logger acceptance", () => {
         reps: 5,
         isWarmup: false,
         performedAt: previousSessionAt,
-        clientCreatedAt: previousSessionAt,
       })),
     );
 
@@ -125,22 +124,6 @@ describe("logger acceptance", () => {
     expect(overloadDelta({ weight: 200, reps: 20 }, null)).toBeNull();
   });
 
-  it("mints sortable UUIDv7 ids with their creation timestamp", () => {
-    const before = Date.now();
-    const ids = Array.from({ length: 500 }, () => uuidv7());
-    const after = Date.now();
-    const shape = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-
-    expect(ids.every((id) => shape.test(id))).toBe(true);
-    expect(new Set(ids)).toHaveLength(ids.length);
-    expect([...ids].sort()).toEqual(ids);
-
-    const timestamp = uuidv7Timestamp(ids.at(-1)!);
-    expect(timestamp).not.toBeNull();
-    expect(timestamp).toBeGreaterThanOrEqual(before);
-    expect(timestamp).toBeLessThanOrEqual(after);
-  });
-
   it("reads ghost values from the previous session", async () => {
     const previous = await lastPerformance(db, userId, benchId, currentSessionId);
 
@@ -152,8 +135,7 @@ describe("logger acceptance", () => {
   });
 
   it("does not create records from a warm-up", async () => {
-    const warmup = await upsertSet(db, {
-      id: uuidv7(),
+    const warmup = await createSet(db, {
       sessionId: currentSessionId,
       exerciseId: benchId,
       setIndex: 0,
@@ -161,16 +143,13 @@ describe("logger acceptance", () => {
       reps: 8,
       rpe: null,
       isWarmup: true,
-      clientCreatedAt: new Date(),
     });
 
     expect(await recordSetPersonalRecords(db, userId, warmup)).toEqual([]);
   });
 
-  it("records PRs once, keeps retries idempotent, and drops stale PRs after an edit", async () => {
-    const setId = uuidv7();
+  it("generates one set id, updates that row, and drops stale PRs after an edit", async () => {
     const input = {
-      id: setId,
       sessionId: currentSessionId,
       exerciseId: benchId,
       setIndex: 1,
@@ -178,10 +157,11 @@ describe("logger acceptance", () => {
       reps: 5,
       rpe: 8,
       isWarmup: false,
-      clientCreatedAt: new Date(),
     };
 
-    const workingSet = await upsertSet(db, input);
+    const workingSet = await createSet(db, input);
+    const setId = workingSet.id;
+    expect(setId).toMatch(/^[0-9a-f-]{36}$/);
     const records = await recordSetPersonalRecords(db, userId, workingSet);
     const byKind = new Map(records.map((record) => [record.kind, record]));
 
@@ -197,23 +177,14 @@ describe("logger acceptance", () => {
       .where(eq(schema.personalRecords.setId, setId));
     expect(initiallyStored).toHaveLength(records.length);
 
-    const retried = await upsertSet(db, input);
-    await recordSetPersonalRecords(db, userId, retried);
-
     const sessionSets = await db
       .select()
       .from(schema.sets)
       .where(eq(schema.sets.sessionId, currentSessionId));
     expect(sessionSets).toHaveLength(2);
-    expect(retried.performedAt.getTime()).toBe(workingSet.performedAt.getTime());
-
-    const recordsAfterRetry = await db
-      .select()
-      .from(schema.personalRecords)
-      .where(eq(schema.personalRecords.setId, setId));
-    expect(recordsAfterRetry).toHaveLength(initiallyStored.length);
-
-    const edited = await upsertSet(db, { ...input, weight: 90 });
+    const edited = await updateSet(db, { ...input, id: setId, weight: 90 });
+    expect(edited).not.toBeNull();
+    if (!edited) throw new Error("Expected the saved set to exist.");
     const recordsAfterEdit = await recordSetPersonalRecords(db, userId, edited);
     expect(recordsAfterEdit.some((record) => record.kind === "max_weight")).toBe(false);
 
@@ -222,5 +193,27 @@ describe("logger acceptance", () => {
       .from(schema.personalRecords)
       .where(eq(schema.personalRecords.setId, setId));
     expect(storedAfterEdit.some((record) => record.kind === "max_weight")).toBe(false);
+
+    const afterUpdate = await db
+      .select()
+      .from(schema.sets)
+      .where(eq(schema.sets.sessionId, currentSessionId));
+    expect(afterUpdate).toHaveLength(2);
+    expect(afterUpdate.find((set) => set.id === setId)?.weight).toBe(90);
+    expect(edited.performedAt.getTime()).toBe(workingSet.performedAt.getTime());
+  });
+
+  it("exports the stable public columns and confirmed set data", async () => {
+    const csv = await exportSetsCsv(db, userId);
+    const [header, ...rows] = csv.trim().split("\r\n");
+
+    expect(header).toBe(
+      "session_id,session_started_at,session_ended_at,set_id,performed_at,exercise,equipment,set_index,is_warmup,weight_kg,reps,rpe,e1rm_kg",
+    );
+    const edited = rows.find(
+      (row) => row.startsWith(`${currentSessionId},`) && row.includes(",90,"),
+    );
+    expect(edited).toBeDefined();
+    expect(edited?.split(",")).toHaveLength(13);
   });
 });

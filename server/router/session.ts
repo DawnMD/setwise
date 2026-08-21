@@ -2,7 +2,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { sets, workoutSessions } from "@/db/schema";
-import { sessionStartInput, setInput, timeZone, uuid } from "@/db/validators";
+import { createSetInput, sessionStartInput, timeZone, updateSetInput, uuid } from "@/db/validators";
 import { protectedProcedure } from "../orpc";
 import { findDay } from "../queries/plan";
 import {
@@ -19,8 +19,10 @@ import {
   recentSessions,
   restLoggedToday,
   RestDayLogError,
-  upsertSet,
+  createSet,
+  updateSet,
 } from "../queries/session";
+import "@tanstack/react-start/server-only";
 
 /**
  * Typed errors, declared once and shared by every procedure in this router.
@@ -35,6 +37,9 @@ const sessionProcedure = protectedProcedure.errors({
   },
   SESSION_FINISHED: {
     message: "That workout is already finished.",
+  },
+  SET_NOT_FOUND: {
+    message: "That set isn't part of this workout.",
   },
   SESSION_ALREADY_ACTIVE: {
     message: "You already have a workout in progress.",
@@ -59,9 +64,6 @@ const sessionProcedure = protectedProcedure.errors({
     message: "You already logged rest today.",
     data: z.object({ sessionId: uuid }),
   },
-  SESSION_ID_CONFLICT: {
-    message: "That activity id is already in use.",
-  },
 });
 
 export const sessionRouter = {
@@ -80,17 +82,8 @@ export const sessionRouter = {
     return row ?? null;
   }),
 
-  /**
-   * Starts a workout on an id the client generated, for the same reason sets
-   * carry one: a retried start is the same workout, not a second empty one.
-   */
+  /** Starts a workout and returns its database-generated id. */
   start: sessionProcedure.input(sessionStartInput).handler(async ({ input, context, errors }) => {
-    const existing = await findSession(context.db, context.userId, input.id);
-    if (existing) {
-      if (existing.kind === "rest") throw errors.SESSION_IS_REST();
-      return existing;
-    }
-
     const [open] = await context.db
       .select({ id: workoutSessions.id })
       .from(workoutSessions)
@@ -113,7 +106,6 @@ export const sessionRouter = {
     const [row] = await context.db
       .insert(workoutSessions)
       .values({
-        id: input.id,
         userId: context.userId,
         routineDayId: input.routineDayId,
         notes: input.notes,
@@ -125,7 +117,7 @@ export const sessionRouter = {
 
   /** Records an instantaneous planned or ad-hoc rest activity. */
   logRestDay: sessionProcedure
-    .input(z.object({ id: uuid, routineDayId: uuid.nullable(), timeZone }))
+    .input(z.object({ routineDayId: uuid.nullable(), timeZone }))
     .handler(async ({ input, context, errors }) => {
       try {
         return await logRestDay(context.db, context.userId, input);
@@ -139,7 +131,7 @@ export const sessionRouter = {
         if (error.code === "REST_ALREADY_LOGGED" && error.sessionId) {
           throw errors.REST_ALREADY_LOGGED({ data: { sessionId: error.sessionId } });
         }
-        throw errors.SESSION_ID_CONFLICT();
+        throw error;
       }
     }),
 
@@ -172,13 +164,8 @@ export const sessionRouter = {
       return lastPerformance(context.db, context.userId, input.exerciseId, input.excludeSessionId);
     }),
 
-  /**
-   * Saves one set and reports what it beat.
-   *
-   * The upsert and the PR detection share a transaction, so a record can never
-   * be logged against a set that failed to store.
-   */
-  logSet: sessionProcedure.input(setInput).handler(async ({ input, context, errors }) => {
+  /** Inserts one set and reports what it beat after the transaction commits. */
+  createSet: sessionProcedure.input(createSetInput).handler(async ({ input, context, errors }) => {
     const session = await findSession(context.db, context.userId, input.sessionId);
     if (!session) throw errors.SESSION_NOT_FOUND();
     if (session.kind === "rest") throw errors.SESSION_IS_REST();
@@ -189,7 +176,26 @@ export const sessionRouter = {
     }
 
     return context.db.transaction(async (tx) => {
-      const saved = await upsertSet(tx, input);
+      const saved = await createSet(tx, input);
+      const records = await recordSetPersonalRecords(tx, context.userId, saved);
+      return { set: saved, records };
+    });
+  }),
+
+  /** Updates one owned set and recalculates any affected per-set records. */
+  updateSet: sessionProcedure.input(updateSetInput).handler(async ({ input, context, errors }) => {
+    const session = await findSession(context.db, context.userId, input.sessionId);
+    if (!session) throw errors.SESSION_NOT_FOUND();
+    if (session.kind === "rest") throw errors.SESSION_IS_REST();
+    if (session.endedAt) throw errors.SESSION_FINISHED();
+
+    if (!(await exerciseIsVisible(context.db, context.userId, input.exerciseId))) {
+      throw errors.EXERCISE_NOT_FOUND();
+    }
+
+    return context.db.transaction(async (tx) => {
+      const saved = await updateSet(tx, input);
+      if (!saved) throw errors.SET_NOT_FOUND();
       const records = await recordSetPersonalRecords(tx, context.userId, saved);
       return { set: saved, records };
     });

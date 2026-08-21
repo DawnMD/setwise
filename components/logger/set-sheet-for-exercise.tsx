@@ -1,5 +1,3 @@
-"use client";
-
 import { useQuery } from "@tanstack/react-query";
 
 import { ghostForPosition } from "@/lib/overload";
@@ -22,6 +20,8 @@ export function SetSheetForExercise({
   siblings,
   editingSet,
   open,
+  pending,
+  saveError,
   onOpenChange,
   onClosed,
   onSave,
@@ -33,6 +33,8 @@ export function SetSheetForExercise({
   /** The set being edited, or null when adding a new one. */
   editingSet: LoggerSet | null;
   open: boolean;
+  pending: boolean;
+  saveError: boolean;
   onOpenChange: (open: boolean) => void;
   /** Fires once the sheet has finished sliding away. */
   onClosed: () => void;
@@ -83,6 +85,8 @@ export function SetSheetForExercise({
       ghostWhen={last.data?.performedAt ?? null}
       initial={initial}
       saveLabel={editingSet ? "Save changes" : "Save set"}
+      pending={pending}
+      saveError={saveError}
       onSave={onSave}
     />
   );

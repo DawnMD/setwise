@@ -2,9 +2,10 @@ import { and, asc, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 
 import type { Db, DbClient } from "@/db";
 import { exercises, routineDays, routines, sets, workoutSessions } from "@/db/schema";
-import type { SetInput } from "@/db/validators";
+import type { CreateSetInput, UpdateSetInput } from "@/db/validators";
 import type { ActivityKind } from "@/lib/activity";
 import { findDay, sessionPlan, type SessionPlan } from "./plan";
+import "@tanstack/react-start/server-only";
 
 export type SetRow = {
   id: string;
@@ -16,7 +17,6 @@ export type SetRow = {
   rpe: number | null;
   isWarmup: boolean;
   performedAt: Date;
-  clientCreatedAt: Date;
 };
 
 export type SessionExercise = {
@@ -53,7 +53,6 @@ const setColumns = {
   rpe: sets.rpe,
   isWarmup: sets.isWarmup,
   performedAt: sets.performedAt,
-  clientCreatedAt: sets.clientCreatedAt,
 };
 
 /** Narrowed by user on every read. A session id alone is never enough. */
@@ -67,11 +66,7 @@ export async function findSession(db: DbClient, userId: string, sessionId: strin
 }
 
 export type RestDayLogErrorCode =
-  | "SESSION_ALREADY_ACTIVE"
-  | "DAY_NOT_FOUND"
-  | "DAY_IS_WORKOUT"
-  | "REST_ALREADY_LOGGED"
-  | "SESSION_ID_CONFLICT";
+  "SESSION_ALREADY_ACTIVE" | "DAY_NOT_FOUND" | "DAY_IS_WORKOUT" | "REST_ALREADY_LOGGED";
 
 export class RestDayLogError extends Error {
   constructor(
@@ -101,23 +96,17 @@ export async function restLoggedToday(db: DbClient, userId: string, timeZone: st
   return row ?? null;
 }
 
-/** Stores one instantaneous rest activity per local day and makes same-id retries a no-op. */
+/** Stores one instantaneous rest activity per local day. */
 export async function logRestDay(
   db: Db,
   userId: string,
-  input: { id: string; routineDayId: string | null; timeZone: string },
+  input: { routineDayId: string | null; timeZone: string },
 ) {
   return db.transaction(async (tx) => {
     // The rule is user-and-local-day based, so it cannot be represented by a
     // simple unique index. Serializing this user's rest writes closes the race
     // between two open tabs without locking anyone else's activity.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`rest-day:${userId}`}))`);
-
-    const existing = await findSession(tx, userId, input.id);
-    if (existing) {
-      if (existing.kind === "rest") return existing;
-      throw new RestDayLogError("SESSION_ID_CONFLICT");
-    }
 
     const [open] = await tx
       .select({ id: workoutSessions.id })
@@ -140,22 +129,15 @@ export async function logRestDay(
     const [created] = await tx
       .insert(workoutSessions)
       .values({
-        id: input.id,
         userId,
         routineDayId: input.routineDayId,
         kind: "rest",
         startedAt: completedAt,
         endedAt: completedAt,
       })
-      .onConflictDoNothing({ target: workoutSessions.id })
       .returning();
 
-    if (created) return created;
-
-    // A concurrent retry can lose the insert race and still be successful.
-    const retried = await findSession(tx, userId, input.id);
-    if (retried?.kind === "rest") return retried;
-    throw new RestDayLogError("SESSION_ID_CONFLICT");
+    return created;
   });
 }
 
@@ -172,7 +154,7 @@ export async function getSessionDetail(
     .from(sets)
     .innerJoin(exercises, eq(exercises.id, sets.exerciseId))
     .where(eq(sets.sessionId, sessionId))
-    .orderBy(asc(sets.clientCreatedAt), asc(sets.setIndex));
+    .orderBy(asc(sets.performedAt), asc(sets.setIndex));
 
   // Order of first appearance, which is the order the user did them in. A
   // `session_exercises` table would say this directly, but an exercise with no
@@ -206,7 +188,6 @@ export async function getSessionDetail(
       rpe: row.rpe,
       isWarmup: row.isWarmup,
       performedAt: row.performedAt,
-      clientCreatedAt: row.clientCreatedAt,
     })),
   };
 }
@@ -331,19 +312,11 @@ export async function recentSessions(
   return rows;
 }
 
-/**
- * Upsert on the client-generated id.
- *
- * `on conflict (id) do update` is what makes the write path idempotent: the
- * second tap after a timeout rewrites the same row rather than adding a
- * duplicate. `performedAt` is left alone on conflict, so a retry does not shift
- * a set into a later stats window than the one it happened in.
- */
-export async function upsertSet(db: DbClient, input: SetInput): Promise<SetRow> {
+/** Inserts a server-identified set after the router has checked its session. */
+export async function createSet(db: DbClient, input: CreateSetInput): Promise<SetRow> {
   const [row] = await db
     .insert(sets)
     .values({
-      id: input.id,
       sessionId: input.sessionId,
       exerciseId: input.exerciseId,
       setIndex: input.setIndex,
@@ -351,19 +324,26 @@ export async function upsertSet(db: DbClient, input: SetInput): Promise<SetRow> 
       reps: input.reps,
       rpe: input.rpe,
       isWarmup: input.isWarmup,
-      clientCreatedAt: input.clientCreatedAt,
-    })
-    .onConflictDoUpdate({
-      target: sets.id,
-      set: {
-        setIndex: input.setIndex,
-        weight: input.weight,
-        reps: input.reps,
-        rpe: input.rpe,
-        isWarmup: input.isWarmup,
-      },
     })
     .returning(setColumns);
 
   return row;
+}
+
+/** Updates one existing row and never turns a missing id into an insert. */
+export async function updateSet(db: DbClient, input: UpdateSetInput): Promise<SetRow | null> {
+  const [row] = await db
+    .update(sets)
+    .set({
+      exerciseId: input.exerciseId,
+      setIndex: input.setIndex,
+      weight: input.weight,
+      reps: input.reps,
+      rpe: input.rpe,
+      isWarmup: input.isWarmup,
+    })
+    .where(and(eq(sets.id, input.id), eq(sets.sessionId, input.sessionId)))
+    .returning(setColumns);
+
+  return row ?? null;
 }

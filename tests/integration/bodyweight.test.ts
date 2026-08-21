@@ -100,7 +100,7 @@ describe("bodyweight series", () => {
       .returning();
 
     let setIndex = 0;
-    const logSet = async (
+    const createFixtureSet = async (
       daysAgo: number,
       weight: number,
       reps: number,
@@ -117,17 +117,16 @@ describe("bodyweight series", () => {
         reps,
         isWarmup,
         performedAt: at,
-        clientCreatedAt: at,
       });
     };
 
     // 1,500 kg of working tonnage three days back, behind a warm-up that must
     // not count toward any of it.
-    await logSet(3, 60, 5, true);
-    for (let index = 0; index < 3; index += 1) await logSet(3, 100, 5, false);
-    for (let index = 0; index < 2; index += 1) await logSet(1, 140, 3, false);
+    await createFixtureSet(3, 60, 5, true);
+    for (let index = 0; index < 3; index += 1) await createFixtureSet(3, 100, 5, false);
+    for (let index = 0; index < 2; index += 1) await createFixtureSet(1, 140, 3, false);
     // Late enough in the day that it belongs to tomorrow east of UTC.
-    await logSet(
+    await createFixtureSet(
       EVENING_SET.daysAgo,
       EVENING_SET.weight,
       EVENING_SET.reps,
@@ -135,7 +134,7 @@ describe("bodyweight series", () => {
       EVENING_SET.hour,
     );
     // Outside the seven-day window, inside the thirty.
-    await logSet(20, 100, 5, false);
+    await createFixtureSet(20, 100, 5, false);
 
     week = await bodyweightSeries(db, userId, 7, "UTC");
     month = await bodyweightSeries(db, userId, 30, "UTC");
