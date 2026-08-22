@@ -8,6 +8,7 @@ import * as schema from "../../db/schema";
 import { openSharedTestDatabase } from "./database";
 import { getRoutineDetail, listRoutines, startableDays } from "../../server/queries/plan";
 import { getSessionDetail, recentSessions } from "../../server/queries/session";
+import { createSessionResolver } from "../../server/orpc";
 import { router } from "../../server/router";
 
 const authState = vi.hoisted(() => ({ userId: "" }));
@@ -35,7 +36,15 @@ vi.mock("../../lib/auth", () => ({
 const { client, db } = openSharedTestDatabase();
 const userId = `test-rest-${randomUUID()}`;
 const otherUserId = `test-rest-other-${randomUUID()}`;
-const api = createRouterClient(router, { context: { headers: new Headers() } });
+// A fresh context per call, the way a request gets one. The session resolver
+// memoises within a request, so a shared context would pin every procedure in
+// the file to whichever user happened to call first.
+const api = createRouterClient(router, {
+  context: () => {
+    const headers = new Headers();
+    return { headers, getSession: createSessionResolver(headers) };
+  },
+});
 const timeZone = "UTC";
 
 describe("rest-day acceptance", () => {
@@ -198,14 +207,15 @@ describe("rest-day acceptance", () => {
     await expect(
       api.session.logRestDay({ routineDayId: workoutDayId, timeZone }),
     ).rejects.toMatchObject({ code: "DAY_IS_WORKOUT" });
-    await expect(api.session.start({ routineDayId: restDayId, notes: null })).rejects.toMatchObject(
-      { code: "DAY_IS_REST" },
-    );
+    await expect(
+      api.session.start({ id: randomUUID(), routineDayId: restDayId, notes: null }),
+    ).rejects.toMatchObject({ code: "DAY_IS_REST" });
     await expect(
       api.plan.addExercise({ routineDayId: restDayId, exerciseId: benchId }),
     ).rejects.toMatchObject({ code: "DAY_IS_REST" });
     await expect(
       api.session.createSet({
+        id: randomUUID(),
         sessionId: plannedRestId,
         exerciseId: benchId,
         setIndex: 0,
@@ -218,8 +228,9 @@ describe("rest-day acceptance", () => {
   });
 
   it("creates, updates, and deletes sets only through an owned workout", async () => {
-    const session = await api.session.start({ routineDayId: null, notes: null });
+    const session = await api.session.start({ id: randomUUID(), routineDayId: null, notes: null });
     const created = await api.session.createSet({
+      id: randomUUID(),
       sessionId: session.id,
       exerciseId: benchId,
       setIndex: 0,
@@ -264,7 +275,7 @@ describe("rest-day acceptance", () => {
   });
 
   it("refuses rest while a workout is active and reports activity kinds", async () => {
-    const active = await api.session.start({ routineDayId: null, notes: null });
+    const active = await api.session.start({ id: randomUUID(), routineDayId: null, notes: null });
     const activeId = active.id;
     expect(activeId).toMatch(/^[0-9a-f-]{36}$/);
     expect(active.kind).toBe("workout");
