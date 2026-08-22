@@ -21,9 +21,9 @@ Phase 5 moved bodyweight out of Progress onto its own Body screen, so phase 3 no
 ## Decisions that are settled
 
 - Setwise requires a reliable connection while a workout is being recorded.
-- Postgres generates session, rest-activity, and set IDs.
+- The client generates workout and set IDs; Postgres generates rest-activity IDs. A write that is retried under the same ID returns the row it already stored rather than a second one.
 - The logger shows a set only after the server confirms it.
-- There is no offline queue, persisted workout draft, automatic reconnect write, or client-generated write ID.
+- There is no offline queue and no persisted workout draft. A set save is retried once, automatically, and only because the ID makes that safe; nothing is queued and nothing is replayed later.
 - Unsaved exercise picks and rest timers live in memory and reset on navigation or reload.
 - Theme is the only local UI preference that persists.
 - Stored weights are kilograms. Unit preference is a display concern.
@@ -45,7 +45,7 @@ These choices can change, but only as product decisions. They should not drift b
 | Client data        | TanStack Query                     | Query ownership, cache refresh, and typed oRPC mutation options          |
 | Components         | shadcn on Base UI                  | Accessible primitives with the `base-lyra` visual system                 |
 | Styling            | Tailwind CSS                       | Mobile-first layout and shared theme tokens                              |
-| Charts             | Recharts through shadcn Chart      | Enough control for the heatmap, trends, and combined weight chart        |
+| Charts             | `components/ui/mini-chart`         | Lines, dots and bars over one or two axes, which is all two screens need |
 | Theme              | Local provider                     | Applies light, dark, or system preference before hydration               |
 | Tooling            | pnpm, Vitest, Playwright           | One package manager and two levels of behavior checks                    |
 
@@ -345,6 +345,8 @@ Do not add a feed, comments, likes, or public-by-default data. Social comes afte
 ### Phase 8: hardening
 
 Some work has landed already: CI runs the full check set, Playwright covers the main browser flow, protected routes have server guards, and reduced-motion CSS exists.
+
+A performance pass has landed on top of that: functions and database in the same region, a connection pool that is not serial, one batched request per screen, one session resolution per request, writes that patch the cache from their own response, and charts drawn in-house. See [performance.md](performance.md) for what was changed, what it is measured against, and how to roll each piece back.
 
 Still needed:
 
