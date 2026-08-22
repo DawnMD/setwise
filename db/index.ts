@@ -5,16 +5,32 @@ import { drizzle as pgDrizzle } from "drizzle-orm/node-postgres";
 import { Pool as PgPool } from "pg";
 
 import { requireEnv } from "./connection";
-import { createNeonPool } from "./neon";
+import { instrumentPool } from "./instrument";
+import { createNeonPool, RUNTIME_POOL_MAX } from "./neon";
 import * as schema from "./schema";
 
 const connectionString = requireEnv("DATABASE_URL");
-const createNeonDatabase = () => neonDrizzle({ client: createNeonPool(connectionString), schema });
+
+/**
+ * The runtime pool.
+ *
+ * `DATABASE_URL` is the pooled Neon endpoint; the unpooled one is for
+ * migrations and administrative tooling only, where a single long-lived
+ * connection is what is wanted and PgBouncer is in the way.
+ */
+const createNeonDatabase = () =>
+  neonDrizzle({
+    client: instrumentPool(createNeonPool(connectionString, RUNTIME_POOL_MAX)),
+    schema,
+  });
 
 export type Db = ReturnType<typeof createNeonDatabase>;
 export const db: Db =
   process.env.DATABASE_DRIVER === "pg"
-    ? (pgDrizzle({ client: new PgPool({ connectionString, max: 1 }), schema }) as unknown as Db)
+    ? (pgDrizzle({
+        client: instrumentPool(new PgPool({ connectionString, max: RUNTIME_POOL_MAX })),
+        schema,
+      }) as unknown as Db)
     : createNeonDatabase();
 export { schema };
 
