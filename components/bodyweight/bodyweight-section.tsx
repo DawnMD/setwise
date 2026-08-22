@@ -65,7 +65,7 @@ export function BodyweightSection({ window }: { window: StatWindow }) {
     orpc.bodyweight.remove.mutationOptions({ onSuccess: (result) => afterLog(result.profile) }),
   );
 
-  if (series.isPending) return <Skeleton className="h-64 w-full" />;
+  if (series.isPending) return <BodyweightSectionSkeleton />;
 
   if (series.isError) {
     return (
@@ -199,6 +199,46 @@ export function BodyweightSection({ window }: { window: StatWindow }) {
       </div>
       {sheet}
     </>
+  );
+}
+
+/** Keeps the Body screen still while a newly selected range is fetched. */
+function BodyweightSectionSkeleton() {
+  return (
+    <div
+      className="flex flex-col gap-3 rounded-lg border bg-card p-3"
+      aria-label="Loading bodyweight"
+      aria-busy="true"
+    >
+      <div className="grid grid-cols-2 gap-2" aria-hidden="true">
+        <StatSkeleton />
+        <StatSkeleton />
+      </div>
+
+      <Skeleton className="h-[208px] w-full" aria-hidden="true" />
+
+      <div className="flex h-8 flex-col gap-1" aria-hidden="true">
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-2/3" />
+      </div>
+
+      <div className="overflow-hidden rounded-lg border" aria-hidden="true">
+        <Skeleton className="h-11 w-full bg-muted/70" />
+        <Skeleton className="h-11 w-full border-t bg-muted/70" />
+      </div>
+
+      <Skeleton className="h-11 w-full" aria-hidden="true" />
+    </div>
+  );
+}
+
+function StatSkeleton() {
+  return (
+    <div className="flex h-[87px] flex-col gap-2 rounded-lg border bg-background px-3 py-2.5">
+      <Skeleton className="h-3 w-20" />
+      <Skeleton className="h-7 w-24" />
+      <Skeleton className="h-3 w-28" />
+    </div>
   );
 }
 
