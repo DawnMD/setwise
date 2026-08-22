@@ -1,42 +1,42 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { isDefinedError } from "@orpc/client";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { BedDouble, Settings } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { BedDouble } from "lucide-react";
 import * as React from "react";
 
-import { afterWrite } from "@/lib/cache";
 import { formatWeight, formatWhen } from "@/lib/format";
-import { newId } from "@/lib/ids";
-import { orpc } from "@/lib/orpc";
 import { queries } from "@/lib/queries";
 import { useCriticalData } from "@/hooks/use-critical-data";
+import { useStartWorkout } from "@/hooks/use-start-workout";
 import { useTimeZone } from "@/hooks/use-time-zone";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { ProfilePrompt } from "@/components/profile/profile-prompt";
 
 import { Elapsed } from "./elapsed";
 import { LogRestDialog, type RestLogTarget } from "./log-rest-dialog";
 
 /**
- * The screen the app opens on.
+ * The logger's front door.
  *
  * One decision: start, or carry on. Everything else here is history, and it is
- * history rather than statistics because the stats screen is phase 3 and a
- * half-built version of it would be worse than none.
+ * history rather than statistics because Progress owns those.
+ *
+ * Phase 6 took two things off this screen. The app now opens on Home, so the
+ * "Setwise" title and the settings gear moved there with it, and so did the
+ * dismissible profile prompt. What is left is the whole rotation rather than
+ * Home's single next day: this is the screen for the week someone wants to run
+ * out of order.
  */
 export function TrainHome() {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [error, setError] = React.useState<string | null>(null);
   const [restTarget, setRestTarget] = React.useState<RestLogTarget | null>(null);
   const timeZone = useTimeZone();
+  const { startWorkout, isPending: starting, error, clearError } = useStartWorkout();
 
   const active = useQuery(queries.activeSession());
   const recent = useQuery(queries.recentActivity());
@@ -46,59 +46,9 @@ export function TrainHome() {
 
   useCriticalData(!active.isPending && !upcoming.isPending && !recent.isPending);
 
-  const start = useMutation(
-    orpc.session.start.mutationOptions({
-      onSuccess: (session) => {
-        queryClient.setQueryData(queries.activeSession().queryKey, session);
-        afterWrite.sessionLifecycle(queryClient);
-        // Started before the navigation rather than by the route it lands on,
-        // so the fetch and the transition overlap instead of queueing. The
-        // route's own loader finds it already in flight and waits on the same
-        // promise.
-        void queryClient.prefetchQuery(queries.sessionDetail(session.id));
-        void navigate({ to: "/train/$sessionId", params: { sessionId: session.id } });
-      },
-      onError: (mutationError) => {
-        // A typed error, matched rather than string-parsed: if a workout is
-        // already open, the only sensible thing is to go to it.
-        if (isDefinedError(mutationError) && mutationError.code === "SESSION_ALREADY_ACTIVE") {
-          void navigate({
-            to: "/train/$sessionId",
-            params: { sessionId: mutationError.data.sessionId },
-          });
-          return;
-        }
-        setError("Couldn't start a workout. Check your connection and try again.");
-      },
-    }),
-  );
-
-  /** Named by the client, so a retried start cannot open a second workout. */
-  const startWorkout = (routineDayId: string | null) => {
-    setError(null);
-    start.mutate({ id: newId(), routineDayId, notes: null });
-  };
-
   return (
     <div className="mx-auto flex w-full max-w-[520px] flex-col gap-4 px-4 py-4">
-      <header className="flex items-center justify-between py-2">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Setwise</h1>
-        <Link
-          to="/settings"
-          aria-label="Settings"
-          className={buttonVariants({ variant: "ghost", size: "icon-touch" })}
-        >
-          <Settings />
-        </Link>
-      </header>
-
-      {/*
-        Dismissible here and nowhere else. Train is the screen the app opens on
-        until phase 6 builds a Home, and nagging someone about their date of
-        birth every time they arrive to lift is how a good prompt becomes
-        furniture people stop reading.
-      */}
-      <ProfilePrompt dismissible />
+      <h1 className="py-2 font-heading text-2xl font-semibold tracking-tight">Train</h1>
 
       {active.isPending ? (
         <Skeleton className="h-28 w-full" />
@@ -164,12 +114,12 @@ export function TrainHome() {
                     variant={index === 0 ? "default" : "outline"}
                     size="touch"
                     disabled={
-                      start.isPending ||
+                      starting ||
                       (day.kind === "rest" &&
                         (restToday.isPending || restToday.isError || restToday.data !== null))
                     }
                     onClick={() => {
-                      setError(null);
+                      clearError();
                       if (day.kind === "rest") {
                         setRestTarget({
                           routineDayId: day.id,
@@ -201,11 +151,11 @@ export function TrainHome() {
             variant={upcoming.data && upcoming.data.length > 0 ? "secondary" : "default"}
             size="touch"
             className="w-full"
-            disabled={start.isPending}
+            disabled={starting}
             onClick={() => startWorkout(null)}
           >
-            {start.isPending ? <Spinner data-icon="inline-start" /> : null}
-            {start.isPending
+            {starting ? <Spinner data-icon="inline-start" /> : null}
+            {starting
               ? "Starting…"
               : upcoming.data && upcoming.data.length > 0
                 ? "Start an empty workout"
@@ -228,9 +178,9 @@ export function TrainHome() {
                 variant="outline"
                 size="touch"
                 className="w-full"
-                disabled={start.isPending || restToday.isPending || restToday.data !== null}
+                disabled={starting || restToday.isPending || restToday.data !== null}
                 onClick={() => {
-                  setError(null);
+                  clearError();
                   setRestTarget({ routineDayId: null });
                 }}
               >

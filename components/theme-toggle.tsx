@@ -1,6 +1,6 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "@/hooks/use-theme";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const THEMES = [

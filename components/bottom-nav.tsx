@@ -1,17 +1,20 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { CalendarDays, ChartNoAxesColumn, Dumbbell, Scale } from "lucide-react";
+import { CalendarDays, ChartNoAxesColumn, Dumbbell, House, Scale } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 /**
- * Four items, because that is genuinely the count of things this app does, not
- * because four looks tidy. Bottom-anchored: everything a thumb reaches lives in
+ * Five items, because that is genuinely the count of things this app does, not
+ * because five looks tidy. Bottom-anchored: everything a thumb reaches lives in
  * the bottom third, and there is never a top-right save button.
  *
  * Body earned a tab in phase 5. Weighing in is a daily act, and it was buried
- * under a heatmap at the bottom of Progress.
+ * under a heatmap at the bottom of Progress. Home earned the first one in phase
+ * 6 and took `/` with it, so the app opens on a summary rather than on the
+ * logger.
  */
 const ITEMS = [
+  { to: "/", label: "Home", icon: House },
   { to: "/train", label: "Train", icon: Dumbbell },
   { to: "/progress", label: "Progress", icon: ChartNoAxesColumn },
   { to: "/body", label: "Body", icon: Scale },
@@ -28,6 +31,8 @@ export function BottomNav() {
     >
       <ul className="mx-auto flex w-full max-w-[520px]">
         {ITEMS.map((item) => {
+          // Home is exact. The prefix arm reads `//` for it, which nothing
+          // matches, so `/train` cannot light up Home as well as itself.
           const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
           return (
             <li key={item.to} className="flex-1">

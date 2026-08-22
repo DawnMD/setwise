@@ -7,7 +7,8 @@ import { z } from "zod";
 import { clearAccountCache } from "@/lib/cache";
 import { authClient } from "@/lib/auth-client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -74,12 +75,12 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
       // nothing here worth refetching, only rows that are no longer this
       // account's.
       clearAccountCache(queryClient);
-      // A new account goes to the wizard, an existing one to the logger. Every
-      // step of the wizard can be skipped, so this costs a returning user
-      // nothing and saves a new one from finding an empty Body screen. The
-      // protected route runs its own guard against the cookie that was just
-      // set, so there is no separate invalidate-then-navigate to sequence.
-      await navigate({ to: isSignUp ? "/onboarding" : "/train", replace: true });
+      // A new account goes to the wizard, an existing one to Home. Every step
+      // of the wizard can be skipped, so this costs a returning user nothing
+      // and saves a new one from finding an empty Body screen. The protected
+      // route runs its own guard against the cookie that was just set, so
+      // there is no separate invalidate-then-navigate to sequence.
+      await navigate({ to: isSignUp ? "/onboarding" : "/", replace: true });
     } catch {
       form.setError("root.server", {
         type: "server",

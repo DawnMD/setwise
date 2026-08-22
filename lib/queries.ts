@@ -31,6 +31,10 @@ export function resolveTimeZone(): string {
  * one request. Cached data for the selected range still renders immediately.
  */
 export const queries = {
+  /** Everything Home draws except the targets, which come from `profile`. */
+  homeSummary: (timeZone: string) =>
+    orpc.home.summary.queryOptions({ input: { timeZone }, staleTime: STALE.home }),
+
   activeSession: () => orpc.session.active.queryOptions({ staleTime: STALE.activeSession }),
 
   recentActivity: (limit = 10) =>

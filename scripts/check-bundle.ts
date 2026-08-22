@@ -42,8 +42,14 @@ const BUDGETS: Budget[] = [
   {
     name: "route chunk",
     // No single screen should be heavier than the shell that loads it.
+    //
+    // `_authenticated` carries the navigation, and since phase 6 the Home
+    // screen with it: `/` is that layout's index route, so the splitter groups
+    // the two. That is the right place for it — Home is where an authenticated
+    // session starts — but it means every private route pays for it, which is
+    // exactly the kind of thing a budget is for.
     match: (file) =>
-      /^(train|progress|body|plan|onboarding|settings|_sessionId|_routineId)-[\w-]+\.js$/.test(
+      /^(train|progress|body|plan|onboarding|settings|_authenticated|_sessionId|_routineId)-[\w-]+\.js$/.test(
         file,
       ),
     limit: 32 * KB,

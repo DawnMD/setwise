@@ -12,6 +12,12 @@
  * read a constant.
  */
 export const STALE = {
+  /**
+   * The Home summary. Short, like the open workout it leads with: this is the
+   * screen someone lands on after a workout finished in another tab, and the
+   * first thing it says is whether one is still running.
+   */
+  home: 15_000,
   /** The exercise catalogue changes on deploy, not during a workout. */
   catalogue: 5 * 60_000,
   /** Volume, intensity and historical bodyweight: yesterday's numbers are settled. */

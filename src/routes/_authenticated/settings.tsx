@@ -5,7 +5,7 @@ import { prefetch } from "@/lib/prefetch";
 import { ProfilePrompt } from "@/components/profile/profile-prompt";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const Route = createFileRoute("/_authenticated/settings")({

@@ -116,35 +116,45 @@ test.describe.serial("Setwise browser smoke", () => {
     await expect(page).toHaveURL(/\/plan$/);
     await page.getByRole("link", { name: "Train" }).click();
     await expect(page).toHaveURL(/\/train$/);
+    // Home took `/` in phase 6, and the settings gear went with it.
+    await page.getByRole("link", { name: "Home" }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("heading", { name: "Setwise" })).toBeVisible();
     await page.getByRole("link", { name: "Settings" }).click();
     await expect(page).toHaveURL(/\/settings$/);
 
-    for (const path of ["/train", "/plan", "/progress", "/body", "/settings"]) {
+    for (const path of ["/", "/train", "/plan", "/progress", "/body", "/settings"]) {
       await page.goto(path);
       await expect(page).toHaveURL(new RegExp(`${path}$`));
     }
   });
 
-  /**
-   * Train is the widest screen in the app: the open workout, recent activity,
-   * the rotation, today's rest and the profile. All five leave in one request.
-   */
-  test("a screen's reads leave as one batched request", async () => {
-    await page.goto("/settings");
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-
+  /** Collects the RPC requests a navigation makes, and nothing else. */
+  async function recordRpc(navigate: () => Promise<void>): Promise<string[]> {
     const rpc: string[] = [];
     const record = (url: string) => {
       if (url.includes("/api/rpc")) rpc.push(url);
     };
     page.on("request", (request) => record(request.url()));
-
-    await page.getByRole("link", { name: "Train" }).click();
-    await expect(page).toHaveURL(/\/train$/);
-    await expect(page.getByRole("heading", { name: "Setwise" })).toBeVisible();
-    await expect(page.getByText("Recent activity")).toBeVisible();
-
+    await navigate();
     page.removeAllListeners("request");
+    return rpc;
+  }
+
+  /**
+   * Train is the widest screen in the app: the open workout, recent activity,
+   * the rotation and today's rest. All four leave in one request.
+   */
+  test("a screen's reads leave as one batched request", async () => {
+    await page.goto("/settings");
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+
+    const rpc = await recordRpc(async () => {
+      await page.getByRole("link", { name: "Train" }).click();
+      await expect(page).toHaveURL(/\/train$/);
+      await expect(page.getByRole("heading", { name: "Train" })).toBeVisible();
+      await expect(page.getByText("Recent activity")).toBeVisible();
+    });
 
     expect(rpc.length).toBeGreaterThan(0);
     // Every one of them went to the batch endpoint, which is the same thing as
@@ -153,6 +163,26 @@ test.describe.serial("Setwise browser smoke", () => {
       expect(url).toContain("/api/rpc/__batch__");
     }
     expect(rpc.length).toBeLessThanOrEqual(2);
+  });
+
+  /**
+   * Home summarises five screens and costs one request to draw. The summary is
+   * one procedure and the targets are the shared profile read every other
+   * screen uses, so a cold arrival sends both together and nothing else.
+   */
+  test("home draws from one request", async () => {
+    await page.goto("/train");
+    await expect(page.getByRole("heading", { name: "Train" })).toBeVisible();
+
+    const rpc = await recordRpc(async () => {
+      await page.getByRole("link", { name: "Home" }).click();
+      await expect(page).toHaveURL(/\/$/);
+      await expect(page.getByRole("heading", { name: "Setwise" })).toBeVisible();
+      await expect(page.getByText("This week")).toBeVisible();
+    });
+
+    expect(rpc).toHaveLength(1);
+    expect(rpc[0]).toContain("/api/rpc/__batch__");
   });
 
   test("workout writes appear only after confirmation and failed writes stay editable", async () => {
@@ -197,6 +227,25 @@ test.describe.serial("Setwise browser smoke", () => {
     await expect(confirmedRow).toHaveCount(1);
   });
 
+  /**
+   * The workout above was left open on purpose. Home has to lead with it, and
+   * the set it confirmed has to already be in the week's rollup — a summary
+   * that lags the thing it summarises is worse than no summary.
+   */
+  test("home leads with the open workout and counts the set it confirmed", async () => {
+    await page.goto("/");
+    await expect(page.getByText("Workout in progress")).toBeVisible();
+
+    const week = page.getByRole("link", { name: "This week, on Progress" });
+    await expect(week).toContainText("Working sets");
+    // 100 kg for 5, and the unit is in the label rather than beside the figure.
+    await expect(week).toContainText("500");
+    await expect(week).toContainText("Tonnage (kg)");
+
+    await page.getByRole("link", { name: "Carry on" }).click();
+    await expect(page).toHaveURL(/\/train\/[0-9a-f-]{36}$/);
+  });
+
   test("theme and CSV export work, then sign-out clears auth", async () => {
     await page.goto("/settings");
     await page.getByRole("button", { name: "Dark" }).click();
@@ -217,6 +266,6 @@ test.describe.serial("Setwise browser smoke", () => {
     await page.getByLabel("Email").fill(account.email);
     await page.getByLabel("Password").fill(account.password);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page).toHaveURL(/\/train$/);
+    await expect(page).toHaveURL(/\/$/);
   });
 });
