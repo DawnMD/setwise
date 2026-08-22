@@ -179,7 +179,7 @@ export default function HabitAdherenceChart({ points }: { points: HabitTrendPoin
               className="grid grid-cols-[1rem_1fr_auto] items-center gap-1.5 text-xs"
             >
               <span
-                className="h-1.5 w-3 rounded-full"
+                className="h-1.5 w-3 rounded-[2px]"
                 style={{ backgroundColor: point.color }}
                 aria-hidden="true"
               />

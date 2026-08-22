@@ -18,7 +18,7 @@ export function TargetsCard({ targets }: { targets: BodyTargets }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3 rounded-lg border bg-card p-3">
+      <div className="flex flex-col gap-3 rounded-none border bg-card p-3">
         <div className="flex flex-col gap-0.5">
           <span className="text-xs text-muted-foreground">
             Daily calories
@@ -132,7 +132,7 @@ function round(value: number, places: number): number {
 
 function Macro({ label, grams }: { label: string; grams: number }) {
   return (
-    <div className="flex flex-col gap-0.5 rounded-lg border bg-background px-3 py-2">
+    <div className="flex flex-col gap-0.5 rounded-none border bg-background px-3 py-2">
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="numeric-display text-xl">{grams}g</span>
     </div>
@@ -141,7 +141,7 @@ function Macro({ label, grams }: { label: string; grams: number }) {
 
 function Stat({ label, value, footnote }: { label: string; value: string; footnote?: string }) {
   return (
-    <div className="flex flex-col gap-0.5 rounded-lg border bg-card px-3 py-2.5">
+    <div className="flex flex-col gap-0.5 rounded-none border bg-card px-3 py-2.5">
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="numeric-display text-2xl">{value}</span>
       {footnote ? (

@@ -74,7 +74,7 @@ export function MuscleHeatmap({
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-2" onClick={onMapClick}>
         {(["front", "back"] as const).map((view) => (
-          <figure key={view} className="rounded-lg border bg-card p-2">
+          <figure key={view} className="rounded-none border bg-card p-2">
             <BodyMap
               view={view}
               bands={bands}
@@ -90,7 +90,7 @@ export function MuscleHeatmap({
 
       <div
         aria-live="polite"
-        className="flex min-h-11 items-center rounded-lg border bg-card px-3 py-2"
+        className="flex min-h-11 items-center rounded-none border bg-card px-3 py-2"
       >
         {active ? (
           <div className="flex w-full items-baseline justify-between gap-2">

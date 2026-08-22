@@ -99,7 +99,7 @@ export function ProgressHome() {
 
           <section className="flex flex-col gap-2">
             <h2 className="font-heading text-sm font-semibold text-muted-foreground">Volume</h2>
-            <div className="overflow-hidden rounded-lg border bg-card">
+            <div className="overflow-hidden rounded-none border bg-card">
               <MuscleVolumeList muscles={muscles} selected={selected} onSelect={setSelected} />
             </div>
           </section>

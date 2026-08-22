@@ -29,7 +29,7 @@ export function SetRow({
   return (
     <Item size="xs" className="min-h-12">
       <ItemMedia>
-        <Badge variant="secondary" className="numeric size-7 rounded-full px-0">
+        <Badge variant="secondary" className="numeric size-7 px-0">
           {label}
         </Badge>
       </ItemMedia>

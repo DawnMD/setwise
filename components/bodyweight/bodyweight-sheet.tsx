@@ -117,7 +117,7 @@ function OpenBodyweightSheet({
       </DrawerHeader>
 
       <div className="flex flex-col gap-3 overflow-y-auto p-4">
-        <div className="flex flex-col gap-0.5 rounded-lg border bg-muted px-3 py-2">
+        <div className="flex flex-col gap-0.5 rounded-none border bg-muted px-3 py-2">
           <span className="text-xs text-muted-foreground">Weight (kg)</span>
           <span
             className={`numeric-display text-3xl leading-tight ${weight === "" ? "text-muted-foreground/50" : ""}`}

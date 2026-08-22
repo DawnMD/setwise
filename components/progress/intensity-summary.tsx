@@ -47,7 +47,7 @@ export function IntensitySummary({ data }: { data: IntensitySummaryData }) {
 
 function Stat({ label, value, footnote }: { label: string; value: string; footnote: string }) {
   return (
-    <div className="flex flex-col gap-0.5 rounded-lg border bg-card px-3 py-2.5">
+    <div className="flex flex-col gap-0.5 rounded-none border bg-card px-3 py-2.5">
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="numeric-display text-2xl">{value}</span>
       <span className="text-[11px] leading-tight text-muted-foreground">{footnote}</span>

@@ -108,7 +108,7 @@ export function MusclePicker({
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-2" onClick={onMapClick}>
         {(["front", "back"] as const).map((view) => (
-          <figure key={view} className="rounded-lg border bg-card p-2">
+          <figure key={view} className="rounded-none border bg-card p-2">
             <BodyMap view={view} bands={bands} className="[&_[data-muscle]]:cursor-pointer" />
             <figcaption className="mt-1 text-center text-xs text-muted-foreground capitalize">
               {view}
