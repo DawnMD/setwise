@@ -18,6 +18,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Elapsed } from "@/components/logger/elapsed";
 import { LogRestDialog, type RestLogTarget } from "@/components/logger/log-rest-dialog";
 import { ProfilePrompt } from "@/components/profile/profile-prompt";
+import { HabitHome } from "@/components/habits/habit-home";
 
 /**
  * The first screen.
@@ -71,6 +72,7 @@ export function HomeScreen() {
       ) : (
         <>
           <Today summary={summary.data} onLogRest={setRestTarget} />
+          <HabitHome />
           <Week week={summary.data.week} />
           <WeightDirection weight={summary.data.weight} />
           <TodaysTargets targets={profile.data?.targets ?? null} pending={profile.isPending} />

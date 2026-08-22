@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
+import type { HabitHomeSummary, HabitList, HabitListItem } from "@/server/queries/habits";
 import type { ProfileSummary } from "@/server/queries/profile";
 import type { RoutineDetail } from "@/server/queries/plan";
 import type { SessionDetail, SessionExercise, SetRow } from "@/server/queries/session";
@@ -38,6 +39,10 @@ export const cacheKeys = {
   stats: () => orpc.stats.key(),
   bodyweight: () => orpc.bodyweight.key(),
   profile: () => orpc.profile.key(),
+  habits: () => orpc.habit.key(),
+  habitHome: () => orpc.habit.home.key(),
+  habitCalendar: () => orpc.habit.calendar.key(),
+  habitList: () => orpc.habit.list.key(),
 } as const;
 
 type Keys = readonly unknown[][];
@@ -239,6 +244,73 @@ export function seedRoutineDetail(queryClient: QueryClient, detail: RoutineDetai
 }
 
 /* -------------------------------------------------------------------------- */
+/* Habits                                                                     */
+/* -------------------------------------------------------------------------- */
+
+function patchHabitList(
+  queryClient: QueryClient,
+  timeZone: string,
+  patch: (list: HabitList) => HabitList,
+): void {
+  patchOrRefetch(queryClient, queries.habitList(timeZone), patch);
+}
+
+export function putHabitHome(
+  queryClient: QueryClient,
+  timeZone: string,
+  summary: HabitHomeSummary,
+): void {
+  if (!PATCH_CACHE) {
+    void queryClient.invalidateQueries({ queryKey: cacheKeys.habitHome() });
+    return;
+  }
+  queryClient.setQueryData(queries.habitHome(timeZone).queryKey, summary);
+}
+
+export function addHabitListItem(
+  queryClient: QueryClient,
+  timeZone: string,
+  item: HabitListItem,
+): void {
+  patchHabitList(queryClient, timeZone, (list) => ({
+    ...list,
+    active: [...list.active.filter((habit) => habit.id !== item.id), item],
+  }));
+}
+
+export function renameHabitListItem(
+  queryClient: QueryClient,
+  timeZone: string,
+  id: string,
+  name: string,
+): void {
+  patchHabitList(queryClient, timeZone, (list) => ({
+    ...list,
+    active: list.active.map((habit) => (habit.id === id ? { ...habit, name } : habit)),
+  }));
+}
+
+export function archiveHabitListItem(
+  queryClient: QueryClient,
+  timeZone: string,
+  item: HabitListItem,
+): void {
+  patchHabitList(queryClient, timeZone, (list) => ({
+    ...list,
+    active: list.active.filter((habit) => habit.id !== item.id),
+    archived: [item, ...list.archived.filter((habit) => habit.id !== item.id)],
+  }));
+}
+
+export function removeHabitListItem(queryClient: QueryClient, timeZone: string, id: string): void {
+  patchHabitList(queryClient, timeZone, (list) => ({
+    ...list,
+    active: list.active.filter((habit) => habit.id !== id),
+    archived: list.archived.filter((habit) => habit.id !== id),
+  }));
+}
+
+/* -------------------------------------------------------------------------- */
 /* The dependency map                                                         */
 /* -------------------------------------------------------------------------- */
 
@@ -313,5 +385,18 @@ export const afterWrite = {
   planEdited(queryClient: QueryClient, routineId?: string): void {
     markStale(queryClient, [cacheKeys.home(), cacheKeys.routineList(), cacheKeys.upcomingDays()]);
     if (routineId) void refreshNow(queryClient, [cacheKeys.routineDetail(routineId)]);
+  },
+
+  habitTodayChanged(queryClient: QueryClient): void {
+    markStale(queryClient, [cacheKeys.habitList(), cacheKeys.habitCalendar()]);
+  },
+
+  habitDefinitionChanged(queryClient: QueryClient): void {
+    markStale(queryClient, [cacheKeys.habitHome(), cacheKeys.habitCalendar()]);
+  },
+
+  habitDeleted(queryClient: QueryClient): void {
+    markStale(queryClient, [cacheKeys.habitHome()]);
+    void refreshNow(queryClient, [cacheKeys.habitCalendar()]);
   },
 };

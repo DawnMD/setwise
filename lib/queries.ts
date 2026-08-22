@@ -35,6 +35,18 @@ export const queries = {
   homeSummary: (timeZone: string) =>
     orpc.home.summary.queryOptions({ input: { timeZone }, staleTime: STALE.home }),
 
+  habitHome: (timeZone: string) =>
+    orpc.habit.home.queryOptions({ input: { timeZone }, staleTime: STALE.habits }),
+
+  habitCalendar: (month: string, timeZone: string) =>
+    orpc.habit.calendar.queryOptions({
+      input: { month, timeZone },
+      staleTime: STALE.habits,
+    }),
+
+  habitList: (timeZone: string) =>
+    orpc.habit.list.queryOptions({ input: { timeZone }, staleTime: STALE.habits }),
+
   activeSession: () => orpc.session.active.queryOptions({ staleTime: STALE.activeSession }),
 
   recentActivity: (limit = 10) =>

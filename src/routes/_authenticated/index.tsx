@@ -21,6 +21,7 @@ export const Route = createFileRoute("/_authenticated/")({
       const timeZone = resolveTimeZone();
       warm(queryClient, queries.homeSummary(timeZone));
       warm(queryClient, queries.profile(timeZone));
+      warm(queryClient, queries.habitHome(timeZone));
     }),
   component: HomeScreen,
 });

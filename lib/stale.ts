@@ -18,6 +18,8 @@ export const STALE = {
    * first thing it says is whether one is still running.
    */
   home: 15_000,
+  /** Daily habit state changes by hand and is patched by its own writes. */
+  habits: 60_000,
   /** The exercise catalogue changes on deploy, not during a workout. */
   catalogue: 5 * 60_000,
   /** Volume, intensity and historical bodyweight: yesterday's numbers are settled. */
