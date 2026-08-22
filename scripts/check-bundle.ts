@@ -1,5 +1,5 @@
 import { gzipSync } from "node:zlib";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 /**
@@ -15,7 +15,10 @@ import { join } from "node:path";
  * in the right direction for a ceiling.
  */
 
-const ASSETS = ".output/public/assets";
+const ASSET_DIRECTORIES =
+  process.env.VERCEL === "1"
+    ? [".vercel/output/static/assets", ".output/public/assets"]
+    : [".output/public/assets", ".vercel/output/static/assets"];
 
 type Budget = {
   name: string;
@@ -64,13 +67,14 @@ function gzipSize(path: string): number {
 const format = (bytes: number) => `${(bytes / KB).toFixed(1)} KB`;
 
 function main() {
-  let assets: string[];
-  try {
-    assets = readdirSync(ASSETS).filter((file) => file.endsWith(".js"));
-  } catch {
-    console.error(`No build to check. Run 'pnpm build' first (looked in ${ASSETS}).`);
+  const assetsDirectory = ASSET_DIRECTORIES.find((directory) => existsSync(directory));
+  if (!assetsDirectory) {
+    console.error(
+      `No build to check. Run 'pnpm build' first (looked in ${ASSET_DIRECTORIES.join(", ")}).`,
+    );
     process.exit(1);
   }
+  const assets = readdirSync(assetsDirectory).filter((file) => file.endsWith(".js"));
 
   const failures: string[] = [];
 
@@ -83,7 +87,7 @@ function main() {
     }
 
     for (const file of matched) {
-      const size = gzipSize(join(ASSETS, file));
+      const size = gzipSize(join(assetsDirectory, file));
       const verdict = size > budget.limit ? "OVER" : "ok";
       console.info(
         `${verdict.padEnd(4)} ${budget.name.padEnd(12)} ${format(size).padStart(9)} / ${format(budget.limit)}  ${file}`,
@@ -98,7 +102,7 @@ function main() {
 
   for (const { marker, why } of FORBIDDEN) {
     const found = assets.filter((file) => {
-      const path = join(ASSETS, file);
+      const path = join(assetsDirectory, file);
       return statSync(path).isFile() && readFileSync(path, "utf8").includes(marker);
     });
 
@@ -109,7 +113,7 @@ function main() {
     }
   }
 
-  const total = assets.reduce((sum, file) => sum + gzipSize(join(ASSETS, file)), 0);
+  const total = assets.reduce((sum, file) => sum + gzipSize(join(assetsDirectory, file)), 0);
   console.info(`\n${assets.length} client chunks, ${format(total)} gzip in total.`);
 
   if (failures.length > 0) {
