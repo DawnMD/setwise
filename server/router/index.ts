@@ -1,5 +1,6 @@
 import { bodyweightRouter } from "./bodyweight";
 import { catalogueRouter } from "./catalogue";
+import { homeRouter } from "./home";
 import { planRouter } from "./plan";
 import { profileRouter } from "./profile";
 import { sessionRouter } from "./session";
@@ -15,6 +16,7 @@ import "@tanstack/react-start/server-only";
  * phase 7 is one import and one key.
  */
 export const router = {
+  home: homeRouter,
   session: sessionRouter,
   plan: planRouter,
   catalogue: catalogueRouter,
