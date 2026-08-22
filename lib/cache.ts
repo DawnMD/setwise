@@ -21,6 +21,12 @@ import { queries } from "./queries";
  */
 
 export const cacheKeys = {
+  /**
+   * The Home summary. Downstream of nearly every write in the app, which is the
+   * cost of a screen that summarises all of them — and the reason it is one key
+   * rather than six.
+   */
+  home: () => orpc.home.key(),
   activeSession: () => orpc.session.active.key(),
   recentActivity: () => orpc.session.recent.key(),
   upcomingDays: () => orpc.plan.upcoming.key(),
@@ -247,6 +253,7 @@ export const afterWrite = {
   /** A set landed. The workout itself is patched; everything downstream waits. */
   setSaved(queryClient: QueryClient): void {
     markStale(queryClient, [
+      cacheKeys.home(),
       cacheKeys.recentActivity(),
       cacheKeys.stats(),
       cacheKeys.bodyweight(),
@@ -257,6 +264,7 @@ export const afterWrite = {
   /** A workout closed. Same set, plus the rotation and the routine summaries. */
   workoutFinished(queryClient: QueryClient): void {
     markStale(queryClient, [
+      cacheKeys.home(),
       cacheKeys.recentActivity(),
       cacheKeys.stats(),
       cacheKeys.bodyweight(),
@@ -268,12 +276,18 @@ export const afterWrite = {
   /** A workout was started or thrown away. */
   sessionLifecycle(queryClient: QueryClient): void {
     void queryClient.invalidateQueries({ queryKey: cacheKeys.activeSession() });
-    markStale(queryClient, [cacheKeys.recentActivity(), cacheKeys.upcomingDays()]);
+    markStale(queryClient, [
+      cacheKeys.home(),
+      cacheKeys.recentActivity(),
+      cacheKeys.upcomingDays(),
+    ]);
   },
 
   /** Rest was logged. Today's rest is on screen wherever this can be triggered. */
   restLogged(queryClient: QueryClient): void {
-    void refreshNow(queryClient, [cacheKeys.restToday()]);
+    // Home is refreshed rather than marked: it is one of the two places rest
+    // can be logged from, and its button reads this answer.
+    void refreshNow(queryClient, [cacheKeys.restToday(), cacheKeys.home()]);
     markStale(queryClient, [
       cacheKeys.recentActivity(),
       cacheKeys.upcomingDays(),
@@ -287,7 +301,7 @@ export const afterWrite = {
    * patched rather than refetched.
    */
   async bodyweightLogged(queryClient: QueryClient): Promise<void> {
-    markStale(queryClient, [cacheKeys.stats()]);
+    markStale(queryClient, [cacheKeys.stats(), cacheKeys.home()]);
     await refreshNow(queryClient, [cacheKeys.bodyweight()]);
   },
 
@@ -297,7 +311,7 @@ export const afterWrite = {
    * mutation response can reconstruct, so its inactive cache is discarded.
    */
   planEdited(queryClient: QueryClient, routineId?: string): void {
-    markStale(queryClient, [cacheKeys.routineList(), cacheKeys.upcomingDays()]);
+    markStale(queryClient, [cacheKeys.home(), cacheKeys.routineList(), cacheKeys.upcomingDays()]);
     if (routineId) void refreshNow(queryClient, [cacheKeys.routineDetail(routineId)]);
   },
 };

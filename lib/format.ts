@@ -54,8 +54,16 @@ export function formatEffectiveSets(sets: number): string {
  * forty tonnes.
  */
 export function formatTonnage(kg: number, unit: UnitPref = "kg"): string {
-  const value = Math.round(toUnit(kg, unit));
-  return `${value.toLocaleString()} ${unit}`;
+  return `${formatTonnageValue(kg, unit)} ${unit}`;
+}
+
+/**
+ * The same figure without its unit, for a narrow column that carries the unit
+ * in its label instead. Split out rather than copied, so the rounding and the
+ * grouping are stated once.
+ */
+export function formatTonnageValue(kg: number, unit: UnitPref = "kg"): string {
+  return Math.round(toUnit(kg, unit)).toLocaleString();
 }
 
 /** Relative intensity, reported as a percentage of your own recent best. */

@@ -9,11 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedBodyRouteImport } from './routes/_authenticated/body'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedProgressRouteImport } from './routes/_authenticated/progress'
@@ -26,11 +26,6 @@ import { Route as AuthenticatedTrainSessionIdRouteImport } from './routes/_authe
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc/$'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
   getParentRoute: () => rootRouteImport,
@@ -48,6 +43,11 @@ const AuthSignUpRoute = AuthSignUpRouteImport.update({
   id: '/sign-up',
   path: '/sign-up',
   getParentRoute: () => AuthRoute,
+} as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedBodyRoute = AuthenticatedBodyRouteImport.update({
   id: '/body',
@@ -108,7 +108,7 @@ const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AuthenticatedIndexRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
   '/body': typeof AuthenticatedBodyRoute
@@ -124,7 +124,7 @@ export interface FileRoutesByFullPath {
   '/train/': typeof AuthenticatedTrainIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/': typeof AuthenticatedIndexRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
   '/body': typeof AuthenticatedBodyRoute
@@ -141,7 +141,6 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/_auth': typeof AuthRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_auth/sign-in': typeof AuthSignInRoute
@@ -151,6 +150,7 @@ export interface FileRoutesById {
   '/_authenticated/progress': typeof AuthenticatedProgressRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/api/export': typeof ApiExportRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/plan/$routineId': typeof AuthenticatedPlanRoutineIdRoute
   '/_authenticated/train/$sessionId': typeof AuthenticatedTrainSessionIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -193,7 +193,6 @@ export interface FileRouteTypes {
     | '/train'
   id:
     | '__root__'
-    | '/'
     | '/_auth'
     | '/_authenticated'
     | '/_auth/sign-in'
@@ -203,6 +202,7 @@ export interface FileRouteTypes {
     | '/_authenticated/progress'
     | '/_authenticated/settings'
     | '/api/export'
+    | '/_authenticated/'
     | '/_authenticated/plan/$routineId'
     | '/_authenticated/train/$sessionId'
     | '/api/auth/$'
@@ -212,7 +212,6 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRouteWithChildren
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   ApiExportRoute: typeof ApiExportRoute
@@ -222,13 +221,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_auth': {
       id: '/_auth'
       path: ''
@@ -256,6 +248,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/sign-up'
       preLoaderRoute: typeof AuthSignUpRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/_authenticated/': {
+      id: '/_authenticated/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/body': {
       id: '/_authenticated/body'
@@ -354,6 +353,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProgressRoute: typeof AuthenticatedProgressRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedPlanRoutineIdRoute: typeof AuthenticatedPlanRoutineIdRoute
   AuthenticatedTrainSessionIdRoute: typeof AuthenticatedTrainSessionIdRoute
   AuthenticatedPlanIndexRoute: typeof AuthenticatedPlanIndexRoute
@@ -365,6 +365,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProgressRoute: AuthenticatedProgressRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedPlanRoutineIdRoute: AuthenticatedPlanRoutineIdRoute,
   AuthenticatedTrainSessionIdRoute: AuthenticatedTrainSessionIdRoute,
   AuthenticatedPlanIndexRoute: AuthenticatedPlanIndexRoute,
@@ -376,7 +377,6 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   ApiExportRoute: ApiExportRoute,

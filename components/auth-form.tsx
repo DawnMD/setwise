@@ -74,12 +74,12 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
       // nothing here worth refetching, only rows that are no longer this
       // account's.
       clearAccountCache(queryClient);
-      // A new account goes to the wizard, an existing one to the logger. Every
-      // step of the wizard can be skipped, so this costs a returning user
-      // nothing and saves a new one from finding an empty Body screen. The
-      // protected route runs its own guard against the cookie that was just
-      // set, so there is no separate invalidate-then-navigate to sequence.
-      await navigate({ to: isSignUp ? "/onboarding" : "/train", replace: true });
+      // A new account goes to the wizard, an existing one to Home. Every step
+      // of the wizard can be skipped, so this costs a returning user nothing
+      // and saves a new one from finding an empty Body screen. The protected
+      // route runs its own guard against the cookie that was just set, so
+      // there is no separate invalidate-then-navigate to sequence.
+      await navigate({ to: isSignUp ? "/onboarding" : "/", replace: true });
     } catch {
       form.setError("root.server", {
         type: "server",
