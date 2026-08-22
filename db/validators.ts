@@ -158,6 +158,20 @@ export const bodyweightKg = z
 /** "YYYY-MM-DD", the client's local day. Never a timestamp: see `bodyweightLogs`. */
 export const isoDay = z.iso.date();
 
+export const habitName = z
+  .string()
+  .trim()
+  .min(1, "Give the habit a name.")
+  .max(80, "That name is too long.");
+
+export const yearMonth = z
+  .string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Use a month in YYYY-MM format.")
+  .refine((value) => {
+    const [year, month] = value.split("-").map(Number);
+    return year >= 1 && year <= 9999 && month >= 1 && month <= 12;
+  }, "Use a valid calendar month.");
+
 export const bodyweightNote = z.string().trim().max(280, "That note is too long.").nullable();
 
 export const bodyweightLogInput = z.object({
