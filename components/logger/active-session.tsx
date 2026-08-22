@@ -1,13 +1,20 @@
+import { isDefinedError } from "@orpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import * as React from "react";
 
 import type { CreateSetInput, UpdateSetInput } from "@/db/validators";
-import { useRestTimer } from "@/hooks/use-rest-timer";
+import { useCriticalData } from "@/hooks/use-critical-data";
+import { useLazyMount } from "@/hooks/use-lazy-mount";
+import { useRestRunning, useRestTimer } from "@/hooks/use-rest-timer";
 import { useWakeLock } from "@/hooks/use-wake-lock";
+import { afterWrite, clearActiveSession, markSessionFinished, putSet } from "@/lib/cache";
 import { formatWeight } from "@/lib/format";
+import { newId } from "@/lib/ids";
 import { orpc } from "@/lib/orpc";
+import { endSpan, startSpan } from "@/lib/perf";
+import { queries } from "@/lib/queries";
 import type { Targets } from "@/lib/targets";
 import {
   AlertDialog,
@@ -26,25 +33,52 @@ import { Spinner } from "@/components/ui/spinner";
 
 import { Elapsed } from "./elapsed";
 import { ExerciseBlock } from "./exercise-block";
-import { ExercisePicker } from "./exercise-picker";
 import { FinishedSummary } from "./finished-summary";
 import { RestTimer } from "./rest-timer";
 import type { SetDraft } from "./set-sheet";
 import { SetSheetForExercise } from "./set-sheet-for-exercise";
 import type { LoggerExercise, LoggerSet } from "./types";
 
-type Editing = { exercise: LoggerExercise; set: LoggerSet | null };
+/**
+ * The picker is a drawer over 800 exercises with its own search and its own
+ * create form. It is closed when the screen opens and most workouts never open
+ * it, so it is not part of what a workout has to download to start.
+ */
+const ExercisePicker = React.lazy(() =>
+  import("./exercise-picker").then((module) => ({ default: module.ExercisePicker })),
+);
+
+type Editing = {
+  exercise: LoggerExercise;
+  set: LoggerSet | null;
+  /**
+   * The id the row will be saved under.
+   *
+   * Chosen when the sheet opens rather than when Save is tapped, so a retry
+   * after a failure restates the same set instead of logging a second one. A
+   * new sheet is a new set and gets a new id.
+   */
+  setId: string;
+};
+
+const editNew = (exercise: LoggerExercise): Editing => ({
+  exercise,
+  set: null,
+  setId: newId(),
+});
 
 export function ActiveSession({ sessionId }: { sessionId: string }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const rest = useRestTimer();
+  const timer = useRestTimer();
+  const restRunning = useRestRunning(timer);
 
-  const options = orpc.session.get.queryOptions({ input: { id: sessionId } });
+  const options = queries.sessionDetail(sessionId);
   const sessionQuery = useQuery(options);
   const detail = sessionQuery.data;
   const isOpen = detail !== undefined && detail.endedAt === null;
 
+  useCriticalData(sessionQuery.isSuccess || sessionQuery.isError);
   useWakeLock(isOpen);
 
   const [picked, setPicked] = React.useState<LoggerExercise[] | null>(null);
@@ -53,6 +87,7 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [saveError, setSaveError] = React.useState(false);
   const [pickerOpen, setPickerOpen] = React.useState(false);
+  const pickerMounted = useLazyMount(pickerOpen);
   const [confirm, setConfirm] = React.useState<"finish" | "discard" | null>(null);
 
   const plannedLineup = React.useMemo(
@@ -105,29 +140,60 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
     return map;
   }, [detail]);
 
+  const lastPerformances = detail?.lastPerformances ?? {};
+
+  /**
+   * The set is on screen as soon as the server confirms it.
+   *
+   * The row comes back from the write, so the cached workout is patched with it
+   * rather than thrown away and fetched again. Waiting for a refetch put a
+   * whole round trip between the tap and the row appearing, on the one action
+   * that happens forty times a workout with someone standing over it.
+   */
   const afterSave = React.useCallback(
-    async (result: { set: LoggerSet; records: Array<{ previous: number | null }> }) => {
-      await queryClient.invalidateQueries({ queryKey: options.queryKey });
+    (result: { set: LoggerSet; records: Array<{ previous: number | null }> }) => {
+      const exercise = lineup.find((entry) => entry.id === result.set.exerciseId) ?? null;
+      putSet(queryClient, result.set, exercise);
+
       if (result.records.some((record) => record.previous !== null)) {
         setPrSetIds((current) => new Set(current).add(result.set.id));
       }
-      if (!result.set.isWarmup) rest.start();
+      if (!result.set.isWarmup) timer.start();
       setSaveError(false);
       setSheetOpen(false);
+
+      // Everything downstream — the history list, the heatmap, the weight
+      // chart — is now out of date but is not on screen. Marked, not fetched.
+      afterWrite.setSaved(queryClient);
+
+      // Measured to the paint that shows the row, not to the response.
+      requestAnimationFrame(() => endSpan("set-confirm"));
     },
-    [options.queryKey, queryClient, rest],
+    [lineup, queryClient, timer],
   );
+
+  const onSaveError = React.useCallback(() => {
+    setSaveError(true);
+    endSpan("set-confirm");
+  }, []);
 
   const createSet = useMutation(
     orpc.session.createSet.mutationOptions({
       onSuccess: afterSave,
-      onError: () => setSaveError(true),
+      onError: onSaveError,
+      // The client names the row, so a retry restates the same set rather than
+      // logging a second one. Only worth doing for a lost connection: a typed
+      // error is an answer, and asking again would get the same one.
+      retry: (failureCount, error) => failureCount < 1 && !isDefinedError(error),
+      retryDelay: 300,
     }),
   );
   const updateSet = useMutation(
     orpc.session.updateSet.mutationOptions({
       onSuccess: afterSave,
-      onError: () => setSaveError(true),
+      onError: onSaveError,
+      retry: (failureCount, error) => failureCount < 1 && !isDefinedError(error),
+      retryDelay: 300,
     }),
   );
   const finish = useMutation(orpc.session.finish.mutationOptions());
@@ -135,36 +201,44 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
 
   const saving = createSet.isPending || updateSet.isPending;
 
-  const submit = (exercise: LoggerExercise, draft: SetDraft, existing: LoggerSet | null) => {
+  const submit = (target: Editing, draft: SetDraft) => {
     setSaveError(false);
-    const siblings = setsByExercise.get(exercise.id) ?? [];
-    const values: CreateSetInput = {
+    startSpan("set-confirm");
+
+    const siblings = setsByExercise.get(target.exercise.id) ?? [];
+    const values = {
+      id: target.setId,
       sessionId,
-      exerciseId: exercise.id,
-      setIndex: existing?.setIndex ?? siblings.length,
+      exerciseId: target.exercise.id,
+      setIndex: target.set?.setIndex ?? siblings.length,
       weight: draft.weight,
       reps: draft.reps,
       rpe: draft.rpe,
       isWarmup: draft.isWarmup,
     };
 
-    if (existing) {
-      const input: UpdateSetInput = { ...values, id: existing.id };
-      updateSet.mutate(input);
-    } else {
-      createSet.mutate(values);
+    if (target.set) {
+      updateSet.mutate(values satisfies UpdateSetInput);
+      return;
     }
+
+    createSet.mutate(values satisfies CreateSetInput);
   };
 
   const doFinish = () => {
     setConfirm(null);
+    startSpan("finish-summary");
     finish.mutate(
       { id: sessionId, notes: null },
       {
-        onSuccess: () => {
-          rest.stop();
-          void queryClient.invalidateQueries({ queryKey: options.queryKey });
+        onSuccess: (result) => {
+          timer.stop();
+          markSessionFinished(queryClient, sessionId, result.session);
+          clearActiveSession(queryClient);
+          afterWrite.workoutFinished(queryClient);
+          requestAnimationFrame(() => endSpan("finish-summary"));
         },
+        onError: () => endSpan("finish-summary"),
       },
     );
   };
@@ -175,7 +249,10 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
       { id: sessionId },
       {
         onSuccess: () => {
-          rest.stop();
+          timer.stop();
+          queryClient.removeQueries({ queryKey: options.queryKey });
+          clearActiveSession(queryClient);
+          afterWrite.sessionLifecycle(queryClient);
           void navigate({ to: "/train", replace: true });
         },
       },
@@ -221,6 +298,8 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
   const working = detail.sets.filter((set) => !set.isWarmup);
   const tonnage = working.reduce((total, set) => total + set.weight * set.reps, 0);
 
+  const openPicker = () => setPickerOpen(true);
+
   return (
     <>
       <div className="mx-auto w-full max-w-[520px] px-4 pb-4">
@@ -245,7 +324,7 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
             <EmptyTitle>No exercises yet</EmptyTitle>
             <EmptyDescription>Add the first one and log a set against it.</EmptyDescription>
             <EmptyContent>
-              <Button size="touch" onClick={() => setPickerOpen(true)}>
+              <Button size="touch" onClick={openPicker}>
                 <Plus data-icon="inline-start" />
                 Add exercise
               </Button>
@@ -257,18 +336,18 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
               <ExerciseBlock
                 key={exercise.id}
                 exercise={exercise}
-                sessionId={sessionId}
                 sets={setsByExercise.get(exercise.id) ?? []}
                 target={targetsByExercise.get(exercise.id) ?? null}
+                last={lastPerformances[exercise.id] ?? null}
                 prSetIds={prSetIds}
                 onAddSet={(target) => {
                   setSaveError(false);
-                  setEditing({ exercise: target, set: null });
+                  setEditing(editNew(target));
                   setSheetOpen(true);
                 }}
                 onEditSet={(set) => {
                   setSaveError(false);
-                  setEditing({ exercise, set });
+                  setEditing({ exercise, set, setId: set.id });
                   setSheetOpen(true);
                 }}
                 onRemove={(exerciseId) =>
@@ -279,12 +358,7 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
               />
             ))}
 
-            <Button
-              variant="secondary"
-              size="touch"
-              className="w-full"
-              onClick={() => setPickerOpen(true)}
-            >
+            <Button variant="secondary" size="touch" className="w-full" onClick={openPicker}>
               <Plus data-icon="inline-start" />
               Add exercise
             </Button>
@@ -293,16 +367,7 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
       </div>
 
       <div className="sticky bottom-0 z-10 mt-auto">
-        {rest.running ? (
-          <RestTimer
-            remaining={rest.remaining}
-            duration={rest.duration}
-            done={rest.done}
-            onExtend={rest.extend}
-            onSkip={rest.stop}
-            onRestart={rest.start}
-          />
-        ) : null}
+        {restRunning ? <RestTimer timer={timer} /> : null}
         <div className="border-t bg-card px-4 py-3">
           <Button
             size="touch"
@@ -316,29 +381,33 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
         </div>
       </div>
 
-      <ExercisePicker
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
-        onPick={(exercise) => {
-          setPickerOpen(false);
-          setPicked((current) =>
-            (current ?? plannedLineup).some((entry) => entry.id === exercise.id)
-              ? (current ?? plannedLineup)
-              : [...(current ?? plannedLineup), exercise],
-          );
-          setSaveError(false);
-          setEditing({ exercise, set: null });
-          setSheetOpen(true);
-        }}
-      />
+      {pickerMounted ? (
+        <React.Suspense fallback={null}>
+          <ExercisePicker
+            open={pickerOpen}
+            onOpenChange={setPickerOpen}
+            onPick={(exercise) => {
+              setPickerOpen(false);
+              setPicked((current) =>
+                (current ?? plannedLineup).some((entry) => entry.id === exercise.id)
+                  ? (current ?? plannedLineup)
+                  : [...(current ?? plannedLineup), exercise],
+              );
+              setSaveError(false);
+              setEditing(editNew(exercise));
+              setSheetOpen(true);
+            }}
+          />
+        </React.Suspense>
+      ) : null}
 
       {editing ? (
         <SetSheetForExercise
           key={editing.set?.id ?? `new-${editing.exercise.id}`}
-          sessionId={sessionId}
           exercise={editing.exercise}
           siblings={setsByExercise.get(editing.exercise.id) ?? []}
           editingSet={editing.set}
+          last={lastPerformances[editing.exercise.id] ?? null}
           open={sheetOpen}
           pending={saving}
           saveError={saveError}
@@ -346,7 +415,7 @@ export function ActiveSession({ sessionId }: { sessionId: string }) {
             if (!saving) setSheetOpen(open);
           }}
           onClosed={() => setEditing(null)}
-          onSave={(draft) => submit(editing.exercise, draft, editing.set)}
+          onSave={(draft) => submit(editing, draft)}
         />
       ) : null}
 

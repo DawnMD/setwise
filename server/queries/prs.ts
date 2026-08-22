@@ -58,20 +58,36 @@ async function previousBests(db: DbClient, userId: string, set: SetRow) {
 }
 
 /**
+ * Whether this set already existed.
+ *
+ * A brand-new set cannot have records to clean up: nothing can reference an id
+ * the database has never seen. Skipping the delete removes a statement from the
+ * write path people are standing over. An edit still has to clear the old rows,
+ * or a set corrected downward would leave its previous PR standing.
+ */
+export type RecordMode = "created" | "edited";
+
+/**
  * Detects and stores records for one saved set.
  *
- * Existing rows for this set id are deleted first so editing a saved set
- * recalculates its record state instead of leaving stale achievements behind.
+ * On an edit, the delete and the insert go out together rather than as two
+ * awaited statements, because they are one change: the records for this set are
+ * whatever it now proves, and there is no useful moment in between.
  */
 export async function recordSetPersonalRecords(
   db: DbClient,
   userId: string,
   set: SetRow,
+  mode: RecordMode = "edited",
 ): Promise<DetectedRecord[]> {
+  const clearsExisting = mode === "edited";
+
   // Warm-ups are logged so you can see them next session, not so they set
   // records. A warm-up single is not a max.
   if (set.isWarmup) {
-    await db.delete(personalRecords).where(eq(personalRecords.setId, set.id));
+    if (clearsExisting) {
+      await db.delete(personalRecords).where(eq(personalRecords.setId, set.id));
+    }
     return [];
   }
 
@@ -96,20 +112,44 @@ export async function recordSetPersonalRecords(
     });
   }
 
-  await db.delete(personalRecords).where(eq(personalRecords.setId, set.id));
-
-  if (found.length > 0) {
-    await db.insert(personalRecords).values(
-      found.map((record) => ({
-        userId,
-        exerciseId: set.exerciseId,
-        kind: record.kind,
-        value: Math.round(record.value * 100) / 100,
-        setId: set.id,
-        achievedAt: set.performedAt,
-      })),
-    );
+  if (found.length === 0) {
+    if (clearsExisting) {
+      await db.delete(personalRecords).where(eq(personalRecords.setId, set.id));
+    }
+    return found;
   }
+
+  const values = found.map((record) => ({
+    userId,
+    exerciseId: set.exerciseId,
+    kind: record.kind,
+    value: Math.round(record.value * 100) / 100,
+    setId: set.id,
+    achievedAt: set.performedAt,
+  }));
+
+  if (!clearsExisting) {
+    await db.insert(personalRecords).values(values);
+    return found;
+  }
+
+  // One statement: the old rows for this set go and the new ones arrive. A
+  // data-modifying CTE always runs to completion whether or not the outer query
+  // reads from it, so the delete does not need to be referenced to happen.
+  await db.execute(sql`
+    with cleared as (
+      delete from personal_records where set_id = ${set.id}::uuid returning 1
+    )
+    insert into personal_records (user_id, exercise_id, kind, value, set_id, achieved_at)
+    values ${sql.join(
+      values.map(
+        (record) =>
+          sql`(${userId}, ${record.exerciseId}::uuid, ${record.kind}::pr_kind,
+               ${record.value}::numeric, ${record.setId}::uuid, ${record.achievedAt}::timestamptz)`,
+      ),
+      sql`, `,
+    )}
+  `);
 
   return found;
 }

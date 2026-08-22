@@ -1,7 +1,7 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
-import { sets, workoutSessions } from "@/db/schema";
+import { sets, workoutSessions, type WorkoutSession } from "@/db/schema";
 import { createSetInput, sessionStartInput, timeZone, updateSetInput, uuid } from "@/db/validators";
 import { protectedProcedure } from "../orpc";
 import { findDay } from "../queries/plan";
@@ -11,16 +11,16 @@ import {
   type SessionVolumeRecord,
 } from "../queries/prs";
 import {
-  exerciseIsVisible,
+  createSet,
   findSession,
   getSessionDetail,
-  lastPerformance,
   logRestDay,
   recentSessions,
   restLoggedToday,
   RestDayLogError,
-  createSet,
+  startSession,
   updateSet,
+  type SetWriteResult,
 } from "../queries/session";
 import "@tanstack/react-start/server-only";
 
@@ -64,6 +64,17 @@ const sessionProcedure = protectedProcedure.errors({
     message: "You already logged rest today.",
     data: z.object({ sessionId: uuid }),
   },
+  /**
+   * The id has been used before, for something else.
+   *
+   * Separate from every other failure because it is the one the client must not
+   * retry: sending the same request again would produce the same answer. It
+   * means two different sets were given one id, which is a bug rather than a
+   * lost response.
+   */
+  IDEMPOTENCY_CONFLICT: {
+    message: "That set id already belongs to a different set.",
+  },
 });
 
 export const sessionRouter = {
@@ -71,29 +82,29 @@ export const sessionRouter = {
    * The workout in progress, if there is one. The train screen asks this first,
    * so closing the tab mid-workout costs nothing but a reload.
    */
-  active: sessionProcedure.handler(async ({ context }) => {
-    const [row] = await context.db
-      .select()
-      .from(workoutSessions)
-      .where(and(eq(workoutSessions.userId, context.userId), isNull(workoutSessions.endedAt)))
-      .orderBy(desc(workoutSessions.startedAt))
-      .limit(1);
+  active: sessionProcedure.handler(
+    // Annotated, because `const [row] = rows` is typed as present and this one
+    // genuinely returns null most of the time. The client writes that null into
+    // its cache when a workout finishes, so the type has to admit it.
+    async ({ context }): Promise<WorkoutSession | null> => {
+      const rows = await context.db
+        .select()
+        .from(workoutSessions)
+        .where(and(eq(workoutSessions.userId, context.userId), isNull(workoutSessions.endedAt)))
+        .limit(1);
 
-    return row ?? null;
-  }),
+      return rows[0] ?? null;
+    },
+  ),
 
-  /** Starts a workout and returns its database-generated id. */
+  /**
+   * Starts a workout under the id the client generated.
+   *
+   * Retrying is safe: the same id returns the same workout rather than opening
+   * a second one, and two devices racing get the one the database accepted plus
+   * a typed pointer to it.
+   */
   start: sessionProcedure.input(sessionStartInput).handler(async ({ input, context, errors }) => {
-    const [open] = await context.db
-      .select({ id: workoutSessions.id })
-      .from(workoutSessions)
-      .where(and(eq(workoutSessions.userId, context.userId), isNull(workoutSessions.endedAt)))
-      .limit(1);
-
-    if (open) {
-      throw errors.SESSION_ALREADY_ACTIVE({ data: { sessionId: open.id } });
-    }
-
     // The foreign key only proves the day exists, not that it is the caller's.
     // Without this check a routine day id guessed from someone else's plan
     // would attach their template to this workout.
@@ -103,16 +114,13 @@ export const sessionRouter = {
       if (day.kind === "rest") throw errors.DAY_IS_REST();
     }
 
-    const [row] = await context.db
-      .insert(workoutSessions)
-      .values({
-        userId: context.userId,
-        routineDayId: input.routineDayId,
-        notes: input.notes,
-      })
-      .returning();
+    const result = await startSession(context.db, context.userId, input);
 
-    return row;
+    if (result.status === "already-active") {
+      throw errors.SESSION_ALREADY_ACTIVE({ data: { sessionId: result.sessionId } });
+    }
+
+    return result.session;
   }),
 
   /** Records an instantaneous planned or ad-hoc rest activity. */
@@ -140,6 +148,11 @@ export const sessionRouter = {
     return restLoggedToday(context.db, context.userId, input.timeZone);
   }),
 
+  /**
+   * The workout, its plan, its sets, and the previous performance of everything
+   * in its lineup. One call, two queries, and nothing left for the screen to
+   * ask for once it mounts.
+   */
   get: sessionProcedure
     .input(z.object({ id: uuid }))
     .handler(async ({ input, context, errors }) => {
@@ -154,50 +167,37 @@ export const sessionRouter = {
       return recentSessions(context.db, context.userId, input.limit);
     }),
 
-  /**
-   * Last time this exercise was trained. Drives the ghost value behind every
-   * weight and rep input, which is the app's whole argument for existing.
-   */
-  lastPerformance: sessionProcedure
-    .input(z.object({ exerciseId: uuid, excludeSessionId: uuid.nullable().default(null) }))
-    .handler(async ({ input, context }) => {
-      return lastPerformance(context.db, context.userId, input.exerciseId, input.excludeSessionId);
-    }),
-
   /** Inserts one set and reports what it beat after the transaction commits. */
   createSet: sessionProcedure.input(createSetInput).handler(async ({ input, context, errors }) => {
-    const session = await findSession(context.db, context.userId, input.sessionId);
-    if (!session) throw errors.SESSION_NOT_FOUND();
-    if (session.kind === "rest") throw errors.SESSION_IS_REST();
-    if (session.endedAt) throw errors.SESSION_FINISHED();
-
-    if (!(await exerciseIsVisible(context.db, context.userId, input.exerciseId))) {
-      throw errors.EXERCISE_NOT_FOUND();
-    }
-
     return context.db.transaction(async (tx) => {
-      const saved = await createSet(tx, input);
-      const records = await recordSetPersonalRecords(tx, context.userId, saved);
-      return { set: saved, records };
+      const result = await createSet(tx, context.userId, input);
+      if (result.status !== "written" && result.status !== "replayed") {
+        throw setWriteError(result, errors);
+      }
+
+      // A replay's records were detected and stored the first time. Running
+      // detection again would compare the set against itself and find nothing,
+      // so the honest answer is that this request set no records — the one that
+      // actually wrote the row already said what it beat.
+      const records =
+        result.status === "written"
+          ? await recordSetPersonalRecords(tx, context.userId, result.set, "created")
+          : [];
+
+      return { set: result.set, records };
     });
   }),
 
   /** Updates one owned set and recalculates any affected per-set records. */
   updateSet: sessionProcedure.input(updateSetInput).handler(async ({ input, context, errors }) => {
-    const session = await findSession(context.db, context.userId, input.sessionId);
-    if (!session) throw errors.SESSION_NOT_FOUND();
-    if (session.kind === "rest") throw errors.SESSION_IS_REST();
-    if (session.endedAt) throw errors.SESSION_FINISHED();
-
-    if (!(await exerciseIsVisible(context.db, context.userId, input.exerciseId))) {
-      throw errors.EXERCISE_NOT_FOUND();
-    }
-
     return context.db.transaction(async (tx) => {
-      const saved = await updateSet(tx, input);
-      if (!saved) throw errors.SET_NOT_FOUND();
-      const records = await recordSetPersonalRecords(tx, context.userId, saved);
-      return { set: saved, records };
+      const result = await updateSet(tx, context.userId, input);
+      if (result.status !== "written" && result.status !== "replayed") {
+        throw setWriteError(result, errors);
+      }
+
+      const records = await recordSetPersonalRecords(tx, context.userId, result.set, "edited");
+      return { set: result.set, records };
     });
   }),
 
@@ -275,3 +275,36 @@ export const sessionRouter = {
       return { id: input.id };
     }),
 };
+
+type SetWriteErrors = {
+  SESSION_NOT_FOUND: () => Error;
+  SESSION_FINISHED: () => Error;
+  SESSION_IS_REST: () => Error;
+  EXERCISE_NOT_FOUND: () => Error;
+  SET_NOT_FOUND: () => Error;
+  IDEMPOTENCY_CONFLICT: () => Error;
+};
+
+/**
+ * Turns a failed write into the error the user is shown.
+ *
+ * The distinctions survive the collapse of four checks into one statement:
+ * they are worked out on the failure path instead of the happy one, which is
+ * where the cost belongs.
+ */
+function setWriteError(result: SetWriteResult, errors: SetWriteErrors): Error {
+  switch (result.status) {
+    case "session-missing":
+      return errors.SESSION_NOT_FOUND();
+    case "session-finished":
+      return errors.SESSION_FINISHED();
+    case "session-is-rest":
+      return errors.SESSION_IS_REST();
+    case "exercise-hidden":
+      return errors.EXERCISE_NOT_FOUND();
+    case "id-conflict":
+      return errors.IDEMPOTENCY_CONFLICT();
+    default:
+      return errors.SET_NOT_FOUND();
+  }
+}

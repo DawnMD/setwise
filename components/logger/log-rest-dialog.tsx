@@ -3,6 +3,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import * as React from "react";
 
+import { useTimeZone } from "@/hooks/use-time-zone";
+import { afterWrite, cacheKeys, refreshNow } from "@/lib/cache";
 import { orpc } from "@/lib/orpc";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -26,26 +28,18 @@ export type RestLogTarget = {
 export function LogRestDialog({
   target,
   onOpenChange,
-  onLogged,
 }: {
   target: RestLogTarget | null;
   onOpenChange: (open: boolean) => void;
-  onLogged?: () => void;
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [timeZone] = React.useState(
-    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-  );
+  const timeZone = useTimeZone();
 
   const logRest = useMutation(
     orpc.session.logRestDay.mutationOptions({
       onSuccess: () => {
-        void queryClient.invalidateQueries({ queryKey: orpc.plan.upcoming.key() });
-        void queryClient.invalidateQueries({ queryKey: orpc.session.recent.key() });
-        void queryClient.invalidateQueries({ queryKey: orpc.session.restToday.key() });
-        void queryClient.invalidateQueries({ queryKey: orpc.plan.list.key() });
-        onLogged?.();
+        afterWrite.restLogged(queryClient);
         onOpenChange(false);
       },
       onError: (error) => {
@@ -57,7 +51,8 @@ export function LogRestDialog({
           return;
         }
         if (isDefinedError(error) && error.code === "REST_ALREADY_LOGGED") {
-          void queryClient.invalidateQueries({ queryKey: orpc.session.restToday.key() });
+          // The screen was out of date, which is the whole reason this failed.
+          refreshNow(queryClient, [cacheKeys.restToday()]);
         }
       },
     }),

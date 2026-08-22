@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -87,7 +87,21 @@ export const workoutSessions = pgTable(
     endedAt: timestamp("ended_at", { withTimezone: true }),
     notes: text("notes"),
   },
-  (table) => [index("workout_sessions_user_started_idx").on(table.userId, table.startedAt)],
+  (table) => [
+    index("workout_sessions_user_started_idx").on(table.userId, table.startedAt),
+    /**
+     * One open workout per user, enforced by the database.
+     *
+     * The application checked for an open session and then inserted, which is a
+     * race two taps on a slow connection can win: both reads say "none", both
+     * inserts succeed, and the user has two workouts they can only see one of.
+     * A partial unique index closes it without constraining finished history,
+     * which is allowed to be as long as someone's training career.
+     */
+    uniqueIndex("workout_sessions_one_open_uq")
+      .on(table.userId)
+      .where(sql`${table.endedAt} is null`),
+  ],
 );
 
 export const sets = pgTable(

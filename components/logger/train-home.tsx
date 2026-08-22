@@ -1,11 +1,15 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isDefinedError } from "@orpc/client";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { BedDouble, Settings } from "lucide-react";
 import * as React from "react";
 
+import { afterWrite } from "@/lib/cache";
 import { formatWeight, formatWhen } from "@/lib/format";
+import { newId } from "@/lib/ids";
 import { orpc } from "@/lib/orpc";
+import { queries } from "@/lib/queries";
+import { useCriticalData } from "@/hooks/use-critical-data";
 import { useTimeZone } from "@/hooks/use-time-zone";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -29,22 +33,31 @@ import { LogRestDialog, type RestLogTarget } from "./log-rest-dialog";
  */
 export function TrainHome() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [error, setError] = React.useState<string | null>(null);
   const [restTarget, setRestTarget] = React.useState<RestLogTarget | null>(null);
   const timeZone = useTimeZone();
 
-  const active = useQuery(orpc.session.active.queryOptions({ staleTime: 0 }));
-  const recent = useQuery(orpc.session.recent.queryOptions({ input: { limit: 10 } }));
-  const upcoming = useQuery(orpc.plan.upcoming.queryOptions({ staleTime: 60_000 }));
-  const restToday = useQuery(
-    orpc.session.restToday.queryOptions({ input: { timeZone }, staleTime: 60_000 }),
-  );
+  const active = useQuery(queries.activeSession());
+  const recent = useQuery(queries.recentActivity());
+  const upcoming = useQuery(queries.upcomingDays());
+  const restToday = useQuery(queries.restToday(timeZone));
   const hasPlannedRest = upcoming.data?.some((day) => day.kind === "rest") ?? false;
+
+  useCriticalData(!active.isPending && !upcoming.isPending && !recent.isPending);
 
   const start = useMutation(
     orpc.session.start.mutationOptions({
-      onSuccess: (session) =>
-        void navigate({ to: "/train/$sessionId", params: { sessionId: session.id } }),
+      onSuccess: (session) => {
+        queryClient.setQueryData(queries.activeSession().queryKey, session);
+        afterWrite.sessionLifecycle(queryClient);
+        // Started before the navigation rather than by the route it lands on,
+        // so the fetch and the transition overlap instead of queueing. The
+        // route's own loader finds it already in flight and waits on the same
+        // promise.
+        void queryClient.prefetchQuery(queries.sessionDetail(session.id));
+        void navigate({ to: "/train/$sessionId", params: { sessionId: session.id } });
+      },
       onError: (mutationError) => {
         // A typed error, matched rather than string-parsed: if a workout is
         // already open, the only sensible thing is to go to it.
@@ -59,6 +72,12 @@ export function TrainHome() {
       },
     }),
   );
+
+  /** Named by the client, so a retried start cannot open a second workout. */
+  const startWorkout = (routineDayId: string | null) => {
+    setError(null);
+    start.mutate({ id: newId(), routineDayId, notes: null });
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-[520px] flex-col gap-4 px-4 py-4">
@@ -158,7 +177,7 @@ export function TrainHome() {
                           routineName: day.routineName,
                         });
                       } else {
-                        start.mutate({ routineDayId: day.id, notes: null });
+                        startWorkout(day.id);
                       }
                     }}
                   >
@@ -183,10 +202,7 @@ export function TrainHome() {
             size="touch"
             className="w-full"
             disabled={start.isPending}
-            onClick={() => {
-              setError(null);
-              start.mutate({ routineDayId: null, notes: null });
-            }}
+            onClick={() => startWorkout(null)}
           >
             {start.isPending ? <Spinner data-icon="inline-start" /> : null}
             {start.isPending
