@@ -51,6 +51,7 @@ test.describe.serial("Setwise browser smoke", () => {
       "/body",
       "/onboarding",
       "/settings",
+      "/habits",
       "/train/not-a-session",
     ]) {
       await page.goto(path);
@@ -123,7 +124,7 @@ test.describe.serial("Setwise browser smoke", () => {
     await page.getByRole("link", { name: "Settings" }).click();
     await expect(page).toHaveURL(/\/settings$/);
 
-    for (const path of ["/", "/train", "/plan", "/progress", "/body", "/settings"]) {
+    for (const path of ["/", "/train", "/plan", "/progress", "/body", "/habits", "/settings"]) {
       await page.goto(path);
       await expect(page).toHaveURL(new RegExp(`${path}$`));
     }
@@ -183,6 +184,71 @@ test.describe.serial("Setwise browser smoke", () => {
 
     expect(rpc).toHaveLength(1);
     expect(rpc[0]).toContain("/api/rpc/__batch__");
+  });
+
+  test("habits can be created, checked, archived, and permanently deleted", async () => {
+    await page.goto("/habits");
+    await expect(page.getByRole("heading", { name: "Habits" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Add your first habit" }).click();
+    await page.getByRole("textbox", { name: "Name", exact: true }).fill("Treadmill");
+    await page.getByRole("button", { name: "Add habit" }).click();
+
+    await page.getByRole("button", { name: "Add" }).click();
+    await page.getByRole("textbox", { name: "Name", exact: true }).fill("No smoking");
+    await page.getByRole("button", { name: "Add habit" }).click();
+    await expect(page.getByText("Treadmill", { exact: true })).toBeVisible();
+    await expect(page.getByText("No smoking", { exact: true })).toBeVisible();
+
+    const chartChunks: string[] = [];
+    page.on("response", (response) => {
+      if (response.url().includes("habit-adherence-chart")) chartChunks.push(response.url());
+    });
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Setwise" })).toBeVisible();
+    const today = page.getByRole("region", { name: "Today" });
+    await expect(today.getByRole("checkbox", { name: "Treadmill" })).toBeVisible();
+    await expect(today.getByRole("checkbox", { name: "No smoking" })).toBeVisible();
+
+    await today.getByRole("checkbox", { name: "Treadmill" }).click();
+    await expect(today.getByRole("checkbox", { name: "Treadmill" })).toBeChecked();
+    await expect(page.locator("span.numeric-display", { hasText: "50%" })).toBeVisible();
+    await today.getByRole("checkbox", { name: "No smoking" }).click();
+    await expect(today.getByRole("checkbox", { name: "No smoking" })).toBeChecked();
+    await expect(page.locator("span.numeric-display", { hasText: "100%" })).toBeVisible();
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.reload();
+    await expect(page.getByRole("checkbox", { name: "Treadmill" })).toBeChecked();
+    await expect(page.getByRole("checkbox", { name: "No smoking" })).toBeChecked();
+    await expect(page.locator("[data-chart-animation=disabled]")).toBeVisible();
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    expect(chartChunks.length).toBeGreaterThanOrEqual(1);
+
+    await page.getByRole("link", { name: "Manage" }).click();
+    await expect(page).toHaveURL(/\/habits$/);
+    const completedDay = page.getByRole("button", { name: /2 of 2 habits completed/ });
+    await completedDay.click();
+    await expect(page.getByRole("heading", { name: /2 of 2 habits completed/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Go to the Previous Month" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Go to the Next Month" })).toBeDisabled();
+
+    await page.getByRole("button", { name: "Archive Treadmill" }).click();
+    await expect(page.getByText(/disappears from Home after today/)).toBeVisible();
+    await page.getByRole("button", { name: "Archive habit" }).click();
+
+    await page.goto("/");
+    await expect(page.getByRole("checkbox", { name: "No smoking" })).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: "Treadmill" })).toHaveCount(0);
+
+    await page.goto("/habits");
+    await page.getByRole("button", { name: "Delete Treadmill" }).click();
+    await expect(page.getByText(/Calendar ratios will change/)).toBeVisible();
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByText("Treadmill", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Delete Treadmill" }).click();
+    await page.getByRole("button", { name: "Delete permanently" }).click();
+    await expect(page.getByText("Treadmill", { exact: true })).toHaveCount(0);
   });
 
   test("workout writes appear only after confirmation and failed writes stay editable", async () => {
