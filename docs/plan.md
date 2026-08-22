@@ -12,11 +12,11 @@ This is the master plan for Setwise. It records what has shipped, what the produ
 | 3     | Progress analytics         | Built                                             |
 | 4     | Bodyweight                 | Built                                             |
 | 5     | Onboarding and body screen | Built                                             |
-| 6     | Home screen                | Not started                                       |
+| 6     | Home screen                | Built                                             |
 | 7     | Social                     | Database groundwork only                          |
 | 8     | Hardening                  | In progress                                       |
 
-Phase 5 moved bodyweight out of Progress onto its own Body screen, so phase 3 now has the Progress screen to itself. Phase 7 has friendship and visibility tables plus usernames, but no router, route, or UI. Those are foundations, not a finished social feature.
+Phase 5 moved bodyweight out of Progress onto its own Body screen, so phase 3 now has the Progress screen to itself. Phase 6 took `/` from Train, so Train is the logger again rather than the front door. Phase 7 has friendship and visibility tables plus usernames, but no router, route, or UI. Those are foundations, not a finished social feature.
 
 ## Decisions that are settled
 
@@ -49,13 +49,13 @@ These choices can change, but only as product decisions. They should not drift b
 | Theme              | Local provider                     | Applies light, dark, or system preference before hydration               |
 | Tooling            | pnpm, Vitest, Playwright           | One package manager and two levels of behavior checks                    |
 
-TanStack Start owns the root document, file routes, server functions, and production build. The session guard runs on the server at `/` and at the authenticated route boundary. Authenticated routes use data-only SSR: the guard and route data run on the server, while the feature UI renders in the browser and calls oRPC through TanStack Query. Sign-in and sign-up remain server-rendered.
+TanStack Start owns the root document, file routes, server functions, and production build. The session guard runs on the server at the authenticated route boundary, which since phase 6 includes `/`. Authenticated routes use data-only SSR: the guard and route data run on the server, while the feature UI renders in the browser and calls oRPC through TanStack Query. Sign-in and sign-up remain server-rendered.
 
 Framework code lives under `src`. Reusable product code remains in `components`, `hooks`, `lib`, `db`, and `server`.
 
 ### oRPC rules
 
-Put validation next to the Drizzle schema and reuse it at the API boundary. Define errors on the procedure that owns them. Group procedures by product area, not by table: `session`, `plan`, `catalogue`, `stats`, `bodyweight`, `profile`, and eventually `social`.
+Put validation next to the Drizzle schema and reuse it at the API boundary. Define errors on the procedure that owns them. Group procedures by product area, not by table: `home`, `session`, `plan`, `catalogue`, `stats`, `bodyweight`, `profile`, and eventually `social`.
 
 ## Data model and invariants
 
@@ -191,9 +191,9 @@ Buttons name the result: "Finish workout", "Save set", "Log rest day". Empty sta
 
 ## Verification and release bar
 
-`pnpm test` runs the Postgres integration suite. It covers training math, energy and macro math, ownership, plan ordering, confirmed set writes, PR maintenance, rest-day limits, bodyweight bucketing and trends, profile patch semantics, stable CSV output, and the muscle migration.
+`pnpm test` runs the Postgres integration suite. It covers training math, energy and macro math, ownership, plan ordering, confirmed set writes, PR maintenance, rest-day limits, bodyweight bucketing and trends, the Home rollup, profile patch semantics, stable CSV output, and the muscle migration.
 
-`pnpm test:e2e` runs the Playwright Chromium smoke suite against the production server. It covers sign-up, sign-in, guarded routes, the onboarding wizard, set creation and editing, in-memory draft boundaries, theme, export, sign-out, and client navigation.
+`pnpm test:e2e` runs the Playwright Chromium smoke suite against the production server. It covers sign-up, sign-in, guarded routes, the onboarding wizard, set creation and editing, in-memory draft boundaries, the Home summary and its request count, theme, export, sign-out, and client navigation.
 
 A change is ready when all of this passes:
 
@@ -305,28 +305,28 @@ Built:
 
 This phase calculates targets. It does not track food.
 
-The dismissible prompt lives on Train because Train is where the app opens. Phase 6 should move that copy to Home.
-
 Phase notes: [phase-5.md](phase-5.md).
-
-## Work remaining
 
 ### Phase 6: home screen
 
-Build one useful first screen:
+Built:
 
-- Show an active workout or the next planned day.
-- Show this week's sets and tonnage.
-- Show the bodyweight direction.
-- Show today's calorie and protein targets when the profile has enough data.
-- Show any muscle with no work in the selected weekly window.
-- Fetch the summary through one server procedure.
-- Change `/` from a redirect to the Home screen.
-- Add Home to the navigation, which already carries Train, Progress, Body, and Plan.
+- `/` is the Home screen, inside the authenticated boundary rather than a redirect in front of it.
+- Home is the first of five tabs.
+- One card that shows the open workout, or starts the next planned day, or logs a planned rest day.
+- This week's working sets, tonnage, and workout count, over a fixed trailing week.
+- Bodyweight as a direction: the seven-day trend against the seven-day trend a week earlier.
+- Today's calorie and protein targets, absent rather than blank when the profile cannot produce them.
+- The muscles that had no work this week, named in words.
+- One procedure, `home.summary`, read alongside the shared profile in one batched request.
 
-Every number on Home must link to the screen that owns it. Home is a summary, not a second place to edit data.
+Every number links to the screen that owns it. Nothing on Home can be edited.
 
-Done when the user can open Setwise, understand the day without scrolling, and start the right workout in one tap.
+The title, the settings gear, and the dismissible profile prompt moved off Train, which is the logger again rather than the front door. Sign-in lands on `/`.
+
+Phase notes: [phase-6.md](phase-6.md).
+
+## Work remaining
 
 ### Phase 7: social
 
@@ -376,8 +376,7 @@ CSV export remains account portability. It is not an offline workout store.
 ## Order of work
 
 1. Finish the real-gym acceptance pass and fix what it exposes.
-2. Build phase 6.
-3. Finish the phase 8 accessibility, browser, migration, and deployment checks.
-4. Build phase 7 only when users have enough history to make sharing useful.
+2. Finish the phase 8 accessibility, browser, migration, and deployment checks.
+3. Build phase 7 only when users have enough history to make sharing useful.
 
 The riskiest existing data problem is still exercise tagging. Bad primary and secondary muscle factors flow straight into the heatmap. Hand-check the exercises people actually use before spending time polishing the long tail.
