@@ -10,7 +10,7 @@ import {
 import * as React from "react";
 
 import { ThemeProvider } from "@/components/theme-provider";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { setUnauthorizedHandler } from "@/lib/unauthorized";
 import type { RouterContext } from "@/src/router";
 import styles from "../styles.css?url";

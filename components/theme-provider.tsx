@@ -1,20 +1,13 @@
 import { ScriptOnce } from "@tanstack/react-router";
 import * as React from "react";
 
-export type Theme = "dark" | "light" | "system";
+import { ThemeProviderContext, type Theme } from "@/components/theme-context";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
   defaultTheme?: Theme;
   storageKey?: string;
 };
-
-type ThemeProviderState = {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-};
-
-const ThemeProviderContext = React.createContext<ThemeProviderState | undefined>(undefined);
 
 function getThemeScript(storageKey: string, defaultTheme: Theme) {
   const key = JSON.stringify(storageKey);
@@ -77,10 +70,4 @@ export function ThemeProvider({
       {children}
     </ThemeProviderContext.Provider>
   );
-}
-
-export function useTheme() {
-  const context = React.useContext(ThemeProviderContext);
-  if (!context) throw new Error("useTheme must be used within a ThemeProvider");
-  return context;
 }
