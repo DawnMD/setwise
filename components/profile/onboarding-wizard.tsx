@@ -12,7 +12,9 @@ import {
 import { toIsoDay } from "@/lib/format";
 import { BODYWEIGHT_TREND_DAYS } from "@/lib/math";
 import type { ActivityLevel, Goal, Sex } from "@/lib/nutrition";
+import { afterWrite, putProfileSummary } from "@/lib/cache";
 import { orpc } from "@/lib/orpc";
+import { queries } from "@/lib/queries";
 import { useTimeZone } from "@/hooks/use-time-zone";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -80,7 +82,7 @@ export function OnboardingWizard() {
   const timeZone = useTimeZone();
   const [index, setIndex] = React.useState(0);
 
-  const summary = useQuery(orpc.profile.get.queryOptions({ input: { timeZone } }));
+  const summary = useQuery(queries.profile(timeZone));
   const save = useMutation(orpc.profile.save.mutationOptions());
   const finish = useMutation(orpc.profile.finishOnboarding.mutationOptions());
   const logWeight = useMutation(orpc.bodyweight.log.mutationOptions());
@@ -89,8 +91,8 @@ export function OnboardingWizard() {
   const last = index === STEPS.length - 1;
 
   const leave = async () => {
-    await finish.mutateAsync({ timeZone });
-    await queryClient.invalidateQueries();
+    const profile = await finish.mutateAsync({ timeZone });
+    putProfileSummary(queryClient, timeZone, profile);
     await navigate({ to: "/body", replace: true });
   };
 
@@ -108,10 +110,11 @@ export function OnboardingWizard() {
    * write it did not get an answer for.
    */
   const commit = async (patch: ProfilePatch) => {
-    await save.mutateAsync({ patch, timeZone });
-    // The summary is the wizard's own data source, so it has to be fresh before
-    // the targets step renders.
-    await queryClient.invalidateQueries({ queryKey: orpc.profile.get.key() });
+    // The response is the recalculated summary, which is the wizard's own data
+    // source. Written straight in, so the targets step renders the numbers this
+    // step produced rather than fetching them back to find out.
+    const profile = await save.mutateAsync({ patch, timeZone });
+    putProfileSummary(queryClient, timeZone, profile);
     advance();
   };
 
@@ -163,8 +166,14 @@ export function OnboardingWizard() {
         <WeightStep
           pending={busy}
           onSave={async (weight) => {
-            await logWeight.mutateAsync({ loggedOn: toIsoDay(), weight, note: null });
-            await queryClient.invalidateQueries();
+            const result = await logWeight.mutateAsync({
+              loggedOn: toIsoDay(),
+              weight,
+              note: null,
+              timeZone,
+            });
+            putProfileSummary(queryClient, timeZone, result.profile);
+            afterWrite.bodyweightLogged(queryClient);
             advance();
           }}
           onSkip={advance}

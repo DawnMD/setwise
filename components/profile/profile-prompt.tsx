@@ -4,7 +4,9 @@ import { UserRoundCog } from "lucide-react";
 
 import { toIsoDay } from "@/lib/format";
 import { PROFILE_FIELD_LABELS, PROMPT_DISMISSAL_DAYS } from "@/lib/nutrition";
+import { putProfileSummary } from "@/lib/cache";
 import { orpc } from "@/lib/orpc";
+import { queries } from "@/lib/queries";
 import { useTimeZone } from "@/hooks/use-time-zone";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -24,10 +26,12 @@ import { Button } from "@/components/ui/button";
 export function ProfilePrompt({ dismissible = false }: { dismissible?: boolean }) {
   const timeZone = useTimeZone();
   const queryClient = useQueryClient();
-  const summary = useQuery(orpc.profile.get.queryOptions({ input: { timeZone } }));
+  const summary = useQuery(queries.profile(timeZone));
   const dismiss = useMutation(
     orpc.profile.dismissPrompt.mutationOptions({
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: orpc.profile.get.key() }),
+      // The response is the summary this prompt reads, including the date it
+      // was just hushed until.
+      onSuccess: (profile) => putProfileSummary(queryClient, timeZone, profile),
     }),
   );
 

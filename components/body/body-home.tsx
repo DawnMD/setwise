@@ -4,18 +4,40 @@ import * as React from "react";
 
 import type { StatWindow } from "@/db/validators";
 import { formatWeight, formatWhen, parseIsoDay, toIsoDay } from "@/lib/format";
+import { afterWrite, putProfileSummary } from "@/lib/cache";
 import { BODYWEIGHT_TREND_DAYS } from "@/lib/math";
 import { orpc } from "@/lib/orpc";
+import { queries } from "@/lib/queries";
+import { BODY_DEFAULT_WINDOW } from "@/lib/windows";
+import { useCriticalData } from "@/hooks/use-critical-data";
+import { useLazyMount } from "@/hooks/use-lazy-mount";
 import { useTimeZone } from "@/hooks/use-time-zone";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BodyweightSection } from "@/components/bodyweight/bodyweight-section";
-import { BodyweightSheet, type WeighIn } from "@/components/bodyweight/bodyweight-sheet";
+import type { WeighIn } from "@/components/bodyweight/bodyweight-sheet";
 import { ProfilePrompt } from "@/components/profile/profile-prompt";
-import { ProfileSheet } from "@/components/profile/profile-sheet";
 import { TargetsCard } from "@/components/profile/targets-card";
 import { WindowToggle } from "@/components/progress/window-toggle";
+
+/**
+ * Both sheets start closed and most visits never open either. The profile one
+ * carries nine form fields and a date picker; the weigh-in one carries the
+ * number pad. Neither belongs in what this screen has to download to draw a
+ * calorie target.
+ */
+const ProfileSheet = React.lazy(() =>
+  import("@/components/profile/profile-sheet").then((module) => ({
+    default: module.ProfileSheet,
+  })),
+);
+
+const BodyweightSheet = React.lazy(() =>
+  import("@/components/bodyweight/bodyweight-sheet").then((module) => ({
+    default: module.BodyweightSheet,
+  })),
+);
 
 /**
  * The Body screen.
@@ -32,15 +54,31 @@ import { WindowToggle } from "@/components/progress/window-toggle";
 export function BodyHome() {
   const timeZone = useTimeZone();
   const queryClient = useQueryClient();
-  const [window, setWindow] = React.useState<StatWindow>(30);
+  const [window, setWindow] = React.useState<StatWindow>(BODY_DEFAULT_WINDOW);
   const [editingProfile, setEditingProfile] = React.useState(false);
   const [weighingIn, setWeighingIn] = React.useState<WeighIn | null>(null);
+  const profileSheetMounted = useLazyMount(editingProfile);
+  const weighInSheetMounted = useLazyMount(weighingIn !== null);
 
-  const summary = useQuery(orpc.profile.get.queryOptions({ input: { timeZone } }));
+  const summary = useQuery(queries.profile(timeZone));
+  useCriticalData(!summary.isPending);
 
-  const refresh = () => queryClient.invalidateQueries();
-  const saveProfile = useMutation(orpc.profile.save.mutationOptions({ onSuccess: refresh }));
-  const logWeight = useMutation(orpc.bodyweight.log.mutationOptions({ onSuccess: refresh }));
+  // Both writes return the summary the screen is drawn from, so it is written
+  // straight into the cache. Re-deriving the targets here would put a second
+  // copy of the calorie formulas in the browser.
+  const saveProfile = useMutation(
+    orpc.profile.save.mutationOptions({
+      onSuccess: (profile) => putProfileSummary(queryClient, timeZone, profile),
+    }),
+  );
+  const logWeight = useMutation(
+    orpc.bodyweight.log.mutationOptions({
+      onSuccess: (result) => {
+        putProfileSummary(queryClient, timeZone, result.profile);
+        afterWrite.bodyweightLogged(queryClient);
+      },
+    }),
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-[520px] flex-1 flex-col gap-4 px-4 py-4">
@@ -101,34 +139,42 @@ export function BodyHome() {
         <BodyweightSection window={window} />
       </section>
 
-      <ProfileSheet
-        open={editingProfile}
-        onOpenChange={setEditingProfile}
-        profile={summary.data?.profile ?? null}
-        pending={saveProfile.isPending}
-        onSave={(patch) => saveProfile.mutateAsync({ patch, timeZone })}
-      />
+      {profileSheetMounted ? (
+        <React.Suspense fallback={null}>
+          <ProfileSheet
+            open={editingProfile}
+            onOpenChange={setEditingProfile}
+            profile={summary.data?.profile ?? null}
+            pending={saveProfile.isPending}
+            onSave={(patch) => saveProfile.mutateAsync({ patch, timeZone })}
+          />
+        </React.Suspense>
+      ) : null}
 
-      <BodyweightSheet
-        open={weighingIn !== null}
-        onOpenChange={(open) => {
-          if (!open) setWeighingIn(null);
-        }}
-        initial={weighingIn ?? { loggedOn: toIsoDay(), weight: null, note: null }}
-        ghost={
-          summary.data?.weight.latest && summary.data.weight.latest.day !== weighingIn?.loggedOn
-            ? {
-                weight: summary.data.weight.latest.weight,
-                loggedOn: summary.data.weight.latest.day,
-              }
-            : null
-        }
-        pending={logWeight.isPending}
-        onSave={async (input) => {
-          await logWeight.mutateAsync(input);
-          setWeighingIn(null);
-        }}
-      />
+      {weighInSheetMounted ? (
+        <React.Suspense fallback={null}>
+          <BodyweightSheet
+            open={weighingIn !== null}
+            onOpenChange={(open) => {
+              if (!open) setWeighingIn(null);
+            }}
+            initial={weighingIn ?? { loggedOn: toIsoDay(), weight: null, note: null }}
+            ghost={
+              summary.data?.weight.latest && summary.data.weight.latest.day !== weighingIn?.loggedOn
+                ? {
+                    weight: summary.data.weight.latest.weight,
+                    loggedOn: summary.data.weight.latest.day,
+                  }
+                : null
+            }
+            pending={logWeight.isPending}
+            onSave={async (input) => {
+              await logWeight.mutateAsync({ ...input, timeZone });
+              setWeighingIn(null);
+            }}
+          />
+        </React.Suspense>
+      ) : null}
     </div>
   );
 }

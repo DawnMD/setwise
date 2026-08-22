@@ -14,6 +14,7 @@ import {
   listRoutines,
   startableDays,
   swapDayOrder,
+  type RoutineDetail,
 } from "../queries/plan";
 import "@tanstack/react-start/server-only";
 
@@ -77,18 +78,30 @@ export const planRouter = {
    */
   createRoutine: planProcedure
     .input(z.object({ name: routineName, firstDayName: dayName.default("Day 1") }))
-    .handler(async ({ input, context }) => {
+    .handler(async ({ input, context }): Promise<RoutineDetail> => {
       return context.db.transaction(async (tx) => {
         const [routine] = await tx
           .insert(routines)
           .values({ userId: context.userId, name: input.name })
           .returning();
 
-        await tx
+        const [day] = await tx
           .insert(routineDays)
-          .values({ routineId: routine.id, dayIndex: 0, name: input.firstDayName });
+          .values({ routineId: routine.id, dayIndex: 0, name: input.firstDayName })
+          .returning();
 
-        return routine;
+        // The whole routine, not just its row. Everything the editor needs is
+        // known here, so the screen it navigates to opens on real data instead
+        // of fetching back what this transaction just wrote.
+        return {
+          id: routine.id,
+          name: routine.name,
+          notes: routine.notes,
+          isArchived: routine.isArchived,
+          days: [
+            { id: day.id, name: day.name, dayIndex: day.dayIndex, kind: day.kind, exercises: [] },
+          ],
+        };
       });
     }),
 

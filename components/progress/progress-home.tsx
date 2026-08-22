@@ -5,7 +5,9 @@ import * as React from "react";
 
 import type { StatWindow } from "@/db/validators";
 import type { MuscleSlug } from "@/lib/muscles";
-import { orpc } from "@/lib/orpc";
+import { queries } from "@/lib/queries";
+import { PROGRESS_DEFAULT_WINDOW } from "@/lib/windows";
+import { useCriticalData } from "@/hooks/use-critical-data";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,11 +34,12 @@ import { WindowToggle } from "./window-toggle";
  * reason: two controls over one piece of state, not two states.
  */
 export function ProgressHome() {
-  const [window, setWindow] = React.useState<StatWindow>(7);
+  const [window, setWindow] = React.useState<StatWindow>(PROGRESS_DEFAULT_WINDOW);
   const [selected, setSelected] = React.useState<MuscleSlug | null>(null);
 
-  const volume = useQuery(orpc.stats.muscleVolume.queryOptions({ input: { window } }));
-  const intensity = useQuery(orpc.stats.intensity.queryOptions({ input: { window } }));
+  const volume = useQuery(queries.muscleVolume(window));
+  const intensity = useQuery(queries.intensity(window));
+  useCriticalData(!volume.isPending);
 
   const muscles = volume.data?.muscles ?? [];
   const trained = muscles.filter((muscle) => muscle.effectiveSets > 0);

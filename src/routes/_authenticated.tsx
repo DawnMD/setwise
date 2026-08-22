@@ -2,12 +2,14 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
 import { BottomNav } from "@/components/bottom-nav";
 import { Spinner } from "@/components/ui/spinner";
-import { getCurrentSession } from "@/src/server/session.functions";
+import { authSessionQuery } from "@/lib/session-query";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: "data-only",
-  beforeLoad: async () => {
-    const session = await getCurrentSession();
+  beforeLoad: async ({ context }) => {
+    // Resolved through the query cache, so navigating between tabs inside the
+    // freshness window costs nothing. See `authSessionQuery` for the window.
+    const session = await context.queryClient.ensureQueryData(authSessionQuery);
     if (!session) throw redirect({ to: "/sign-in" });
     return { session };
   },
