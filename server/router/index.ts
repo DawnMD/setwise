@@ -1,6 +1,7 @@
 import { bodyweightRouter } from "./bodyweight";
 import { catalogueRouter } from "./catalogue";
 import { homeRouter } from "./home";
+import { habitRouter } from "./habit";
 import { planRouter } from "./plan";
 import { profileRouter } from "./profile";
 import { sessionRouter } from "./session";
@@ -23,6 +24,7 @@ export const router = {
   stats: statsRouter,
   bodyweight: bodyweightRouter,
   profile: profileRouter,
+  habit: habitRouter,
 };
 
 export type AppRouter = typeof router;
