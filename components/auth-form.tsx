@@ -1,9 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { clearAccountCache } from "@/lib/cache";
 import { authClient } from "@/lib/auth-client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -37,7 +38,6 @@ type AuthValues = z.input<typeof signUpSchema>;
  * failure is not something to scroll away.
  */
 export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
-  const router = useRouter();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isSignUp = mode === "sign-up";
@@ -69,13 +69,16 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
         return;
       }
 
-      // The server layout reads the session, so the cookie has to be visible to
-      // the next server render.
-      await queryClient.invalidateQueries();
-      await router.invalidate();
+      // Everything cached belonged to whoever was signed in before, including
+      // the route guard's own answer. Cleared rather than invalidated: there is
+      // nothing here worth refetching, only rows that are no longer this
+      // account's.
+      clearAccountCache(queryClient);
       // A new account goes to the wizard, an existing one to the logger. Every
       // step of the wizard can be skipped, so this costs a returning user
-      // nothing and saves a new one from finding an empty Body screen.
+      // nothing and saves a new one from finding an empty Body screen. The
+      // protected route runs its own guard against the cookie that was just
+      // set, so there is no separate invalidate-then-navigate to sequence.
       await navigate({ to: isSignUp ? "/onboarding" : "/train", replace: true });
     } catch {
       form.setError("root.server", {

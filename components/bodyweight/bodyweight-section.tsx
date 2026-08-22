@@ -4,8 +4,12 @@ import * as React from "react";
 
 import type { StatWindow } from "@/db/validators";
 import { formatDelta, formatTonnage, formatWeight, toIsoDay } from "@/lib/format";
+import type { ProfileSummary } from "@/server/queries/profile";
+import { afterWrite, putProfileSummary } from "@/lib/cache";
 import { BODYWEIGHT_TREND_DAYS } from "@/lib/math";
 import { orpc } from "@/lib/orpc";
+import { queries } from "@/lib/queries";
+import { useLazyMount } from "@/hooks/use-lazy-mount";
 import { useTimeZone } from "@/hooks/use-time-zone";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -19,8 +23,13 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { BodyweightChart } from "./bodyweight-chart";
-import { BodyweightSheet, type WeighIn } from "./bodyweight-sheet";
+import type { WeighIn } from "./bodyweight-sheet";
 import { WeighInList } from "./weigh-in-list";
+
+/** Closed until someone weighs in, and so is its number pad. */
+const BodyweightSheet = React.lazy(() =>
+  import("./bodyweight-sheet").then((module) => ({ default: module.BodyweightSheet })),
+);
 
 /**
  * Bodyweight against training volume, over whatever window the screen is set
@@ -32,15 +41,29 @@ export function BodyweightSection({ window }: { window: StatWindow }) {
   // reader's own zone can answer.
   const timeZone = useTimeZone();
   const [editing, setEditing] = React.useState<WeighIn | null>(null);
+  const sheetMounted = useLazyMount(editing !== null);
 
   const queryClient = useQueryClient();
-  const series = useQuery(orpc.bodyweight.series.queryOptions({ input: { window, timeZone } }));
+  const series = useQuery(queries.bodyweightSeries(window, timeZone));
 
-  const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: orpc.bodyweight.series.key() });
+  /**
+   * The chart stays on screen while it is recalculated.
+   *
+   * A weigh-in moves the rolling average of the six days around it, so the
+   * whole series really does have to be read again — but blanking it to a
+   * skeleton to say so would hide the number that was just typed.
+   */
+  const afterLog = (profile: ProfileSummary) => {
+    putProfileSummary(queryClient, timeZone, profile);
+    afterWrite.bodyweightLogged(queryClient);
   };
-  const log = useMutation(orpc.bodyweight.log.mutationOptions({ onSuccess: refresh }));
-  const remove = useMutation(orpc.bodyweight.remove.mutationOptions({ onSuccess: refresh }));
+
+  const log = useMutation(
+    orpc.bodyweight.log.mutationOptions({ onSuccess: (result) => afterLog(result.profile) }),
+  );
+  const remove = useMutation(
+    orpc.bodyweight.remove.mutationOptions({ onSuccess: (result) => afterLog(result.profile) }),
+  );
 
   if (series.isPending) return <Skeleton className="h-64 w-full" />;
 
@@ -67,32 +90,34 @@ export function BodyweightSection({ window }: { window: StatWindow }) {
   const todayWeighIn = weighIns.find((weighIn) => weighIn.loggedOn === today) ?? null;
   const openToday = () => setEditing(todayWeighIn ?? { loggedOn: today, weight: null, note: null });
 
-  const sheet = (
-    <BodyweightSheet
-      open={editing !== null}
-      onOpenChange={(open) => {
-        if (!open) setEditing(null);
-      }}
-      initial={editing ?? { loggedOn: toIsoDay(), weight: null, note: null }}
-      ghost={
-        data.latest && data.latest.day !== editing?.loggedOn
-          ? { weight: data.latest.weight, loggedOn: data.latest.day }
-          : null
-      }
-      pending={log.isPending || remove.isPending}
-      onSave={async (input) => {
-        await log.mutateAsync(input);
-        setEditing(null);
-      }}
-      onDelete={
-        editing && editing.weight !== null
-          ? async () => {
-              await remove.mutateAsync({ loggedOn: editing.loggedOn });
-              setEditing(null);
-            }
-          : undefined
-      }
-    />
+  const sheet = !sheetMounted ? null : (
+    <React.Suspense fallback={null}>
+      <BodyweightSheet
+        open={editing !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditing(null);
+        }}
+        initial={editing ?? { loggedOn: toIsoDay(), weight: null, note: null }}
+        ghost={
+          data.latest && data.latest.day !== editing?.loggedOn
+            ? { weight: data.latest.weight, loggedOn: data.latest.day }
+            : null
+        }
+        pending={log.isPending || remove.isPending}
+        onSave={async (input) => {
+          await log.mutateAsync({ ...input, timeZone });
+          setEditing(null);
+        }}
+        onDelete={
+          editing && editing.weight !== null
+            ? async () => {
+                await remove.mutateAsync({ loggedOn: editing.loggedOn, timeZone });
+                setEditing(null);
+              }
+            : undefined
+        }
+      />
+    </React.Suspense>
   );
 
   if (data.weighIns === 0) {

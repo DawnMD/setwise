@@ -9,10 +9,10 @@ import {
   findDay,
   getRoutineDetail,
   listRoutines,
-  sessionPlan,
   startableDays,
   swapDayOrder,
 } from "../../server/queries/plan";
+import { getSessionDetail } from "../../server/queries/session";
 import { openTestDatabase } from "./database";
 
 const { client, db } = openTestDatabase();
@@ -148,14 +148,16 @@ describe("plan builder acceptance", () => {
       routineDayId: legs.id,
     });
 
-    const plannedSession = await sessionPlan(db, userId, sessionId);
+    // The plan arrives with the session it belongs to rather than as its own
+    // read, so this is where its ownership check lives now.
+    const plannedSession = (await getSessionDetail(db, userId, sessionId))?.plan;
     expect(plannedSession).toMatchObject({
       dayName: "Legs",
       routineName: "Push/pull/legs",
     });
     expect(plannedSession?.exercises).toHaveLength(2);
     expect(describeTargets(plannedSession!.exercises[0])).toBe("5 × 5");
-    expect(await sessionPlan(db, otherUserId, sessionId)).toBeNull();
+    expect(await getSessionDetail(db, otherUserId, sessionId)).toBeNull();
 
     const upcoming = await startableDays(db, userId);
     expect(upcoming.map((day) => day.name)).toEqual(["Push", "Legs"]);

@@ -69,6 +69,17 @@ export default tseslint.config(
     rules: { "jsx-a11y/no-autofocus": "off" },
   },
   {
+    files: ["components/ui/mini-chart.tsx"],
+    rules: {
+      // A chart is a figure you can also interrogate. It carries a textual
+      // summary as its accessible name, takes focus once rather than once per
+      // point, moves between points with the arrow keys, and announces the one
+      // under the cursor through a live region beneath it.
+      "jsx-a11y/no-noninteractive-element-interactions": "off",
+      "jsx-a11y/no-noninteractive-tabindex": "off",
+    },
+  },
+  {
     files: ["components/theme-provider.tsx"],
     rules: {
       // Hydration deliberately synchronizes React state with the theme applied

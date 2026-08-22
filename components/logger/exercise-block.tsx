@@ -1,10 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import * as React from "react";
 
 import { formatWeight, formatWhen } from "@/lib/format";
 import { ghostForPosition } from "@/lib/overload";
-import { orpc } from "@/lib/orpc";
 import { describeTargets, type Targets } from "@/lib/targets";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,44 +17,38 @@ import {
 } from "@/components/ui/card";
 
 import { SetRow } from "./set-row";
-import type { LoggerExercise, LoggerSet } from "./types";
+import type { LoggerExercise, LoggerLastPerformance, LoggerSet } from "./types";
 
 /**
  * One exercise and its sets.
  *
- * Owns the ghost lookup, because the ghost is per exercise and the query for it
- * is the same shape for every set inside. Fetched once here rather than once
- * per row.
+ * The ghost arrives with the workout rather than being fetched here. It used to
+ * be a query per block, which meant six requests on a six-exercise day for the
+ * one number the screen is built around — and every one of them behind the
+ * session that had to load first.
  */
 export function ExerciseBlock({
   exercise,
-  sessionId,
   sets,
   target,
+  last,
   prSetIds,
   onAddSet,
   onEditSet,
   onRemove,
 }: {
   exercise: LoggerExercise;
-  sessionId: string;
   sets: LoggerSet[];
   /** What the routine day asks for here, if this session came from one. */
   target: Targets | null;
+  /** The last time this was trained, or null for the first time. */
+  last: LoggerLastPerformance | null;
   prSetIds: ReadonlySet<string>;
   onAddSet: (exercise: LoggerExercise) => void;
   onEditSet: (set: LoggerSet) => void;
   onRemove: (exerciseId: string) => void;
 }) {
-  const last = useQuery(
-    orpc.session.lastPerformance.queryOptions({
-      input: { exerciseId: exercise.id, excludeSessionId: sessionId },
-      // The previous session cannot change while this one is open.
-      staleTime: Infinity,
-    }),
-  );
-
-  const lastSets = last.data?.sets ?? [];
+  const lastSets = last?.sets ?? [];
 
   // Position within its own kind, so a warm-up appearing this session does not
   // shift every working set's ghost by one.
@@ -83,11 +75,9 @@ export function ExerciseBlock({
       <CardHeader>
         <CardTitle className="truncate text-[15px]">{exercise.name}</CardTitle>
         <CardDescription className="numeric">
-          {last.data
-            ? `Last ${formatWhen(last.data.performedAt).toLowerCase()} · ${summarise(last.data.sets)}`
-            : last.isPending
-              ? " "
-              : "First time"}
+          {last
+            ? `Last ${formatWhen(new Date(last.performedAt)).toLowerCase()} · ${summarise(last.sets)}`
+            : "First time"}
         </CardDescription>
         <CardAction>
           {targetLabel ? (

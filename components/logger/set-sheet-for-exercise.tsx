@@ -1,24 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
-
 import { ghostForPosition } from "@/lib/overload";
-import { orpc } from "@/lib/orpc";
 
 import { SetSheet, type SetDraft } from "./set-sheet";
-import type { LoggerExercise, LoggerSet } from "./types";
+import type { LoggerExercise, LoggerLastPerformance, LoggerSet } from "./types";
 
 /**
  * Wires the ghost value into the set sheet.
  *
- * The lookup is the same query the exercise block already ran, so opening the
- * sheet costs nothing: TanStack serves it from cache under the same key. Kept
- * separate from `ActiveSession` because the query is per exercise and the sheet
- * only exists while one is selected.
+ * The ghost is handed down rather than fetched: it came with the workout, so
+ * opening the sheet costs nothing and cannot show a spinner where a number
+ * should be. Kept separate from `ActiveSession` because the sheet only exists
+ * while an exercise is selected.
  */
 export function SetSheetForExercise({
-  sessionId,
   exercise,
   siblings,
   editingSet,
+  last,
   open,
   pending,
   saveError,
@@ -26,12 +23,13 @@ export function SetSheetForExercise({
   onClosed,
   onSave,
 }: {
-  sessionId: string;
   exercise: LoggerExercise;
   /** Sets already logged for this exercise in this session, by set index. */
   siblings: LoggerSet[];
   /** The set being edited, or null when adding a new one. */
   editingSet: LoggerSet | null;
+  /** The last time this exercise was trained, or null for the first time. */
+  last: LoggerLastPerformance | null;
   open: boolean;
   pending: boolean;
   saveError: boolean;
@@ -40,13 +38,6 @@ export function SetSheetForExercise({
   onClosed: () => void;
   onSave: (draft: SetDraft) => void;
 }) {
-  const last = useQuery(
-    orpc.session.lastPerformance.queryOptions({
-      input: { exerciseId: exercise.id, excludeSessionId: sessionId },
-      staleTime: Infinity,
-    }),
-  );
-
   const isWarmup = editingSet?.isWarmup ?? false;
   const ordinal = editingSet
     ? siblings.filter(
@@ -81,8 +72,8 @@ export function SetSheetForExercise({
       exerciseName={exercise.name}
       isBarbell={exercise.equipment === "barbell"}
       setLabel={label}
-      ghost={ghostForPosition(last.data?.sets ?? [], ordinal, isWarmup)}
-      ghostWhen={last.data?.performedAt ?? null}
+      ghost={ghostForPosition(last?.sets ?? [], ordinal, isWarmup)}
+      ghostWhen={last ? new Date(last.performedAt) : null}
       initial={initial}
       saveLabel={editingSet ? "Save changes" : "Save set"}
       pending={pending}

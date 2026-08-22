@@ -1,24 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
 import type { StatWindow } from "@/db/validators";
 import { formatDelta, formatE1rm } from "@/lib/format";
-import { orpc } from "@/lib/orpc";
+import { queries } from "@/lib/queries";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import {
-  type ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import { MiniChart } from "@/components/ui/mini-chart";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const CHART_CONFIG = {
-  e1rm: { label: "Est. 1RM", color: "var(--overload)" },
-} satisfies ChartConfig;
 
 /**
  * Per-exercise history, plotted as an estimated 1RM trend.
@@ -33,7 +23,7 @@ const CHART_CONFIG = {
  * through two dots cannot pass for a trend.
  */
 export function ExerciseTrend({ window }: { window: StatWindow }) {
-  const exercises = useQuery(orpc.stats.exercises.queryOptions({ input: { window } }));
+  const exercises = useQuery(queries.trainedExercises(window));
   const [chosen, setChosen] = React.useState<string | null>(null);
 
   const options = exercises.data ?? [];
@@ -43,12 +33,7 @@ export function ExerciseTrend({ window }: { window: StatWindow }) {
   const selectedId =
     chosen && options.some((e) => e.id === chosen) ? chosen : (options[0]?.id ?? null);
 
-  const history = useQuery({
-    ...orpc.stats.exerciseHistory.queryOptions({
-      input: { exerciseId: selectedId ?? "", window },
-    }),
-    enabled: selectedId !== null,
-  });
+  const history = useQuery(queries.exerciseHistory(selectedId, window));
 
   const points = React.useMemo(
     () =>
@@ -135,57 +120,34 @@ export function ExerciseTrend({ window }: { window: StatWindow }) {
             )}
           </div>
 
-          <ChartContainer config={CHART_CONFIG} className="aspect-auto h-44 w-full">
-            <LineChart data={points} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
-              <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="date"
-                type="number"
-                scale="time"
-                domain={["dataMin", "dataMax"]}
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                minTickGap={24}
-                tickFormatter={(value: number) =>
-                  new Date(value).toLocaleDateString(undefined, { day: "numeric", month: "short" })
-                }
-              />
-              <YAxis
-                dataKey="e1rm"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={4}
-                width={36}
-                // Anchored to the data, not to zero. The interesting range is
-                // the few kilos a lift actually moves over a quarter, and a
-                // zero baseline flattens all of it into one line.
-                domain={["dataMin - 5", "dataMax + 5"]}
-                tickFormatter={(value: number) => String(Math.round(value))}
-              />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(_, payload) =>
-                      new Date(payload?.[0]?.payload?.date ?? 0).toLocaleDateString(undefined, {
-                        day: "numeric",
-                        month: "short",
-                      })
-                    }
-                  />
-                }
-              />
-              <Line
-                dataKey="e1rm"
-                type="monotone"
-                stroke="var(--color-e1rm)"
-                strokeWidth={2}
-                dot={{ r: 3, fill: "var(--color-e1rm)" }}
-                activeDot={{ r: 5 }}
-                isAnimationActive={false}
-              />
-            </LineChart>
-          </ChartContainer>
+          <MiniChart
+            height={176}
+            // Sessions are not evenly spaced, and a chart that pretends they
+            // are would show a fortnight off as one step like any other.
+            positions={points.map((point) => point.date)}
+            labels={points.map((point) =>
+              new Date(point.date).toLocaleDateString(undefined, {
+                day: "numeric",
+                month: "short",
+              }),
+            )}
+            series={[
+              {
+                key: "e1rm",
+                label: "Est. 1RM",
+                kind: "line",
+                color: "var(--overload)",
+                showPoints: true,
+                values: points.map((point) => point.e1rm),
+                format: (value) => formatE1rm(value),
+              },
+            ]}
+            // Anchored to the data, not to zero. The interesting range is the
+            // few kilos a lift actually moves over a quarter, and a zero
+            // baseline flattens all of it into one line.
+            leftDomain={(min, max) => [min - 5, max + 5]}
+            summary={`Estimated one-rep max over ${points.length} sessions, from ${formatE1rm(first)} to ${formatE1rm(last)}.`}
+          />
 
           <p className="text-xs text-muted-foreground">
             Best Epley estimate per session, from {points.length} sessions.

@@ -9,7 +9,7 @@ import { overloadDelta } from "../../lib/overload";
 import { DEFAULT_BAR_KG, loadBar } from "../../lib/plates";
 import { exportSetsCsv } from "../../server/queries/export";
 import { recordSetPersonalRecords } from "../../server/queries/prs";
-import { createSet, lastPerformance, updateSet } from "../../server/queries/session";
+import { createSet, lastPerformances, updateSet } from "../../server/queries/session";
 import { openTestDatabase } from "./database";
 
 const { client, db } = openTestDatabase();
@@ -124,8 +124,9 @@ describe("logger acceptance", () => {
     expect(overloadDelta({ weight: 200, reps: 20 }, null)).toBeNull();
   });
 
-  it("reads ghost values from the previous session", async () => {
-    const previous = await lastPerformance(db, userId, benchId, currentSessionId);
+  it("reads ghost values for the whole lineup in one query", async () => {
+    const ghosts = await lastPerformances(db, userId, [benchId], currentSessionId);
+    const previous = ghosts[benchId];
 
     expect(previous?.sessionId).toBe(previousSessionId);
     expect(previous?.sets.map((set) => [set.weight, set.reps])).toEqual([
@@ -134,8 +135,14 @@ describe("logger acceptance", () => {
     ]);
   });
 
+  it("reports a never-trained exercise as null rather than omitting it", async () => {
+    const ghosts = await lastPerformances(db, userId, [randomUUID()], currentSessionId);
+    expect(Object.values(ghosts)).toEqual([null]);
+  });
+
   it("does not create records from a warm-up", async () => {
-    const warmup = await createSet(db, {
+    const warmup = await createSet(db, userId, {
+      id: randomUUID(),
       sessionId: currentSessionId,
       exerciseId: benchId,
       setIndex: 0,
@@ -145,11 +152,57 @@ describe("logger acceptance", () => {
       isWarmup: true,
     });
 
-    expect(await recordSetPersonalRecords(db, userId, warmup)).toEqual([]);
+    expect(warmup.status).toBe("written");
+    if (warmup.status !== "written") throw new Error("Expected the warm-up to be written.");
+    expect(await recordSetPersonalRecords(db, userId, warmup.set, "created")).toEqual([]);
   });
 
-  it("generates one set id, updates that row, and drops stale PRs after an edit", async () => {
+  it("returns the stored row when the same set id arrives twice", async () => {
     const input = {
+      id: randomUUID(),
+      sessionId: currentSessionId,
+      exerciseId: benchId,
+      setIndex: 5,
+      weight: 80,
+      reps: 6,
+      rpe: null,
+      isWarmup: false,
+    };
+
+    const first = await createSet(db, userId, input);
+    const replay = await createSet(db, userId, input);
+
+    expect(first.status).toBe("written");
+    expect(replay.status).toBe("replayed");
+
+    const stored = await db.select().from(schema.sets).where(eq(schema.sets.id, input.id));
+    expect(stored).toHaveLength(1);
+
+    await db.delete(schema.sets).where(eq(schema.sets.id, input.id));
+  });
+
+  it("refuses a reused id that stands for a different set", async () => {
+    const input = {
+      id: randomUUID(),
+      sessionId: currentSessionId,
+      exerciseId: benchId,
+      setIndex: 6,
+      weight: 80,
+      reps: 6,
+      rpe: null,
+      isWarmup: false,
+    };
+
+    await createSet(db, userId, input);
+    const conflict = await createSet(db, userId, { ...input, reps: 7 });
+    expect(conflict.status).toBe("id-conflict");
+
+    await db.delete(schema.sets).where(eq(schema.sets.id, input.id));
+  });
+
+  it("keeps one set id, updates that row, and drops stale PRs after an edit", async () => {
+    const input = {
+      id: randomUUID(),
       sessionId: currentSessionId,
       exerciseId: benchId,
       setIndex: 1,
@@ -159,10 +212,13 @@ describe("logger acceptance", () => {
       isWarmup: false,
     };
 
-    const workingSet = await createSet(db, input);
+    const created = await createSet(db, userId, input);
+    if (created.status !== "written") throw new Error("Expected the set to be written.");
+    const workingSet = created.set;
     const setId = workingSet.id;
-    expect(setId).toMatch(/^[0-9a-f-]{36}$/);
-    const records = await recordSetPersonalRecords(db, userId, workingSet);
+    // The client named it, and the row kept that name.
+    expect(setId).toBe(input.id);
+    const records = await recordSetPersonalRecords(db, userId, workingSet, "created");
     const byKind = new Map(records.map((record) => [record.kind, record]));
 
     expect(byKind.get("max_weight")?.value).toBeCloseTo(102.5);
@@ -182,10 +238,10 @@ describe("logger acceptance", () => {
       .from(schema.sets)
       .where(eq(schema.sets.sessionId, currentSessionId));
     expect(sessionSets).toHaveLength(2);
-    const edited = await updateSet(db, { ...input, id: setId, weight: 90 });
-    expect(edited).not.toBeNull();
-    if (!edited) throw new Error("Expected the saved set to exist.");
-    const recordsAfterEdit = await recordSetPersonalRecords(db, userId, edited);
+    const update = await updateSet(db, userId, { ...input, weight: 90 });
+    if (update.status !== "written") throw new Error("Expected the saved set to exist.");
+    const edited = update.set;
+    const recordsAfterEdit = await recordSetPersonalRecords(db, userId, edited, "edited");
     expect(recordsAfterEdit.some((record) => record.kind === "max_weight")).toBe(false);
 
     const storedAfterEdit = await db

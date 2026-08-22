@@ -3,8 +3,11 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { CalendarDays, Plus } from "lucide-react";
 import * as React from "react";
 
+import { useCriticalData } from "@/hooks/use-critical-data";
+import { afterWrite, seedRoutineDetail } from "@/lib/cache";
 import { formatWhen } from "@/lib/format";
 import { orpc } from "@/lib/orpc";
+import { queries } from "@/lib/queries";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,12 +34,16 @@ export function PlanHome() {
   const queryClient = useQueryClient();
   const [creating, setCreating] = React.useState(false);
 
-  const routines = useQuery(orpc.plan.list.queryOptions());
+  const routines = useQuery(queries.routineList());
+  useCriticalData(!routines.isPending);
 
   const create = useMutation(
     orpc.plan.createRoutine.mutationOptions({
       onSuccess: (routine) => {
-        void queryClient.invalidateQueries({ queryKey: orpc.plan.list.key() });
+        // The response is the whole routine, so the editor opens on real data
+        // rather than fetching back what the server just told us.
+        seedRoutineDetail(queryClient, routine);
+        afterWrite.planEdited(queryClient);
         setCreating(false);
         void navigate({ to: "/plan/$routineId", params: { routineId: routine.id } });
       },

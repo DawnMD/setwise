@@ -69,13 +69,27 @@ const setValuesInput = z.object({
   isWarmup: z.boolean(),
 });
 
-export const createSetInput = setValuesInput;
+/**
+ * The client names the row.
+ *
+ * A set save is the one write in the app that someone is standing over, out of
+ * breath, on gym wifi. When the response is lost the only safe retry is one
+ * that can be recognised as the same request, and a server-generated id makes
+ * that impossible: the second attempt is indistinguishable from a second set at
+ * the same weight, which is a completely ordinary thing to log.
+ *
+ * With the id supplied, a repeat is a no-op that returns the row already
+ * stored, and the app can retry a write it never got an answer for.
+ */
+export const createSetInput = setValuesInput.extend({ id: uuid });
 export const updateSetInput = setValuesInput.extend({ id: uuid });
 
 export type CreateSetInput = z.infer<typeof createSetInput>;
 export type UpdateSetInput = z.infer<typeof updateSetInput>;
 
+/** Same reasoning as `createSetInput`: a retried start must not open a second workout. */
 export const sessionStartInput = z.object({
+  id: uuid,
   routineDayId: uuid.nullable(),
   notes: z.string().trim().max(2000).nullable(),
 });

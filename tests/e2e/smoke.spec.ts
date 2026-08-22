@@ -98,8 +98,11 @@ test.describe.serial("Setwise browser smoke", () => {
 
     await page.getByRole("button", { name: "Finish" }).click();
     await expect(page).toHaveURL(/\/body$/);
-    // The weigh-in from step one survived the four saves after it.
-    await expect(page.getByText("80 kg")).toBeVisible();
+    // The weigh-in from step one survived the four saves after it. It appears
+    // twice now — once on the weigh-in card and once in the list under the
+    // chart — because the Body route warms its series before the screen mounts
+    // rather than after.
+    await expect(page.getByText("80 kg").first()).toBeVisible();
   });
 
   test("authenticated navigation and direct loads work", async () => {
@@ -122,6 +125,36 @@ test.describe.serial("Setwise browser smoke", () => {
     }
   });
 
+  /**
+   * Train is the widest screen in the app: the open workout, recent activity,
+   * the rotation, today's rest and the profile. All five leave in one request.
+   */
+  test("a screen's reads leave as one batched request", async () => {
+    await page.goto("/settings");
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+
+    const rpc: string[] = [];
+    const record = (url: string) => {
+      if (url.includes("/api/rpc")) rpc.push(url);
+    };
+    page.on("request", (request) => record(request.url()));
+
+    await page.getByRole("link", { name: "Train" }).click();
+    await expect(page).toHaveURL(/\/train$/);
+    await expect(page.getByRole("heading", { name: "Setwise" })).toBeVisible();
+    await expect(page.getByText("Recent activity")).toBeVisible();
+
+    page.removeAllListeners("request");
+
+    expect(rpc.length).toBeGreaterThan(0);
+    // Every one of them went to the batch endpoint, which is the same thing as
+    // saying none of them went on its own.
+    for (const url of rpc) {
+      expect(url).toContain("/api/rpc/__batch__");
+    }
+    expect(rpc.length).toBeLessThanOrEqual(2);
+  });
+
   test("workout writes appear only after confirmation and failed writes stay editable", async () => {
     await page.goto("/train");
     await page.getByRole("button", { name: "Start workout" }).click();
@@ -139,7 +172,10 @@ test.describe.serial("Setwise browser smoke", () => {
 
     await page.getByRole("button", { name: "Add set" }).click();
     await enterSet(page, "105", "5");
-    await page.route("**/api/rpc/**", (route) => route.abort("failed"), { times: 1 });
+    // Twice, because a set save is retried once now: the client names the row,
+    // so restating it cannot log a second set. One dropped request is something
+    // the app recovers from; this test is about what happens when it does not.
+    await page.route("**/api/rpc/**", (route) => route.abort("failed"), { times: 2 });
     await page.getByRole("button", { name: "Save set" }).click();
 
     await expect(

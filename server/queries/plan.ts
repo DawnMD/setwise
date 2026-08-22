@@ -186,6 +186,14 @@ export async function getRoutineDetail(
   };
 }
 
+/**
+ * The plan behind a session, as the logger reads it.
+ *
+ * Assembled inside `getSessionDetail` rather than fetched on its own, and read
+ * live rather than copied into the session at start: a routine edited mid-week
+ * should show its new form the next time it is run, and a snapshot would need
+ * its own table to say something nobody asked for.
+ */
 export type SessionPlan = {
   dayId: string;
   dayName: string;
@@ -194,57 +202,6 @@ export type SessionPlan = {
   routineName: string;
   exercises: PlannedExercise[];
 };
-
-/**
- * The plan behind an in-progress session, read back by the logger so a workout
- * started from a routine day opens with its lineup already on screen.
- *
- * Read live rather than copied into the session at start. A routine edited
- * mid-week should show its new form the next time it is run, and a snapshot
- * would need its own table to say something nobody asked for.
- */
-export async function sessionPlan(
-  db: DbClient,
-  userId: string,
-  sessionId: string,
-): Promise<SessionPlan | null> {
-  const [session] = await db
-    .select({ routineDayId: workoutSessions.routineDayId })
-    .from(workoutSessions)
-    .where(and(eq(workoutSessions.id, sessionId), eq(workoutSessions.userId, userId)))
-    .limit(1);
-
-  if (!session?.routineDayId) return null;
-
-  const day = await findDay(db, userId, session.routineDayId);
-  if (!day) return null;
-
-  const planned = await db
-    .select({
-      id: routineExercises.id,
-      exerciseId: routineExercises.exerciseId,
-      name: exercises.name,
-      equipment: exercises.equipment,
-      orderIndex: routineExercises.orderIndex,
-      targetSets: routineExercises.targetSets,
-      targetRepLow: routineExercises.targetRepLow,
-      targetRepHigh: routineExercises.targetRepHigh,
-      targetRpe: routineExercises.targetRpe,
-    })
-    .from(routineExercises)
-    .innerJoin(exercises, eq(exercises.id, routineExercises.exerciseId))
-    .where(eq(routineExercises.routineDayId, day.id))
-    .orderBy(asc(routineExercises.orderIndex));
-
-  return {
-    dayId: day.id,
-    dayName: day.name,
-    kind: day.kind,
-    routineId: day.routineId,
-    routineName: day.routineName,
-    exercises: planned,
-  };
-}
 
 /**
  * Swaps two rows' order values.

@@ -2,9 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import * as React from "react";
 
+import { useLazyMount } from "@/hooks/use-lazy-mount";
 import { MUSCLES, type MuscleSlug } from "@/lib/muscles";
-import { orpc } from "@/lib/orpc";
-import { CustomExerciseForm } from "@/components/catalogue/custom-exercise-form";
+import { queries } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -20,6 +20,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import type { LoggerExercise } from "./types";
+
+/**
+ * The create-an-exercise form brings a muscle picker and the whole custom
+ * exercise schema with it, and is opened by a small fraction of the people who
+ * open the picker. It arrives when it is asked for.
+ */
+const CustomExerciseForm = React.lazy(() =>
+  import("@/components/catalogue/custom-exercise-form").then((module) => ({
+    default: module.CustomExerciseForm,
+  })),
+);
 
 /**
  * Search over the global catalogue plus the user's own exercises.
@@ -42,6 +53,7 @@ export function ExercisePicker({
   const [debounced, setDebounced] = React.useState("");
   const [muscle, setMuscle] = React.useState<MuscleSlug | null>(null);
   const [creating, setCreating] = React.useState(false);
+  const creatingMounted = useLazyMount(creating);
 
   React.useEffect(() => {
     const id = window.setTimeout(() => setDebounced(query.trim()), 200);
@@ -49,11 +61,7 @@ export function ExercisePicker({
   }, [query]);
 
   const results = useQuery(
-    orpc.catalogue.search.queryOptions({
-      input: { query: debounced, muscle: muscle ?? undefined, limit: 40 },
-      enabled: open,
-      staleTime: 5 * 60_000,
-    }),
+    queries.catalogueSearch({ query: debounced, muscle: muscle ?? undefined, limit: 40 }, open),
   );
 
   return (
@@ -135,11 +143,15 @@ export function ExercisePicker({
           </Button>
         </Command>
 
-        <CustomExerciseForm
-          open={creating}
-          onOpenChange={setCreating}
-          onCreated={(exercise) => onPick(exercise)}
-        />
+        {creatingMounted ? (
+          <React.Suspense fallback={null}>
+            <CustomExerciseForm
+              open={creating}
+              onOpenChange={setCreating}
+              onCreated={(exercise) => onPick(exercise)}
+            />
+          </React.Suspense>
+        ) : null}
       </DrawerContent>
     </Drawer>
   );

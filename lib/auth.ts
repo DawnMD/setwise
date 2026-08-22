@@ -5,6 +5,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 
 import { db, schema } from "@/db";
+import { AUTH_COOKIE_CACHE } from "./flags";
 
 function hostFromEnvironment(value: string | undefined) {
   if (!value) return undefined;
@@ -39,6 +40,28 @@ export const auth = betterAuth({
   // Email and password only for the MVP. An OAuth provider slots in here later
   // without touching the schema beyond what `account` already stores.
   emailAndPassword: { enabled: true },
+
+  /**
+   * The signed session cookie cache.
+   *
+   * Every protected procedure resolved the session by querying Postgres, which
+   * put a Singapore round trip in front of every read on every screen. The
+   * cache moves that to a signature check against a cookie the browser already
+   * sent.
+   *
+   * Five minutes is the revocation window this buys itself with: a session
+   * revoked on another device stays usable here for up to that long. Sign-out
+   * is not affected — Better Auth clears the cache cookie in the same response
+   * that clears the session cookie, so the tab that signed out is locked out at
+   * once. The window only applies to a revocation the browser never saw.
+   */
+  session: {
+    cookieCache: {
+      enabled: AUTH_COOKIE_CACHE,
+      maxAge: 5 * 60,
+      strategy: "compact",
+    },
+  },
 
   user: {
     additionalFields: {

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Download } from "lucide-react";
 
+import { prefetch } from "@/lib/prefetch";
 import { ProfilePrompt } from "@/components/profile/profile-prompt";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -9,6 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({ meta: [{ title: "Settings · Setwise" }] }),
+  // The profile prompt on this screen is the only thing here that reads data.
+  loader: ({ context: { queryClient } }) =>
+    prefetch(({ queries, resolveTimeZone, warm }) => {
+      warm(queryClient, queries.profile(resolveTimeZone()));
+    }),
   component: SettingsPage,
 });
 

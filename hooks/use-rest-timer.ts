@@ -1,46 +1,159 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-
-import { useNow } from "./use-now";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 export const REST_PRESETS = [60, 90, 120, 180] as const;
 export const DEFAULT_REST_SECONDS = 120;
 
 const TICK_MS = 250;
 
-export function useRestTimer() {
-  const [duration, setDuration] = useState(DEFAULT_REST_SECONDS);
-  const [endsAt, setEndsAt] = useState<number | null>(null);
-  const now = useNow(endsAt === null ? null : TICK_MS);
-  const notifiedFor = useRef<number | null>(null);
+export type RestSnapshot = {
+  /** Seconds left, counting down. Zero once the rest is over. */
+  remaining: number;
+  duration: number;
+  running: boolean;
+  done: boolean;
+};
 
-  const remaining = endsAt === null || now === null ? 0 : Math.max(0, (endsAt - now) / 1000);
-  const running = endsAt !== null;
-  const done = running && now !== null && remaining <= 0;
+export type RestTimer = {
+  /** Fires four times a second while the timer runs. Only the bar listens. */
+  subscribeTick: (listener: () => void) => () => void;
+  /** Fires only when the timer starts or stops. */
+  subscribeRunning: (listener: () => void) => () => void;
+  getSnapshot: () => RestSnapshot;
+  isRunning: () => boolean;
+  start: (seconds?: number) => void;
+  extend: (seconds: number) => void;
+  stop: () => void;
+  dispose: () => void;
+};
 
-  useEffect(() => {
-    if (!done || endsAt === null || notifiedFor.current === endsAt) return;
-    notifiedFor.current = endsAt;
-    if ("vibrate" in navigator) navigator.vibrate?.([120, 80, 120]);
-  }, [done, endsAt]);
+const IDLE: RestSnapshot = {
+  remaining: 0,
+  duration: DEFAULT_REST_SECONDS,
+  running: false,
+  done: false,
+};
 
-  const start = useCallback(
-    (seconds?: number) => {
-      const length = seconds ?? duration;
-      if (seconds !== undefined) setDuration(seconds);
-      notifiedFor.current = null;
-      setEndsAt(Date.now() + length * 1000);
+/**
+ * The rest timer, as a store rather than as state in the workout screen.
+ *
+ * It used to be a hook in `ActiveSession`, which meant every 250 ms tick
+ * re-rendered the whole workout: the header, the totals, and every exercise
+ * card with its sets. Four times a second, for two minutes, while someone is
+ * scrolling back through what they lifted — which is exactly what the rest
+ * period is for.
+ *
+ * Two subscriptions rather than one. The countdown changes constantly and only
+ * the bar renders it; whether a timer exists at all changes twice per set and
+ * is the only part the screen above needs.
+ */
+export function createRestTimer(): RestTimer {
+  let endsAt: number | null = null;
+  let duration = DEFAULT_REST_SECONDS;
+  let snapshot: RestSnapshot = IDLE;
+  let interval: ReturnType<typeof setInterval> | undefined;
+  let notified: number | null = null;
+
+  const tickListeners = new Set<() => void>();
+  const runningListeners = new Set<() => void>();
+
+  const compute = (): RestSnapshot => {
+    if (endsAt === null) return { remaining: 0, duration, running: false, done: false };
+    const remaining = Math.max(0, (endsAt - Date.now()) / 1000);
+    return { remaining, duration, running: true, done: remaining <= 0 };
+  };
+
+  const publish = () => {
+    const wasRunning = snapshot.running;
+    snapshot = compute();
+
+    if (snapshot.done && endsAt !== null && notified !== endsAt) {
+      notified = endsAt;
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        navigator.vibrate?.([120, 80, 120]);
+      }
+    }
+
+    for (const listener of tickListeners) listener();
+    if (snapshot.running !== wasRunning) {
+      for (const listener of runningListeners) listener();
+    }
+  };
+
+  const startTicking = () => {
+    if (interval !== undefined) return;
+    interval = setInterval(publish, TICK_MS);
+  };
+
+  const stopTicking = () => {
+    if (interval === undefined) return;
+    clearInterval(interval);
+    interval = undefined;
+  };
+
+  return {
+    subscribeTick(listener) {
+      tickListeners.add(listener);
+      return () => tickListeners.delete(listener);
     },
-    [duration],
-  );
+    subscribeRunning(listener) {
+      runningListeners.add(listener);
+      return () => runningListeners.delete(listener);
+    },
+    getSnapshot: () => snapshot,
+    isRunning: () => snapshot.running,
 
-  const extend = useCallback((seconds: number) => {
-    setEndsAt((current) =>
-      current === null ? null : Math.max(Date.now(), current) + seconds * 1000,
-    );
-    setDuration((current) => current + seconds);
-  }, []);
+    start(seconds) {
+      if (seconds !== undefined) duration = seconds;
+      notified = null;
+      endsAt = Date.now() + duration * 1000;
+      startTicking();
+      publish();
+    },
 
-  const stop = useCallback(() => setEndsAt(null), []);
+    extend(seconds) {
+      if (endsAt === null) return;
+      // From now when the timer has already run out, so "+30s" always buys 30
+      // seconds rather than topping up a number that went negative.
+      endsAt = Math.max(Date.now(), endsAt) + seconds * 1000;
+      duration += seconds;
+      notified = null;
+      publish();
+    },
 
-  return { remaining, duration, running, done, start, extend, stop };
+    stop() {
+      endsAt = null;
+      stopTicking();
+      publish();
+    },
+
+    dispose() {
+      stopTicking();
+      tickListeners.clear();
+      runningListeners.clear();
+    },
+  };
+}
+
+/** One timer per mounted workout, torn down with it. */
+export function useRestTimer(): RestTimer {
+  const [timer] = useState(createRestTimer);
+  useEffect(() => () => timer.dispose(), [timer]);
+  return timer;
+}
+
+/**
+ * Whether a rest is running. Re-renders the caller twice per set, not eight
+ * times a second.
+ */
+export function useRestRunning(timer: RestTimer): boolean {
+  return useSyncExternalStore(timer.subscribeRunning, timer.isRunning, () => false);
+}
+
+/** There is no countdown on the server, and rendering one would mismatch a beat later. */
+const getIdleSnapshot = () => IDLE;
+
+/** The countdown itself. Only the bar that draws it should call this. */
+export function useRestSnapshot(timer: RestTimer): RestSnapshot {
+  const subscribe = useCallback((listener: () => void) => timer.subscribeTick(listener), [timer]);
+  return useSyncExternalStore(subscribe, timer.getSnapshot, getIdleSnapshot);
 }

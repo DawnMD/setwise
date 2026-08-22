@@ -2,7 +2,11 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/format";
-import { REST_PRESETS } from "@/hooks/use-rest-timer";
+import {
+  REST_PRESETS,
+  useRestSnapshot,
+  type RestTimer as RestTimerStore,
+} from "@/hooks/use-rest-timer";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -13,22 +17,12 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
  * People need to scroll their log while it runs — checking what they did two
  * exercises ago is exactly what the rest period is for. A dialog would take the
  * screen away at the one moment it is being read.
+ *
+ * This is the only component subscribed to the countdown. Everything above it
+ * hears about the timer twice per set: when it starts and when it stops.
  */
-export function RestTimer({
-  remaining,
-  duration,
-  done,
-  onExtend,
-  onSkip,
-  onRestart,
-}: {
-  remaining: number;
-  duration: number;
-  done: boolean;
-  onExtend: (seconds: number) => void;
-  onSkip: () => void;
-  onRestart: (seconds: number) => void;
-}) {
+export function RestTimer({ timer }: { timer: RestTimerStore }) {
+  const { remaining, duration, done } = useRestSnapshot(timer);
   const [presetsOpen, setPresetsOpen] = React.useState(false);
   const progress =
     duration > 0 ? Math.min(100, Math.max(0, (1 - remaining / duration) * 100)) : 100;
@@ -57,10 +51,15 @@ export function RestTimer({
         </Button>
 
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="touch" className="numeric" onClick={() => onExtend(30)}>
+          <Button
+            variant="outline"
+            size="touch"
+            className="numeric"
+            onClick={() => timer.extend(30)}
+          >
             +30s
           </Button>
-          <Button variant="ghost" size="touch" onClick={onSkip}>
+          <Button variant="ghost" size="touch" onClick={() => timer.stop()}>
             {done ? "Dismiss" : "Skip"}
           </Button>
         </div>
@@ -73,7 +72,7 @@ export function RestTimer({
             value={[String(duration)]}
             onValueChange={([next]) => {
               if (!next) return;
-              onRestart(Number(next));
+              timer.start(Number(next));
               setPresetsOpen(false);
             }}
             aria-label="Rest length"

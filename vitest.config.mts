@@ -12,7 +12,10 @@ export default defineConfig({
     environment: "node",
     fileParallelism: false,
     hookTimeout: 30_000,
-    include: ["tests/integration/**/*.test.ts"],
+    // Unit tests alongside the integration suite rather than in their own
+    // runner: they are the same language, the same aliases and the same
+    // command, and a second config is a second thing to keep in step.
+    include: ["tests/integration/**/*.test.ts", "tests/unit/**/*.test.ts"],
     testTimeout: 30_000,
   },
 });

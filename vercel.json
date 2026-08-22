@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm db:migrate && pnpm build",
-  "framework": "tanstack-start"
+  "buildCommand": "pnpm check:region && pnpm db:migrate && pnpm build && pnpm check:bundle",
+  "framework": "tanstack-start",
+  "regions": ["sin1"]
 }

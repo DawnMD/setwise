@@ -79,6 +79,9 @@ jobs:
       - name: Build production server
         run: pnpm build
 
+      - name: Check bundle budgets
+        run: pnpm check:bundle
+
       - name: Run integration tests
         run: pnpm test
 
