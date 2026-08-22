@@ -1,5 +1,6 @@
 import "@tanstack/react-start/server-only";
 
+import { attachDatabasePool } from "@vercel/functions/db-connections";
 import { drizzle as neonDrizzle } from "drizzle-orm/neon-serverless";
 import { drizzle as pgDrizzle } from "drizzle-orm/node-postgres";
 import { Pool as PgPool } from "pg";
@@ -12,6 +13,16 @@ import * as schema from "./schema";
 const connectionString = requireEnv("DATABASE_URL");
 
 /**
+ * Keep Vercel invocations alive until a runtime pool has released idle clients.
+ * Local development and CI have no Vercel request context, so registering there
+ * would only produce warnings when a client is released.
+ */
+function attachRuntimePool<T extends Parameters<typeof attachDatabasePool>[0]>(pool: T): T {
+  if (process.env.VERCEL === "1") attachDatabasePool(pool);
+  return pool;
+}
+
+/**
  * The runtime pool.
  *
  * `DATABASE_URL` is the pooled Neon endpoint; the unpooled one is for
@@ -20,7 +31,7 @@ const connectionString = requireEnv("DATABASE_URL");
  */
 const createNeonDatabase = () =>
   neonDrizzle({
-    client: instrumentPool(createNeonPool(connectionString, RUNTIME_POOL_MAX)),
+    client: instrumentPool(attachRuntimePool(createNeonPool(connectionString, RUNTIME_POOL_MAX))),
     schema,
   });
 
@@ -28,7 +39,9 @@ export type Db = ReturnType<typeof createNeonDatabase>;
 export const db: Db =
   process.env.DATABASE_DRIVER === "pg"
     ? (pgDrizzle({
-        client: instrumentPool(new PgPool({ connectionString, max: RUNTIME_POOL_MAX })),
+        client: instrumentPool(
+          attachRuntimePool(new PgPool({ connectionString, max: RUNTIME_POOL_MAX })),
+        ),
         schema,
       }) as unknown as Db)
     : createNeonDatabase();
