@@ -41,8 +41,8 @@ function SettingsPage() {
         <CardHeader>
           <CardTitle>Export your data</CardTitle>
           <CardDescription>
-            Two CSVs: every set you have logged, one row each, and every weigh-in, one row per day.
-            Both are in kilograms.
+            Download your sets, weigh-ins, or habit history as separate CSV files. Weights stay in
+            kilograms.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
@@ -61,6 +61,14 @@ function SettingsPage() {
           >
             <Download data-icon="inline-start" />
             Download bodyweight
+          </a>
+          <a
+            href="/api/export?data=habits"
+            download
+            className={buttonVariants({ variant: "outline", size: "touch", className: "w-full" })}
+          >
+            <Download data-icon="inline-start" />
+            Download habits
           </a>
         </CardContent>
       </Card>

@@ -2,11 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
-import { exportBodyweightCsv, exportSetsCsv } from "@/server/queries/export";
+import { exportBodyweightCsv, exportHabitsCsv, exportSetsCsv } from "@/server/queries/export";
 
 const DATASETS = {
   sets: { export: exportSetsCsv, slug: "sets" },
   bodyweight: { export: exportBodyweightCsv, slug: "bodyweight" },
+  habits: { export: exportHabitsCsv, slug: "habits" },
 } as const;
 
 type Dataset = keyof typeof DATASETS;

@@ -1,7 +1,14 @@
 import { asc, eq } from "drizzle-orm";
 
 import type { DbClient } from "@/db";
-import { bodyweightLogs, exercises, sets, workoutSessions } from "@/db/schema";
+import {
+  bodyweightLogs,
+  exercises,
+  habitCompletions,
+  habits,
+  sets,
+  workoutSessions,
+} from "@/db/schema";
 import { estimateOneRepMax } from "@/lib/math";
 import "@tanstack/react-start/server-only";
 
@@ -113,5 +120,36 @@ export async function exportBodyweightCsv(db: DbClient, userId: string): Promise
     lines.push([row.loggedOn, row.weight, row.note].map(escape).join(","));
   }
 
+  return `${lines.join("\r\n")}\r\n`;
+}
+
+const HABIT_COLUMNS = [
+  "habit_id",
+  "habit_name",
+  "starts_on",
+  "archived_on",
+  "completed_on",
+] as const;
+
+export async function exportHabitsCsv(db: DbClient, userId: string): Promise<string> {
+  const rows = await db
+    .select({
+      id: habits.id,
+      name: habits.name,
+      startsOn: habits.startsOn,
+      archivedOn: habits.archivedOn,
+      completedOn: habitCompletions.completedOn,
+    })
+    .from(habits)
+    .leftJoin(habitCompletions, eq(habitCompletions.habitId, habits.id))
+    .where(eq(habits.userId, userId))
+    .orderBy(asc(habits.createdAt), asc(habitCompletions.completedOn));
+
+  const lines = [HABIT_COLUMNS.join(",")];
+  for (const row of rows) {
+    lines.push(
+      [row.id, row.name, row.startsOn, row.archivedOn, row.completedOn].map(escape).join(","),
+    );
+  }
   return `${lines.join("\r\n")}\r\n`;
 }
