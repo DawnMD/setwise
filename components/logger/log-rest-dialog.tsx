@@ -52,7 +52,7 @@ export function LogRestDialog({
         }
         if (isDefinedError(error) && error.code === "REST_ALREADY_LOGGED") {
           // The screen was out of date, which is the whole reason this failed.
-          refreshNow(queryClient, [cacheKeys.restToday()]);
+          void refreshNow(queryClient, [cacheKeys.restToday()]);
         }
       },
     }),

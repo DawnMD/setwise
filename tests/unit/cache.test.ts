@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { afterWrite, cacheKeys, clearActiveSession, putSet, removeSet } from "../../lib/cache";
 import { queries } from "../../lib/queries";
+import type { StatWindow } from "../../db/validators";
+import type { BodyweightSeries } from "../../server/queries/bodyweight";
 import type { SessionDetail, SetRow } from "../../server/queries/session";
 
 const SESSION_ID = "11111111-1111-4111-8111-111111111111";
@@ -36,6 +38,23 @@ function makeDetail(): SessionDetail {
     exercises: [{ id: BENCH, name: "Bench press", equipment: "barbell" }],
     sets: [],
     lastPerformances: {},
+  };
+}
+
+function makeBodyweightSeries(
+  window: StatWindow,
+  trendNow: number,
+): BodyweightSeries & {
+  window: StatWindow;
+} {
+  return {
+    window,
+    points: [],
+    latest: null,
+    trendNow,
+    trendChange: null,
+    weighIns: 0,
+    tonnage: 0,
   };
 }
 
@@ -151,7 +170,7 @@ describe("cache policy", () => {
     unsubscribe();
   });
 
-  it("marks a derived read stale so the next visit refetches it", async () => {
+  it("drops an inactive derived read so the next visit cannot flash stale data", async () => {
     const { client, fetched, read } = makeClient();
 
     const volume = queries.muscleVolume(7);
@@ -161,8 +180,52 @@ describe("cache policy", () => {
     afterWrite.setSaved(client);
     await vi.waitFor(() => expect(client.isFetching()).toBe(0));
 
-    expect(client.getQueryState(volume.queryKey)?.isInvalidated).toBe(true);
+    expect(client.getQueryData(volume.queryKey)).toBeUndefined();
     expect(fetched).toHaveLength(1);
+  });
+
+  it("refetches the visible bodyweight window and drops cached inactive windows", async () => {
+    const { client } = makeClient();
+    const week = queries.bodyweightSeries(7, "UTC");
+    const month = queries.bodyweightSeries(30, "UTC");
+    const quarter = queries.bodyweightSeries(90, "UTC");
+
+    client.setQueryData(week.queryKey, makeBodyweightSeries(7, 70));
+    client.setQueryData(month.queryKey, makeBodyweightSeries(30, 71));
+    client.setQueryData(quarter.queryKey, makeBodyweightSeries(90, 72));
+
+    let fetches = 0;
+    const observer = new QueryObserver(client, {
+      queryKey: month.queryKey,
+      queryFn: async () => {
+        fetches += 1;
+        return makeBodyweightSeries(30, 73);
+      },
+      staleTime: Infinity,
+    });
+    const unsubscribe = observer.subscribe(() => {});
+
+    await afterWrite.bodyweightLogged(client);
+
+    expect(fetches).toBe(1);
+    expect(client.getQueryData(month.queryKey)?.trendNow).toBe(73);
+    expect(client.getQueryData(week.queryKey)).toBeUndefined();
+    expect(client.getQueryData(quarter.queryKey)).toBeUndefined();
+    unsubscribe();
+  });
+
+  it("does not borrow data from another stats window while a range loads", () => {
+    const windowed = [
+      queries.muscleVolume(7),
+      queries.intensity(7),
+      queries.trainedExercises(7),
+      queries.exerciseHistory(BENCH, 7),
+      queries.bodyweightSeries(7, "UTC"),
+    ];
+
+    for (const options of windowed) {
+      expect(options).not.toHaveProperty("placeholderData");
+    }
   });
 
   it("closes the active workout by writing null rather than asking again", async () => {

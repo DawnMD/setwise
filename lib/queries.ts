@@ -1,4 +1,4 @@
-import { keepPreviousData, type QueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 
 import type { StatWindow } from "@/db/validators";
 import type { MuscleSlug } from "./muscles";
@@ -26,13 +26,10 @@ export function resolveTimeZone(): string {
 }
 
 /**
- * Switching 7/30/90 keeps the previous window on screen while the next one
- * loads. Charts and summaries that collapse into skeletons on every toggle read
- * as a page reload, and the shape being compared is the whole point of the
- * control.
+ * Range queries do not use another range as placeholder data. A 30-day value
+ * under a freshly selected 7-day label is stale UI, even when it lasts for only
+ * one request. Cached data for the selected range still renders immediately.
  */
-const windowed = { placeholderData: keepPreviousData } as const;
-
 export const queries = {
   activeSession: () => orpc.session.active.queryOptions({ staleTime: STALE.activeSession }),
 
@@ -59,28 +56,25 @@ export const queries = {
     orpc.stats.muscleVolume.queryOptions({
       input: { window },
       staleTime: STALE.stats,
-      ...windowed,
     }),
 
   intensity: (window: StatWindow) =>
-    orpc.stats.intensity.queryOptions({ input: { window }, staleTime: STALE.stats, ...windowed }),
+    orpc.stats.intensity.queryOptions({ input: { window }, staleTime: STALE.stats }),
 
   trainedExercises: (window: StatWindow) =>
-    orpc.stats.exercises.queryOptions({ input: { window }, staleTime: STALE.stats, ...windowed }),
+    orpc.stats.exercises.queryOptions({ input: { window }, staleTime: STALE.stats }),
 
   exerciseHistory: (exerciseId: string | null, window: StatWindow) =>
     orpc.stats.exerciseHistory.queryOptions({
       input: { exerciseId: exerciseId ?? "", window },
       enabled: exerciseId !== null,
       staleTime: STALE.stats,
-      ...windowed,
     }),
 
   bodyweightSeries: (window: StatWindow, timeZone: string) =>
     orpc.bodyweight.series.queryOptions({
       input: { window, timeZone },
       staleTime: STALE.stats,
-      ...windowed,
     }),
 
   catalogueSearch: (input: { query: string; muscle?: MuscleSlug; limit: number }, open: boolean) =>

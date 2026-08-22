@@ -72,9 +72,10 @@ returns the row already stored; the same ID with different content is a typed
 the only mutation retry in the app.
 
 `lib/cache.ts` holds the write-to-read dependency map. A write patches what it
-can from its own response and marks the rest stale without fetching it: saving a
-set does change the 30-day heatmap, but refetching it from the gym floor spends
-a round trip on a screen nobody is looking at. An unscoped
+can from its own response and discards inactive derived reads without fetching
+them: saving a set does change the 30-day heatmap, but refetching it from the gym
+floor spends a round trip on a screen nobody is looking at. Discarding the old
+result also stops it flashing before that next fetch finishes. An unscoped
 `invalidateQueries()` is legitimate at sign-in and sign-out and nowhere else.
 
 ### Queries
