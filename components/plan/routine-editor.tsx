@@ -122,7 +122,7 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
    *
    * The list behind this screen is a different matter: its `lastActivityAt` is
    * an aggregate over sessions that no single edit response can reconstruct, so
-   * it is marked stale and left for the next time it is looked at.
+   * its inactive cache is discarded and read again on the next visit.
    */
   const patch = React.useCallback(
     (change: (detail: RoutineDetail) => RoutineDetail) => {

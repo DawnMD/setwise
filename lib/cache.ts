@@ -37,34 +37,43 @@ export const cacheKeys = {
 type Keys = readonly unknown[][];
 
 /**
- * Marks queries stale without fetching anything.
+ * Discards inactive queries and marks active ones stale without fetching.
  *
  * This is the right call for a derived read nobody is looking at. Saving a set
  * does change the 30-day heatmap, but refetching it from the logger spends a
  * round trip on a screen that is not open, at the one moment the user is doing
- * something time-critical. Marked stale, it refetches when the Progress screen
- * is next mounted, which is the first moment the number is read.
+ * something time-critical. An inactive result is removed so the next screen
+ * cannot briefly render the old number before its refetch finishes.
  */
 export function markStale(queryClient: QueryClient, keys: Keys): void {
   for (const queryKey of keys) {
-    // With patching turned off, every write goes back to invalidate-and-refetch.
+    queryClient.removeQueries({ queryKey, type: "inactive" });
+
+    // Active derived reads are unusual here, but keep their current result on
+    // screen. The rollback flag restores the old refetch-on-write behaviour.
     void queryClient.invalidateQueries(
-      PATCH_CACHE ? { queryKey, refetchType: "none" } : { queryKey },
+      PATCH_CACHE
+        ? { queryKey, type: "active", refetchType: "none" }
+        : { queryKey, type: "active" },
     );
   }
 }
 
 /**
- * Marks queries stale and refetches the ones on screen.
+ * Refetches queries on screen and discards inactive copies.
  *
  * Used where the write changed something the user is currently looking at. The
  * existing data stays rendered while the refetch runs, so nothing collapses
- * into a skeleton.
+ * into a skeleton. Inactive variants are removed because invalidating them
+ * would leave old data available to flash on the next range switch.
  */
-export function refreshNow(queryClient: QueryClient, keys: Keys): void {
-  for (const queryKey of keys) {
-    void queryClient.invalidateQueries({ queryKey });
-  }
+export async function refreshNow(queryClient: QueryClient, keys: Keys): Promise<void> {
+  await Promise.all(
+    keys.map((queryKey) => {
+      queryClient.removeQueries({ queryKey, type: "inactive" });
+      return queryClient.invalidateQueries({ queryKey, type: "active" });
+    }),
+  );
 }
 
 /** Sign-in and sign-out only. Every cached row belonged to someone else. */
@@ -231,8 +240,8 @@ export function seedRoutineDetail(queryClient: QueryClient, detail: RoutineDetai
  * The reads each write makes stale, expressed once.
  *
  * `patched` is what the write updates from its own response and therefore never
- * refetches. `stale` is marked and left for its next observer. `refresh` is
- * refetched now, because the user is looking at it.
+ * refetches. Inactive derived reads are discarded and fetched on their next
+ * visit. Visible reads are refreshed now.
  */
 export const afterWrite = {
   /** A set landed. The workout itself is patched; everything downstream waits. */
@@ -264,7 +273,7 @@ export const afterWrite = {
 
   /** Rest was logged. Today's rest is on screen wherever this can be triggered. */
   restLogged(queryClient: QueryClient): void {
-    refreshNow(queryClient, [cacheKeys.restToday()]);
+    void refreshNow(queryClient, [cacheKeys.restToday()]);
     markStale(queryClient, [
       cacheKeys.recentActivity(),
       cacheKeys.upcomingDays(),
@@ -277,18 +286,18 @@ export const afterWrite = {
    * recalculates; the profile summary came back with the response and is
    * patched rather than refetched.
    */
-  bodyweightLogged(queryClient: QueryClient): void {
-    refreshNow(queryClient, [cacheKeys.bodyweight()]);
+  async bodyweightLogged(queryClient: QueryClient): Promise<void> {
     markStale(queryClient, [cacheKeys.stats()]);
+    await refreshNow(queryClient, [cacheKeys.bodyweight()]);
   },
 
   /**
    * A routine changed. The detail is patched from the response where the
    * response says enough; the list carries `lastActivityAt`, which no single
-   * mutation response can reconstruct, so it is marked stale instead.
+   * mutation response can reconstruct, so its inactive cache is discarded.
    */
   planEdited(queryClient: QueryClient, routineId?: string): void {
     markStale(queryClient, [cacheKeys.routineList(), cacheKeys.upcomingDays()]);
-    if (routineId) refreshNow(queryClient, [cacheKeys.routineDetail(routineId)]);
+    if (routineId) void refreshNow(queryClient, [cacheKeys.routineDetail(routineId)]);
   },
 };

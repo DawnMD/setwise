@@ -73,9 +73,9 @@ export function BodyHome() {
   );
   const logWeight = useMutation(
     orpc.bodyweight.log.mutationOptions({
-      onSuccess: (result) => {
+      onSuccess: async (result) => {
         putProfileSummary(queryClient, timeZone, result.profile);
-        afterWrite.bodyweightLogged(queryClient);
+        await afterWrite.bodyweightLogged(queryClient);
       },
     }),
   );

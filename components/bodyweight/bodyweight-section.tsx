@@ -55,7 +55,7 @@ export function BodyweightSection({ window }: { window: StatWindow }) {
    */
   const afterLog = (profile: ProfileSummary) => {
     putProfileSummary(queryClient, timeZone, profile);
-    afterWrite.bodyweightLogged(queryClient);
+    return afterWrite.bodyweightLogged(queryClient);
   };
 
   const log = useMutation(

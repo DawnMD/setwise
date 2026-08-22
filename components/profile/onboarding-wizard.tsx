@@ -173,7 +173,7 @@ export function OnboardingWizard() {
               timeZone,
             });
             putProfileSummary(queryClient, timeZone, result.profile);
-            afterWrite.bodyweightLogged(queryClient);
+            await afterWrite.bodyweightLogged(queryClient);
             advance();
           }}
           onSkip={advance}
