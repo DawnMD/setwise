@@ -147,7 +147,7 @@ export function BodyweightSection({ window }: { window: StatWindow }) {
 
   return (
     <>
-      <div className="flex flex-col gap-3 rounded-lg border bg-card p-3">
+      <div className="flex flex-col gap-3 rounded-none border bg-card p-3">
         <div className="grid grid-cols-2 gap-2">
           <Stat
             label={`${BODYWEIGHT_TREND_DAYS}-day average`}
@@ -206,7 +206,7 @@ export function BodyweightSection({ window }: { window: StatWindow }) {
 function BodyweightSectionSkeleton() {
   return (
     <div
-      className="flex flex-col gap-3 rounded-lg border bg-card p-3"
+      className="flex flex-col gap-3 rounded-none border bg-card p-3"
       aria-label="Loading bodyweight"
       aria-busy="true"
     >
@@ -222,7 +222,7 @@ function BodyweightSectionSkeleton() {
         <Skeleton className="h-3 w-2/3" />
       </div>
 
-      <div className="overflow-hidden rounded-lg border" aria-hidden="true">
+      <div className="overflow-hidden rounded-none border" aria-hidden="true">
         <Skeleton className="h-11 w-full bg-muted/70" />
         <Skeleton className="h-11 w-full border-t bg-muted/70" />
       </div>
@@ -234,7 +234,7 @@ function BodyweightSectionSkeleton() {
 
 function StatSkeleton() {
   return (
-    <div className="flex h-[87px] flex-col gap-2 rounded-lg border bg-background px-3 py-2.5">
+    <div className="flex h-[87px] flex-col gap-2 rounded-none border bg-background px-3 py-2.5">
       <Skeleton className="h-3 w-20" />
       <Skeleton className="h-7 w-24" />
       <Skeleton className="h-3 w-28" />
@@ -244,7 +244,7 @@ function StatSkeleton() {
 
 function Stat({ label, value, footnote }: { label: string; value: string; footnote: string }) {
   return (
-    <div className="flex flex-col gap-0.5 rounded-lg border bg-background px-3 py-2.5">
+    <div className="flex flex-col gap-0.5 rounded-none border bg-background px-3 py-2.5">
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="numeric-display text-2xl">{value}</span>
       <span className="text-[11px] leading-tight text-muted-foreground">{footnote}</span>

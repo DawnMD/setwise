@@ -28,7 +28,7 @@ export function WeighInList({
 
   return (
     <div className="flex flex-col">
-      <ul className="flex flex-col divide-y rounded-lg border">
+      <ul className="flex flex-col divide-y rounded-none border">
         {shown.map((weighIn) => (
           <li key={weighIn.loggedOn}>
             <button

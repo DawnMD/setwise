@@ -70,7 +70,7 @@ function OptionList<T extends string>({
             // Tapping the chosen answer clears it. Skipping a step leaves the
             // field null, so un-answering has to be possible too.
             onClick={() => onChange(selected ? null : option.value)}
-            className={`flex min-h-11 flex-col justify-center rounded-lg border px-3 py-2 text-left transition-colors ${
+            className={`flex min-h-11 flex-col justify-center rounded-none border px-3 py-2 text-left transition-colors ${
               selected ? "border-primary bg-primary/10" : "bg-card hover:bg-accent"
             }`}
           >
