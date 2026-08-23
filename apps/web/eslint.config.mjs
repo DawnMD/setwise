@@ -1,46 +1,22 @@
-import js from "@eslint/js";
-import importPlugin from "eslint-plugin-import";
-import jsxA11y from "eslint-plugin-jsx-a11y";
-import reactHooks from "eslint-plugin-react-hooks";
-import reactRefresh from "eslint-plugin-react-refresh";
-import globals from "globals";
-import tseslint from "typescript-eslint";
+import { defineConfig, globalIgnores } from "eslint/config";
 
-export default tseslint.config(
-  {
-    ignores: [
-      ".output/**",
-      ".tanstack/**",
-      "coverage/**",
-      "dist/**",
-      "node_modules/**",
-      "public/body-*.svg",
-      "src/routeTree.gen.ts",
-      "lib/body-svg.generated.ts",
-      "data/free-exercise-db.json",
-      "drizzle/meta/**",
-    ],
-  },
-  js.configs.recommended,
-  ...tseslint.configs.recommended,
-  reactHooks.configs.flat.recommended,
-  {
-    files: ["**/*.{js,mjs,cjs,ts,mts,tsx}"],
-    languageOptions: {
-      globals: { ...globals.browser, ...globals.node },
-    },
-    plugins: {
-      import: importPlugin,
-      "jsx-a11y": jsxA11y,
-      "react-refresh": reactRefresh,
-    },
-    rules: {
-      ...jsxA11y.flatConfigs.recommended.rules,
-      "import/first": "error",
-      "import/no-duplicates": "error",
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
-    },
-  },
+import { boundaries } from "@setwise/eslint-config/boundaries";
+import web from "@setwise/eslint-config/web";
+import globals from "globals";
+
+// The shared web preset carries the language options, the React and a11y
+// plugins and the import rules. What stays here is what only this application
+// can know: its generated files, and the handful of justified rule waivers.
+export default defineConfig(
+  ...web,
+  ...boundaries("@setwise/web"),
+  globalIgnores([
+    "public/body-*.svg",
+    "src/routeTree.gen.ts",
+    "lib/body-svg.generated.ts",
+    "data/free-exercise-db.json",
+    "drizzle/meta/**",
+  ]),
   {
     files: ["tests/**/*.{ts,tsx}", "**/*.test.{ts,tsx}", "playwright.config.ts"],
     languageOptions: { globals: { ...globals.node, ...globals.vitest } },
