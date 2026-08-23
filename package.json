@@ -17,10 +17,11 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "test": "turbo run test",
+    "boundaries": "node scripts/check-boundaries.mjs",
     "e2e": "turbo run e2e",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "turbo run format:check lint typecheck test build"
+    "check": "turbo run format:check boundaries lint typecheck test build"
   },
   "devDependencies": {
     "prettier": "^3.9.6",

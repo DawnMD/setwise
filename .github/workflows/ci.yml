@@ -62,6 +62,11 @@ jobs:
       - name: Check formatting
         run: pnpm format:check
 
+      # One matrix in packages/eslint-config/boundaries.js drives both this and
+      # the no-restricted-imports rules each workspace lints with.
+      - name: Check dependency boundaries
+        run: pnpm boundaries
+
       - name: Lint
         run: pnpm turbo run lint
 

@@ -24,6 +24,9 @@
     "//#format": {
       "cache": false
     },
+    "//#boundaries": {
+      "cache": false
+    },
     "test": {
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
