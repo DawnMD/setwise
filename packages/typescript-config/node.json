@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Setwise Node",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": ["esnext"],
+    "types": ["node"]
+  }
+}

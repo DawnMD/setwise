@@ -1,0 +1,37 @@
+{
+  "name": "@setwise/eslint-config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./base": "./base.js",
+    "./web": "./web.js",
+    "./react-native": "./react-native.js",
+    "./boundaries": "./boundaries.js"
+  },
+  "files": [
+    "base.js",
+    "web.js",
+    "react-native.js",
+    "boundaries.js"
+  ],
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@eslint/js": "^9.39.2",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.4.0",
+    "typescript-eslint": "^8.46.1"
+  },
+  "devDependencies": {
+    "eslint": "^9"
+  },
+  "peerDependencies": {
+    "eslint": "^9",
+    "typescript": "^5"
+  }
+}

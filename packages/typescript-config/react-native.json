@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Setwise React Native",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": ["esnext"],
+    "jsx": "react-jsx",
+    "types": []
+  }
+}
