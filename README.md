@@ -1,8 +1,28 @@
 # Setwise
 
-Setwise is a mobile-first workout log built around progressive overload. The previous
-performance sits beside the fields for the next set, while plans, trends, bodyweight, and CSV
-exports remain attached to one authenticated account.
+Setwise is a mobile-first workout log built around progressive overload. The previous performance
+sits beside the fields for the next set, while plans, trends, bodyweight, and CSV exports remain
+attached to one authenticated account.
+
+This is a Turborepo workspace. The web application is one package in it.
+
+## Repository map
+
+```text
+apps/
+  web/          TanStack Start UI, API host, Better Auth, Vercel deployment
+packages/       shared domain, database, and API packages (added in later phases)
+docs/
+  monorepo/     migration phase records
+```
+
+`apps/web` currently owns everything: UI, API procedures, database schema, and domain rules.
+Later migration phases extract `packages/domain`, `packages/db`, `packages/api-contract`,
+`packages/api-server`, and `packages/api-client`, leaving `apps/web` as a deployment adapter.
+The API is permanently hosted by `apps/web`; there is no `apps/api`.
+
+See [`apps/web/README.md`](apps/web/README.md) for database setup, environment variables, and
+deployment.
 
 ## Stack
 
@@ -12,18 +32,13 @@ exports remain attached to one authenticated account.
 - Better Auth with server-executed session guards
 - Drizzle ORM on Neon Postgres
 - Tailwind CSS and shadcn/Base UI (`base-lyra`)
-- Vercel deployment and pnpm tooling
-
-The TanStack framework shell lives in `src/`: file routes are in `src/routes`, router setup is in
-`src/router.tsx`, and global styles are in `src/styles.css`. Reusable application code remains in
-the root-level `components`, `hooks`, `lib`, `db`, `server`, and `data` directories. The `@/*`
-alias resolves from the repository root.
+- Turborepo and pnpm workspaces, deployed to Vercel
 
 The root document, auth checks, and public auth pages render on the server. Authenticated routes
 use TanStack Start's data-only SSR boundary: authorization still runs on the server, while the
 feature UI renders in the browser and fetches through oRPC and TanStack Query.
 
-## Prerequisites and setup
+## Prerequisites
 
 - Node.js 22.12 or newer
 - pnpm 11.22.0 or newer
@@ -31,75 +46,56 @@ feature UI renders in the browser and fetches through oRPC and TanStack Query.
 
 ```bash
 pnpm install
-cp .env.example .env.local
-pnpm db:migrate
-pnpm db:seed
-pnpm dev
+cp apps/web/.env.example apps/web/.env.local
+pnpm --filter @setwise/web db:migrate
+pnpm --filter @setwise/web db:seed
+pnpm dev:web
 ```
-
-Fill in `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL` in
-`.env.local`. Drizzle loads `.env.local` before `.env`. Runtime secrets are unprefixed server
-variables; never expose them through a `VITE_` name.
-
-`db:migrate` creates the muscle-region rows needed for custom exercises. `db:seed` adds the global
-exercise catalogue and is idempotent. Generate a production auth secret with
-`openssl rand -base64 32`.
 
 ## Commands
 
-| Command                               | Purpose                                                               |
-| ------------------------------------- | --------------------------------------------------------------------- |
-| `pnpm dev`                            | Run the Vite development server on port 3000                          |
-| `pnpm build`                          | Build the Nitro server and type-check the repository                  |
-| `pnpm start`                          | Run `.output/server/index.mjs`                                        |
-| `pnpm preview`                        | Preview through Vite                                                  |
-| `pnpm lint`                           | Run the ESLint flat configuration                                     |
-| `pnpm format:check`                   | Check formatting                                                      |
-| `pnpm test`                           | Run the Vitest/Postgres integration suite                             |
-| `pnpm test:e2e`                       | Run the Playwright Chromium smoke suite against the production server |
-| `pnpm db:check`                       | Validate committed migration history                                  |
-| `pnpm db:generate -- --name=<change>` | Generate a migration from schema changes                              |
-| `pnpm db:migrate`                     | Apply committed migrations                                            |
-| `pnpm db:seed`                        | Seed the exercise catalogue                                           |
-| `pnpm db:studio`                      | Open Drizzle Studio                                                   |
-| `pnpm svg:generate`                   | Regenerate body-map SVG assets                                        |
+Run these from the repository root. Turbo fans each one out to the packages that define it.
 
-Integration and browser tests use the configured Postgres database. Migrate and seed it before
-running them. Database changes follow a code-first workflow: edit `db/schema`, generate and review
-the SQL, run `pnpm db:check`, apply it, and commit the schema, migration, journal, and snapshot
-together.
+| Command             | Purpose                                                  |
+| ------------------- | -------------------------------------------------------- |
+| `pnpm dev:web`      | Run the web development server on port 3000              |
+| `pnpm build`        | Build every package                                      |
+| `pnpm typecheck`    | Type-check every package                                 |
+| `pnpm lint`         | Lint every package                                       |
+| `pnpm test`         | Run every package's test suite                           |
+| `pnpm e2e`          | Run the Playwright smoke suite                           |
+| `pnpm format:check` | Check formatting across the whole repository             |
+| `pnpm format`       | Write formatting across the whole repository             |
+| `pnpm check`        | `format:check`, `lint`, `typecheck`, `test`, and `build` |
+
+Formatting is deliberately a root task rather than a per-package one: a single Prettier pass
+already covers every workspace, and the configuration lives at the root.
+
+Package-scoped scripts — database migrations, Drizzle Studio, bundle budgets — are documented in
+[`apps/web/README.md`](apps/web/README.md) and run through `pnpm --filter @setwise/web <script>`.
 
 ## Workout write model
 
 Workout writes require a reliable connection. Session, rest-day, and set IDs are generated by
 Postgres. A set row appears only after the server confirms its insert or update. If saving fails,
-the drawer stays open with its entered values and an inline error; pressing Save again starts a
-new request.
+the drawer stays open with its entered values and an inline error; pressing Save again starts a new
+request.
 
 There is no optimistic failed row, automatic reconnect behavior, or persisted workout state. A
 response lost after the database commits can therefore produce a duplicate if Save is pressed
 again. Setwise never presents an unconfirmed write as saved.
 
-Picked-but-unsaved exercises and the rest timer live only for the mounted training screen and
-reset on navigation or reload. Theme preference is the only local browser preference that is
-persisted. Screen wake lock remains available during an active session. CSV export is an account
-export, not an offline workout store.
-
-## Deployment
-
-The repository targets Vercel with the `tanstack-start` framework preset. Nitro selects its Vercel
-output during the build; no custom output directory is needed. Keep Vercel's automatically exposed
-system environment variables enabled so Better Auth can trust preview, branch, and production
-hosts without a separate auth URL for every deployment.
-
-Apply migration `0004_remove_offline_resilience` before serving this version. Verify auth cookies,
-the `/api/auth/*`, `/api/rpc/*`, and `/api/export` endpoints, direct protected-route loads, client
-navigation, and the browser smoke suite on a preview before production promotion.
+Picked-but-unsaved exercises and the rest timer live only for the mounted training screen and reset
+on navigation or reload. Theme preference is the only local browser preference that is persisted.
+Screen wake lock remains available during an active session. CSV export is an account export, not
+an offline workout store.
 
 ## Project invariants
 
 - All stored weights are kilograms; unit preference is display-only.
-- `lib/muscles.ts` defines the eighteen muscle regions used by schema rows, SVG paths, and pickers.
+- `apps/web/lib/muscles.ts` defines the eighteen muscle regions used by schema rows, SVG paths, and
+  pickers.
 - Application colours use `--overload`, `--pr`, and `--band-*`; shadcn owns the core theme tokens.
 - Mid-workout controls retain the custom touch-sized variants.
-- The generated `src/routeTree.gen.ts` is committed but excluded from linting and formatting.
+- The generated `apps/web/src/routeTree.gen.ts` is committed but excluded from linting and
+  formatting.
