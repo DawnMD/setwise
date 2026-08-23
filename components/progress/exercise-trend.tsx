@@ -60,7 +60,7 @@ export function ExerciseTrend({ window }: { window: StatWindow }) {
 
   if (options.length === 0) {
     return (
-      <p className="rounded-lg border bg-card px-3 py-4 text-xs text-muted-foreground">
+      <p className="rounded-none border bg-card px-3 py-4 text-xs text-muted-foreground">
         No exercises logged in this window. Widen it, or log a workout.
       </p>
     );
@@ -94,12 +94,12 @@ export function ExerciseTrend({ window }: { window: StatWindow }) {
           <AlertDescription>Check your connection and try again.</AlertDescription>
         </Alert>
       ) : points.length === 0 ? (
-        <p className="rounded-lg border bg-card px-3 py-4 text-xs text-muted-foreground">
+        <p className="rounded-none border bg-card px-3 py-4 text-xs text-muted-foreground">
           Nothing here can be turned into a 1RM estimate. Epley only holds to twelve reps, so a
           window of high-rep work has no trend to draw.
         </p>
       ) : points.length === 1 ? (
-        <div className="rounded-lg border bg-card px-3 py-4">
+        <div className="rounded-none border bg-card px-3 py-4">
           <p className="numeric-display text-2xl">{formatE1rm(points[0].e1rm)}</p>
           <p className="mt-1 text-xs text-muted-foreground">
             One session in this window. Widen it to see a trend.

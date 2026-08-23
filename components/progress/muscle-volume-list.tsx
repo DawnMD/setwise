@@ -49,7 +49,7 @@ export function MuscleVolumeList({
             >
               <span
                 aria-hidden
-                className="absolute inset-y-1 left-0 rounded-r-[2px] bg-overload/10"
+                className="absolute inset-y-1 left-0 rounded-none bg-overload/10"
                 style={{ width: `${share}%` }}
               />
               <span className="relative text-sm">

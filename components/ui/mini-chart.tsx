@@ -210,7 +210,7 @@ export function MiniChart({
         tabIndex={0}
         role="img"
         aria-label={summary}
-        className="w-full rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="w-full rounded-none outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onPointerMove={(event) => setActive(nearestIndex(event.clientX))}
         onPointerDown={(event) => setActive(nearestIndex(event.clientX))}
         onPointerLeave={() => setActive(null)}
