@@ -18,8 +18,11 @@
       "dependsOn": ["^lint"],
       "outputs": []
     },
-    "format:check": {
+    "//#format:check": {
       "outputs": []
+    },
+    "//#format": {
+      "cache": false
     },
     "test": {
       "dependsOn": ["^build"],
