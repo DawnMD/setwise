@@ -27,12 +27,12 @@ export function PlateMath({ targetKg, barKg }: { targetKg: number; barKg: number
       <span className="sr-only">Per side: {describeLoading(loading)}</span>
 
       <div aria-hidden className="flex items-center gap-[3px]">
-        <span className="h-1 w-3 rounded-sm bg-muted-foreground/50" />
+        <span className="h-1 w-3 rounded-none bg-muted-foreground/50" />
         {loading.perSide.map((plate, index) => (
           <span
             key={`${plate.label}-${index}`}
             title={`${plate.label} kg`}
-            className="flex w-4 items-center justify-center rounded-[2px] border"
+            className="flex w-4 items-center justify-center rounded-none border"
             style={{
               background: plate.color,
               borderColor: plate.ring,
