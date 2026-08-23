@@ -10,16 +10,41 @@ This is a Turborepo workspace. The web application is one package in it.
 
 ```text
 apps/
-  web/          TanStack Start UI, API host, Better Auth, Vercel deployment
-packages/       shared domain, database, and API packages (added in later phases)
+  web/                  TanStack Start UI, API host, Better Auth, Vercel deployment
+packages/
+  eslint-config/        base, web and react-native presets, plus the dependency matrix
+  typescript-config/    base, web, react-native and node compiler presets
+scripts/
+  check-boundaries.mjs  fails CI when a package.json crosses a layer
 docs/
-  monorepo/     migration phase records
+  monorepo/             migration phase records
 ```
 
 `apps/web` currently owns everything: UI, API procedures, database schema, and domain rules.
 Later migration phases extract `packages/domain`, `packages/db`, `packages/api-contract`,
 `packages/api-server`, and `packages/api-client`, leaving `apps/web` as a deployment adapter.
 The API is permanently hosted by `apps/web`; there is no `apps/api`.
+
+## Dependency rules
+
+Packages are layered. An arrow means _may depend on_.
+
+```text
+domain ← api-contract ← api-client ← apps/web, apps/mobile
+domain + api-contract + db ← api-server ← apps/web
+```
+
+Applications are composition roots, so nothing may depend on one. `apps/mobile` cannot reach
+`db` or `api-server` at all. `domain` is platform-neutral: no React, no Drizzle, no DOM, no Node
+built-ins, no environment access.
+
+One file, [`packages/eslint-config/boundaries.js`](packages/eslint-config/boundaries.js), states
+the whole graph. ESLint reads it to restrict imports inside each workspace, and `pnpm boundaries`
+reads it to check what each `package.json` declares. Add a package there before adding it to
+`apps/` or `packages/`.
+
+Every workspace extends a `@setwise/typescript-config` preset and a `@setwise/eslint-config`
+preset. Prettier stays at the root, because one pass covers the whole repository.
 
 See [`apps/web/README.md`](apps/web/README.md) for database setup, environment variables, and
 deployment.
@@ -56,17 +81,18 @@ pnpm dev:web
 
 Run these from the repository root. Turbo fans each one out to the packages that define it.
 
-| Command             | Purpose                                                  |
-| ------------------- | -------------------------------------------------------- |
-| `pnpm dev:web`      | Run the web development server on port 3000              |
-| `pnpm build`        | Build every package                                      |
-| `pnpm typecheck`    | Type-check every package                                 |
-| `pnpm lint`         | Lint every package                                       |
-| `pnpm test`         | Run every package's test suite                           |
-| `pnpm e2e`          | Run the Playwright smoke suite                           |
-| `pnpm format:check` | Check formatting across the whole repository             |
-| `pnpm format`       | Write formatting across the whole repository             |
-| `pnpm check`        | `format:check`, `lint`, `typecheck`, `test`, and `build` |
+| Command             | Purpose                                      |
+| ------------------- | -------------------------------------------- |
+| `pnpm dev:web`      | Run the web development server on port 3000  |
+| `pnpm build`        | Build every package                          |
+| `pnpm typecheck`    | Type-check every package                     |
+| `pnpm lint`         | Lint every package                           |
+| `pnpm test`         | Run every package's test suite               |
+| `pnpm boundaries`   | Check the workspace dependency graph         |
+| `pnpm e2e`          | Run the Playwright smoke suite               |
+| `pnpm format:check` | Check formatting across the whole repository |
+| `pnpm format`       | Write formatting across the whole repository |
+| `pnpm check`        | Everything above except `dev` and `e2e`      |
 
 Formatting is deliberately a root task rather than a per-package one: a single Prettier pass
 already covers every workspace, and the configuration lives at the root.
