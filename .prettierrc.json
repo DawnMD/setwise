@@ -2,5 +2,5 @@
   "endOfLine": "auto",
   "plugins": ["prettier-plugin-tailwindcss"],
   "printWidth": 100,
-  "tailwindStylesheet": "./src/styles.css"
+  "tailwindStylesheet": "./apps/web/src/styles.css"
 }
