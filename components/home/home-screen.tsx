@@ -100,7 +100,7 @@ function Today({
 
   if (summary.active) {
     return (
-      <section className="flex flex-col gap-3 rounded-lg border bg-card p-4">
+      <section className="flex flex-col gap-3 rounded-none border bg-card p-4">
         <div className="flex flex-col gap-0.5">
           <span className="text-xs text-muted-foreground">Workout in progress</span>
           <span className="numeric-display text-3xl leading-none">
@@ -124,7 +124,7 @@ function Today({
   const day = summary.nextDay;
 
   return (
-    <section className="flex flex-col gap-3 rounded-lg border bg-card p-4">
+    <section className="flex flex-col gap-3 rounded-none border bg-card p-4">
       <div className="flex flex-col gap-0.5">
         <span className="text-xs text-muted-foreground">{day ? "Up next" : "Nothing planned"}</span>
         <span className="font-heading text-2xl leading-tight font-semibold">
@@ -219,7 +219,7 @@ function SummaryCard({
       <Link
         to={to}
         aria-label={linkLabel}
-        className="flex items-center justify-between gap-3 rounded-lg border bg-card p-3 text-left"
+        className="flex items-center justify-between gap-3 rounded-none border bg-card p-3 text-left"
       >
         <div className="flex min-w-0 flex-1 flex-col gap-1">{children}</div>
         <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
