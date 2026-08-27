@@ -10,7 +10,6 @@ import { describe, expect, it, vi } from "vitest";
  * cache from a mutation response.
  */
 vi.mock("../../lib/flags", () => ({
-  BATCH_RPC: true,
   PATCH_CACHE: false,
   AUTH_COOKIE_CACHE: true,
 }));

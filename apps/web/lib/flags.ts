@@ -2,10 +2,8 @@
  * Rollback switches for the performance work.
  *
  * Each of these turns off one change and restores the behaviour that shipped
- * before it. They exist because batching, cookie-cached sessions and cache
- * patching each change something load-bearing in a way a staging environment
- * cannot fully rehearse: how a real browser behaves on a real connection when
- * something goes wrong.
+ * before it. Cookie-cached sessions and cache patching each change something
+ * load-bearing in a way a staging environment cannot fully rehearse.
  *
  * All default to on. A flag is set to "0", "false" or "off" to fall back, and
  * the intention is that all three are deleted a release after they land.
@@ -18,9 +16,6 @@ const clientEnv: Record<string, string | undefined> =
   typeof import.meta !== "undefined" && import.meta.env
     ? (import.meta.env as unknown as Record<string, string | undefined>)
     : {};
-
-/** Combine reads into one `/api/rpc/__batch__` request. */
-export const BATCH_RPC = !disabled(clientEnv.VITE_ORPC_BATCH);
 
 /**
  * Patch caches from mutation responses instead of invalidating and refetching.

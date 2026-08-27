@@ -132,13 +132,12 @@ this work and is 104 KB after it.
 
 ## Rolling back
 
-Three environment flags (`lib/flags.ts`), each restoring the behaviour that
-shipped before it. All default to on, and all three should be deleted a release
+Two environment flags (`lib/flags.ts`), each restoring the behaviour that
+shipped before it. Both default to on, and both should be deleted a release
 after they land.
 
 | Flag                       | Off restores                                       |
 | -------------------------- | -------------------------------------------------- |
-| `VITE_ORPC_BATCH`          | one request per read                               |
 | `VITE_CACHE_PATCHING`      | invalidate-and-refetch after every write           |
 | `BETTER_AUTH_COOKIE_CACHE` | resolving the session from the database every time |
 
