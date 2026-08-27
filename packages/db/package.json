@@ -1,0 +1,54 @@
+{
+  "name": "@setwise/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./instrument": "./src/instrument.ts",
+    "./queries/bodyweight": "./src/queries/bodyweight.ts",
+    "./queries/export": "./src/queries/export.ts",
+    "./queries/home": "./src/queries/home.ts",
+    "./queries/plan": "./src/queries/plan.ts",
+    "./queries/profile": "./src/queries/profile.ts",
+    "./queries/prs": "./src/queries/prs.ts",
+    "./queries/session": "./src/queries/session.ts",
+    "./queries/stats": "./src/queries/stats.ts",
+    "./schema": "./src/schema/index.ts",
+    "./seed": "./src/seed.ts",
+    "./sync-muscles": "./src/sync-muscles.ts",
+    "./tooling": "./src/tooling.ts"
+  },
+  "scripts": {
+    "db:check": "drizzle-kit check --config drizzle.config.ts",
+    "db:generate": "drizzle-kit generate --config drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config drizzle.config.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:studio": "drizzle-kit studio --config drizzle.config.ts",
+    "lint": "eslint .",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@setwise/domain": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.16.3",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "@setwise/eslint-config": "workspace:*",
+    "@setwise/typescript-config": "workspace:*",
+    "@types/node": "^20",
+    "@types/pg": "^8.23.1",
+    "@types/ws": "^8.18.1",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9",
+    "globals": "^16.4.0",
+    "tsx": "^4.23.12",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

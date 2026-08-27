@@ -10,13 +10,7 @@ import globals from "globals";
 export default defineConfig(
   ...web,
   ...boundaries("@setwise/web"),
-  globalIgnores([
-    "public/body-*.svg",
-    "src/routeTree.gen.ts",
-    "lib/body-svg.generated.ts",
-    "data/free-exercise-db.json",
-    "drizzle/meta/**",
-  ]),
+  globalIgnores(["public/body-*.svg", "src/routeTree.gen.ts", "lib/body-svg.generated.ts"]),
   {
     files: ["tests/**/*.{ts,tsx}", "**/*.test.{ts,tsx}", "playwright.config.ts"],
     languageOptions: { globals: { ...globals.node, ...globals.vitest } },

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { statWindow, uuid } from "@/db/validators";
+import { statWindow, uuid } from "@setwise/domain/validators";
 import {
   exerciseHistory,
   intensitySummary,
@@ -8,7 +8,7 @@ import {
   STAT_WINDOWS,
   trainedExercises,
   untrainedMuscles,
-} from "../queries/stats";
+} from "@setwise/db/queries/stats";
 import { protectedProcedure, publicProcedure } from "../orpc";
 import "@tanstack/react-start/server-only";
 

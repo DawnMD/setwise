@@ -1,7 +1,7 @@
 import * as React from "react";
 
-import type { ProfilePatch } from "@/db/validators";
-import type { UserProfile } from "@/db/schema";
+import type { ProfilePatch } from "@setwise/domain/validators";
+import type { UserProfile } from "@setwise/db/schema";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {

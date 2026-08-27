@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-import { timeZone } from "@/db/validators";
+import { timeZone } from "@setwise/domain/validators";
 import { protectedProcedure } from "../orpc";
-import { homeSummary } from "../queries/home";
+import { homeSummary } from "@setwise/db/queries/home";
 import "@tanstack/react-start/server-only";
 
 /**

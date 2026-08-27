@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
 
-import type { StatWindow } from "@/db/validators";
-import { formatDelta, formatE1rm } from "@/lib/format";
+import type { StatWindow } from "@setwise/domain/validators";
+import { formatDelta, formatE1rm } from "@setwise/domain/format";
 import { queries } from "@/lib/queries";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";

@@ -3,8 +3,8 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import * as schema from "../../db/schema";
-import { profilePatch } from "../../db/validators";
+import * as schema from "@setwise/db/schema";
+import { profilePatch } from "@setwise/domain/validators";
 import {
   basalMetabolicRate,
   bodyMassIndex,
@@ -18,8 +18,8 @@ import {
   totalDailyEnergy,
   weeklyRateKg,
   type ProfileInputs,
-} from "../../lib/nutrition";
-import { logBodyweight } from "../../server/queries/bodyweight";
+} from "@setwise/domain/nutrition";
+import { logBodyweight } from "@setwise/db/queries/bodyweight";
 import {
   completeOnboarding,
   dismissProfilePrompt,
@@ -27,7 +27,7 @@ import {
   readProfile,
   saveProfile,
   trendWeight,
-} from "../../server/queries/profile";
+} from "@setwise/db/queries/profile";
 import { openTestDatabase } from "./database";
 
 const { client, db } = openTestDatabase();

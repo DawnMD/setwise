@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 
-import { MUSCLES, type MuscleSlug } from "../lib/muscles";
+import { MUSCLES, type MuscleSlug } from "@setwise/domain/muscles";
 import type { DbClient } from "./index";
 import { muscles } from "./schema";
 

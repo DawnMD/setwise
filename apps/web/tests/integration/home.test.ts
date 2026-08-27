@@ -3,12 +3,12 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import * as schema from "../../db/schema";
-import { MUSCLES } from "../../lib/muscles";
-import { homeSummary, HOME_WEEK_DAYS, type HomeSummary } from "../../server/queries/home";
-import { startableDays } from "../../server/queries/plan";
-import { profileSummary } from "../../server/queries/profile";
-import { muscleVolume, untrainedMuscles } from "../../server/queries/stats";
+import * as schema from "@setwise/db/schema";
+import { MUSCLES } from "@setwise/domain/muscles";
+import { homeSummary, HOME_WEEK_DAYS, type HomeSummary } from "@setwise/db/queries/home";
+import { startableDays } from "@setwise/db/queries/plan";
+import { profileSummary } from "@setwise/db/queries/profile";
+import { muscleVolume, untrainedMuscles } from "@setwise/db/queries/stats";
 import { openTestDatabase } from "./database";
 
 const { client, db } = openTestDatabase();

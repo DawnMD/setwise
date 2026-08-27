@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { ProgressHome } from "@/components/progress/progress-home";
 import { prefetch } from "@/lib/prefetch";
-import { PROGRESS_DEFAULT_WINDOW } from "@/lib/windows";
+import { PROGRESS_DEFAULT_WINDOW } from "@setwise/domain/windows";
 
 export const Route = createFileRoute("/_authenticated/progress")({
   head: () => ({ meta: [{ title: "Progress · Setwise" }] }),

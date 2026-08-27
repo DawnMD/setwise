@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { afterWrite, cacheKeys, clearActiveSession, putSet, removeSet } from "../../lib/cache";
 import { queries } from "../../lib/queries";
-import type { StatWindow } from "../../db/validators";
-import type { BodyweightSeries } from "../../server/queries/bodyweight";
-import type { SessionDetail, SetRow } from "../../server/queries/session";
+import type { StatWindow } from "@setwise/domain/validators";
+import type { BodyweightSeries } from "@setwise/db/queries/bodyweight";
+import type { SessionDetail, SetRow } from "@setwise/db/queries/session";
 
 const SESSION_ID = "11111111-1111-4111-8111-111111111111";
 const BENCH = "22222222-2222-4222-8222-222222222222";

@@ -1,4 +1,4 @@
-import type { MuscleSlug } from "../muscles";
+import type { MuscleSlug } from "@setwise/domain/muscles";
 
 /**
  * free-exercise-db tags each exercise with seventeen coarse muscle names. Ours

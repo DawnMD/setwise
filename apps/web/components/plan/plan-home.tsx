@@ -5,7 +5,7 @@ import * as React from "react";
 
 import { useCriticalData } from "@/hooks/use-critical-data";
 import { afterWrite, seedRoutineDetail } from "@/lib/cache";
-import { formatWhen } from "@/lib/format";
+import { formatWhen } from "@setwise/domain/format";
 import { orpc } from "@/lib/orpc";
 import { queries } from "@/lib/queries";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

@@ -1,4 +1,4 @@
-import { RPE_MAX, RPE_MIN, RPE_STEP } from "@/db/validators";
+import { RPE_MAX, RPE_MIN, RPE_STEP } from "@setwise/domain/validators";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Slider } from "@/components/ui/slider";

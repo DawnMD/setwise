@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { isDefinedError, ORPCError } from "@orpc/client";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
-import { customExerciseInput, type CustomExerciseInput } from "@/db/validators";
+import { customExerciseInput, type CustomExerciseInput } from "@setwise/domain/validators";
 import { orpc } from "@/lib/orpc";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

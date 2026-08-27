@@ -3,13 +3,13 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import * as schema from "../../db/schema";
+import * as schema from "@setwise/db/schema";
 import {
   bodyweightSeries,
   logBodyweight,
   removeBodyweight,
   TREND_LEAD_IN_DAYS,
-} from "../../server/queries/bodyweight";
+} from "@setwise/db/queries/bodyweight";
 import { openTestDatabase } from "./database";
 
 const { client, db } = openTestDatabase();

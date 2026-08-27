@@ -1,9 +1,9 @@
 import { Plus } from "lucide-react";
 import * as React from "react";
 
-import { formatWeight, formatWhen } from "@/lib/format";
-import { ghostForPosition } from "@/lib/overload";
-import { describeTargets, type Targets } from "@/lib/targets";
+import { formatWeight, formatWhen } from "@setwise/domain/format";
+import { ghostForPosition } from "@setwise/domain/overload";
+import { describeTargets, type Targets } from "@setwise/domain/targets";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

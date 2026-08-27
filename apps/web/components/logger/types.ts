@@ -10,8 +10,8 @@ import type {
   SessionDetail,
   SessionExercise,
   SetRow,
-} from "@/server/queries/session";
-import type { PlannedExercise } from "@/server/queries/plan";
+} from "@setwise/db/queries/session";
+import type { PlannedExercise } from "@setwise/db/queries/plan";
 
 export type LoggerSet = SetRow;
 export type LoggerExercise = SessionExercise;

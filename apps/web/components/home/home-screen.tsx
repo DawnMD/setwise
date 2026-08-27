@@ -3,8 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { BedDouble, ChevronRight, Settings } from "lucide-react";
 import * as React from "react";
 
-import type { HomeSummary } from "@/server/queries/home";
-import { formatTonnageValue, formatWeight, formatWhen, parseIsoDay } from "@/lib/format";
+import type { HomeSummary } from "@setwise/db/queries/home";
+import { formatTonnageValue, formatWeight, formatWhen, parseIsoDay } from "@setwise/domain/format";
 import { queries } from "@/lib/queries";
 import { useCriticalData } from "@/hooks/use-critical-data";
 import { useStartWorkout } from "@/hooks/use-start-workout";

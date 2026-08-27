@@ -1,5 +1,5 @@
 import { useNow } from "@/hooks/use-now";
-import { formatElapsed } from "@/lib/format";
+import { formatElapsed } from "@setwise/domain/format";
 
 /**
  * How long a workout has been running.

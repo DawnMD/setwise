@@ -1,5 +1,5 @@
-import { formatEffectiveSets, formatTonnage } from "@/lib/format";
-import type { MuscleSlug } from "@/lib/muscles";
+import { formatEffectiveSets, formatTonnage } from "@setwise/domain/format";
+import type { MuscleSlug } from "@setwise/domain/muscles";
 import { cn } from "@/lib/utils";
 
 import type { HeatmapMuscle } from "./muscle-heatmap";

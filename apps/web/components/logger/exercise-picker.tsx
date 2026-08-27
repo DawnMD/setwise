@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import * as React from "react";
 
 import { useLazyMount } from "@/hooks/use-lazy-mount";
-import { MUSCLES, type MuscleSlug } from "@/lib/muscles";
+import { MUSCLES, type MuscleSlug } from "@setwise/domain/muscles";
 import { queries } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import {

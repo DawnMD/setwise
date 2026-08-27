@@ -1,11 +1,10 @@
 import { and, eq, ne, sql } from "drizzle-orm";
 
-import type { DbClient } from "@/db";
-import { personalRecords, sets, workoutSessions } from "@/db/schema";
-import { E1RM_MAX_REPS, E1RM_MIN_REPS, estimateOneRepMax } from "@/lib/math";
+import type { DbClient } from "../index";
+import { personalRecords, sets, workoutSessions } from "../schema";
+import { E1RM_MAX_REPS, E1RM_MIN_REPS, estimateOneRepMax } from "@setwise/domain/math";
 
 import type { SetRow } from "./session";
-import "@tanstack/react-start/server-only";
 
 export type PrKind = "max_weight" | "best_e1rm" | "max_reps_at_weight" | "session_volume";
 

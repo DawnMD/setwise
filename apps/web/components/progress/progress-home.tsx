@@ -3,10 +3,10 @@ import { Link } from "@tanstack/react-router";
 import { ChartNoAxesColumn, Scale } from "lucide-react";
 import * as React from "react";
 
-import type { StatWindow } from "@/db/validators";
-import type { MuscleSlug } from "@/lib/muscles";
+import type { StatWindow } from "@setwise/domain/validators";
+import type { MuscleSlug } from "@setwise/domain/muscles";
 import { queries } from "@/lib/queries";
-import { PROGRESS_DEFAULT_WINDOW } from "@/lib/windows";
+import { PROGRESS_DEFAULT_WINDOW } from "@setwise/domain/windows";
 import { useCriticalData } from "@/hooks/use-critical-data";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

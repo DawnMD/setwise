@@ -2,10 +2,16 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { DbClient } from "@/db";
-import { routineDays, routineExercises, routines } from "@/db/schema";
-import { activityKind, dayName, routineExerciseTargets, routineName, uuid } from "@/db/validators";
+import { routineDays, routineExercises, routines } from "@setwise/db/schema";
+import {
+  activityKind,
+  dayName,
+  routineExerciseTargets,
+  routineName,
+  uuid,
+} from "@setwise/domain/validators";
 import { protectedProcedure } from "../orpc";
-import { exerciseIsVisible } from "../queries/session";
+import { exerciseIsVisible } from "@setwise/db/queries/session";
 import {
   findDay,
   findRoutine,
@@ -15,7 +21,7 @@ import {
   startableDays,
   swapDayOrder,
   type RoutineDetail,
-} from "../queries/plan";
+} from "@setwise/db/queries/plan";
 import "@tanstack/react-start/server-only";
 
 const planProcedure = protectedProcedure.errors({

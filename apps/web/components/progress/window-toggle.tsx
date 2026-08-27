@@ -1,4 +1,4 @@
-import { STAT_WINDOWS, type StatWindow } from "@/db/validators";
+import { STAT_WINDOWS, type StatWindow } from "@setwise/domain/validators";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 /**

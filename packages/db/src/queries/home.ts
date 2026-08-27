@@ -1,10 +1,9 @@
 import { sql } from "drizzle-orm";
 
-import type { DbClient } from "@/db";
-import { BODYWEIGHT_TREND_DAYS } from "@/lib/math";
-import { MUSCLES, type MuscleSlug } from "@/lib/muscles";
+import type { DbClient } from "../index";
+import { BODYWEIGHT_TREND_DAYS } from "@setwise/domain/math";
+import { MUSCLES, type MuscleSlug } from "@setwise/domain/muscles";
 import { startableDays, type StartableDay } from "./plan";
-import "@tanstack/react-start/server-only";
 
 /**
  * The window Home means by "this week".

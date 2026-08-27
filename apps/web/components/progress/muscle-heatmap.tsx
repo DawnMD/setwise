@@ -1,8 +1,8 @@
 import * as React from "react";
 
-import { formatEffectiveSets, formatTonnage } from "@/lib/format";
-import type { VolumeBand } from "@/lib/math";
-import { isMuscleSlug, type MuscleSlug } from "@/lib/muscles";
+import { formatEffectiveSets, formatTonnage } from "@setwise/domain/format";
+import type { VolumeBand } from "@setwise/domain/math";
+import { isMuscleSlug, type MuscleSlug } from "@setwise/domain/muscles";
 import { BodyMap } from "@/components/body-map";
 
 export type HeatmapMuscle = {

@@ -1,5 +1,5 @@
-import { formatDelta, formatWeight } from "@/lib/format";
-import { type Ghost, overloadDelta } from "@/lib/overload";
+import { formatDelta, formatWeight } from "@setwise/domain/format";
+import { type Ghost, overloadDelta } from "@setwise/domain/overload";
 import { Badge } from "@/components/ui/badge";
 import { Item, ItemContent, ItemMedia } from "@/components/ui/item";
 

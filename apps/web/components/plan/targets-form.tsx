@@ -7,8 +7,8 @@ import {
   RPE_STEP,
   routineExerciseTargets,
   type RoutineExerciseTargets,
-} from "@/db/validators";
-import type { Targets } from "@/lib/targets";
+} from "@setwise/domain/validators";
+import type { Targets } from "@setwise/domain/targets";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {

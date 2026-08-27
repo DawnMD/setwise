@@ -1,7 +1,7 @@
 import * as React from "react";
 
-import { isMuscleSlug, MUSCLES, type MuscleSlug } from "@/lib/muscles";
-import type { VolumeBand } from "@/lib/math";
+import { isMuscleSlug, MUSCLES, type MuscleSlug } from "@setwise/domain/muscles";
+import type { VolumeBand } from "@setwise/domain/math";
 import { BodyMap } from "@/components/body-map";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";

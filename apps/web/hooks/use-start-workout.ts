@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import * as React from "react";
 
 import { afterWrite } from "@/lib/cache";
-import { newId } from "@/lib/ids";
+import { newId } from "@setwise/domain/ids";
 import { orpc } from "@/lib/orpc";
 import { queries } from "@/lib/queries";
 

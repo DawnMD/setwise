@@ -4,10 +4,10 @@ import { createRouterClient } from "@orpc/server";
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import * as schema from "../../db/schema";
+import * as schema from "@setwise/db/schema";
 import { openSharedTestDatabase } from "./database";
-import { getRoutineDetail, listRoutines, startableDays } from "../../server/queries/plan";
-import { getSessionDetail, recentSessions } from "../../server/queries/session";
+import { getRoutineDetail, listRoutines, startableDays } from "@setwise/db/queries/plan";
+import { getSessionDetail, recentSessions } from "@setwise/db/queries/session";
 import { createSessionResolver } from "../../server/orpc";
 import { router } from "../../server/router";
 
@@ -19,7 +19,7 @@ const authState = vi.hoisted(() => ({ userId: "" }));
 vi.mock("../../db", async () => {
   const [{ openSharedTestDatabase }, schema] = await Promise.all([
     import("./database"),
-    import("../../db/schema"),
+    import("@setwise/db/schema"),
   ]);
 
   return { db: openSharedTestDatabase().db, schema };

@@ -13,8 +13,8 @@ import {
   proteinPerKg as proteinPerKgSchema,
   TARGET_RATE_MAX,
   TARGET_RATE_STEP,
-} from "@/db/validators";
-import { parseIsoDay, toIsoDay } from "@/lib/format";
+} from "@setwise/domain/validators";
+import { parseIsoDay, toIsoDay } from "@setwise/domain/format";
 import {
   ACTIVITY_DESCRIPTIONS,
   ACTIVITY_LEVELS,
@@ -26,7 +26,7 @@ import {
   type ActivityLevel,
   type Goal,
   type Sex,
-} from "@/lib/nutrition";
+} from "@setwise/domain/nutrition";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";

@@ -1,9 +1,8 @@
 import { config } from "dotenv";
 import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { createNeonPool } from "./db/neon";
-import * as schema from "./db/schema";
+import { openToolingDatabase } from "@setwise/db/tooling";
+import * as schema from "@setwise/db/schema";
 config({ path: ".env.local", quiet: true });
 
 const EMAIL = "phase3-preview@example.invalid";
@@ -31,8 +30,15 @@ const DAYS: Record<string, [string, number, number, number][]> = {
 };
 
 async function main() {
-  const client = createNeonPool(process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL!);
-  const db = drizzle({ client, schema });
+  const pooledUrl = process.env.DATABASE_URL;
+  const directUrl = process.env.DATABASE_URL_UNPOOLED;
+  if (!pooledUrl && !directUrl) throw new Error("Set DATABASE_URL or DATABASE_URL_UNPOOLED");
+  const connection = openToolingDatabase({
+    pooledUrl: pooledUrl ?? directUrl!,
+    directUrl,
+    driver: process.env.DATABASE_DRIVER === "pg" ? "pg" : "neon",
+  });
+  const { db } = connection;
 
   const [u] = await db.select().from(schema.user).where(eq(schema.user.email, EMAIL));
   if (!u) throw new Error("preview user not found");
@@ -113,6 +119,6 @@ async function main() {
     }
   }
   console.log("sessions:", sessionCount);
-  await client.end();
+  await connection.close();
 }
 main();

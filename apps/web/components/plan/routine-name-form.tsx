@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { dayName, routineName } from "@/db/validators";
+import { dayName, routineName } from "@setwise/domain/validators";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {

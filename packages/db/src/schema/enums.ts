@@ -1,7 +1,7 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
-import { ACTIVITY_KINDS } from "@/lib/activity";
-import { ACTIVITY_LEVELS, GOALS, SEXES } from "@/lib/nutrition";
+import { ACTIVITY_KINDS } from "@setwise/domain/activity";
+import { ACTIVITY_LEVELS, GOALS, SEXES } from "@setwise/domain/nutrition";
 
 export const activityKindEnum = pgEnum("activity_kind", ACTIVITY_KINDS);
 

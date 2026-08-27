@@ -1,8 +1,8 @@
 import { Info, TriangleAlert } from "lucide-react";
 
-import { formatWeight } from "@/lib/format";
-import { BODYWEIGHT_TREND_DAYS } from "@/lib/math";
-import { PROFILE_FIELD_LABELS, type BodyTargets } from "@/lib/nutrition";
+import { formatWeight } from "@setwise/domain/format";
+import { BODYWEIGHT_TREND_DAYS } from "@setwise/domain/math";
+import { PROFILE_FIELD_LABELS, type BodyTargets } from "@setwise/domain/nutrition";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 /**

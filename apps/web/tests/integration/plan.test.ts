@@ -3,16 +3,16 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import * as schema from "../../db/schema";
-import { describeTargets } from "../../lib/targets";
+import * as schema from "@setwise/db/schema";
+import { describeTargets } from "@setwise/domain/targets";
 import {
   findDay,
   getRoutineDetail,
   listRoutines,
   startableDays,
   swapDayOrder,
-} from "../../server/queries/plan";
-import { getSessionDetail } from "../../server/queries/session";
+} from "@setwise/db/queries/plan";
+import { getSessionDetail } from "@setwise/db/queries/session";
 import { openTestDatabase } from "./database";
 
 const { client, db } = openTestDatabase();

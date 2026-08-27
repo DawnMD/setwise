@@ -1,13 +1,13 @@
 import { z } from "zod";
 
-import { profilePatch, timeZone } from "@/db/validators";
+import { profilePatch, timeZone } from "@setwise/domain/validators";
 import { protectedProcedure } from "../orpc";
 import {
   completeOnboarding,
   dismissProfilePrompt,
   profileSummary,
   saveProfile,
-} from "../queries/profile";
+} from "@setwise/db/queries/profile";
 import "@tanstack/react-start/server-only";
 
 /**

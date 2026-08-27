@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
-import { formatElapsed, formatWeight, formatWhen } from "@/lib/format";
-import { estimateOneRepMax } from "@/lib/math";
+import { formatElapsed, formatWeight, formatWhen } from "@setwise/domain/format";
+import { estimateOneRepMax } from "@setwise/domain/math";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Item, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";

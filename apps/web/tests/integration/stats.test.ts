@@ -3,15 +3,15 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import * as schema from "../../db/schema";
-import { volumeBand } from "../../lib/math";
-import type { MuscleSlug } from "../../lib/muscles";
+import * as schema from "@setwise/db/schema";
+import { volumeBand } from "@setwise/domain/math";
+import type { MuscleSlug } from "@setwise/domain/muscles";
 import {
   exerciseHistory,
   intensitySummary,
   muscleVolume,
   trainedExercises,
-} from "../../server/queries/stats";
+} from "@setwise/db/queries/stats";
 import { openTestDatabase } from "./database";
 
 const { client, db } = openTestDatabase();

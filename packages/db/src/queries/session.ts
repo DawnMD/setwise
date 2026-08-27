@@ -1,11 +1,10 @@
 import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 
-import type { Db, DbClient } from "@/db";
-import { exercises, routineDays, routines, sets, workoutSessions } from "@/db/schema";
-import type { CreateSetInput, UpdateSetInput } from "@/db/validators";
-import type { ActivityKind } from "@/lib/activity";
+import type { Db, DbClient } from "../index";
+import { exercises, routineDays, routines, sets, workoutSessions } from "../schema";
+import type { CreateSetInput, UpdateSetInput } from "@setwise/domain/validators";
+import type { ActivityKind } from "@setwise/domain/activity";
 import { findDay, type PlannedExercise, type SessionPlan } from "./plan";
-import "@tanstack/react-start/server-only";
 
 export type SetRow = {
   id: string;

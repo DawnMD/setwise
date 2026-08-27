@@ -1,12 +1,11 @@
 import { and, eq, gte, sql } from "drizzle-orm";
 
-import type { Db, DbClient } from "@/db";
-import { exerciseMuscles, exercises, muscles, sets, workoutSessions } from "@/db/schema";
-import { STAT_WINDOWS } from "@/db/validators";
-import { type MuscleSlug, MUSCLES } from "@/lib/muscles";
-import { E1RM_MAX_REPS, E1RM_MIN_REPS } from "@/lib/math";
-import { volumeBand, type VolumeBand } from "@/lib/math";
-import "@tanstack/react-start/server-only";
+import type { Db, DbClient } from "../index";
+import { exerciseMuscles, exercises, muscles, sets, workoutSessions } from "../schema";
+import { STAT_WINDOWS } from "@setwise/domain/validators";
+import { type MuscleSlug, MUSCLES } from "@setwise/domain/muscles";
+import { E1RM_MAX_REPS, E1RM_MIN_REPS } from "@setwise/domain/math";
+import { volumeBand, type VolumeBand } from "@setwise/domain/math";
 
 /**
  * The trailing window the relative-intensity reference is read over, fixed at
@@ -20,7 +19,7 @@ import "@tanstack/react-start/server-only";
 export const INTENSITY_REFERENCE_DAYS = 90;
 
 export { STAT_WINDOWS };
-export type { StatWindow } from "@/db/validators";
+export type { StatWindow } from "@setwise/domain/validators";
 
 /** Epley in SQL, null outside the rep range it can be trusted over. */
 const setE1rm = sql<number | null>`case

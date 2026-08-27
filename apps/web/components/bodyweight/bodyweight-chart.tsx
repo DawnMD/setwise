@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { formatDayShort, formatWeight } from "@/lib/format";
+import { formatDayShort, formatWeight } from "@setwise/domain/format";
 import { MiniChart, type MiniChartSeries } from "@/components/ui/mini-chart";
 
 export type BodyweightChartPoint = {

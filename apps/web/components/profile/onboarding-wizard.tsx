@@ -8,10 +8,10 @@ import {
   BODYWEIGHT_STEP,
   bodyweightKg,
   type ProfilePatch,
-} from "@/db/validators";
-import { toIsoDay } from "@/lib/format";
-import { BODYWEIGHT_TREND_DAYS } from "@/lib/math";
-import type { ActivityLevel, Goal, Sex } from "@/lib/nutrition";
+} from "@setwise/domain/validators";
+import { toIsoDay } from "@setwise/domain/format";
+import { BODYWEIGHT_TREND_DAYS } from "@setwise/domain/math";
+import type { ActivityLevel, Goal, Sex } from "@setwise/domain/nutrition";
 import { afterWrite, putProfileSummary } from "@/lib/cache";
 import { orpc } from "@/lib/orpc";
 import { queries } from "@/lib/queries";

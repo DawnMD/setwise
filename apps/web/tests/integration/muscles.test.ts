@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterAll, describe, expect, it } from "vitest";
 
-import * as schema from "../../db/schema";
-import { MUSCLES } from "../../lib/muscles";
+import * as schema from "@setwise/db/schema";
+import { MUSCLES } from "@setwise/domain/muscles";
 import { openTestDatabase } from "./database";
 
 const { client, db } = openTestDatabase();
@@ -21,7 +21,7 @@ type Row = { slug: string; displayName: string; svgPathId: string; bodySide: str
  * copy of `MUSCLES`, and a copy nobody checks is a copy that drifts.
  */
 async function migrationRows(): Promise<Row[]> {
-  const file = path.join(process.cwd(), "drizzle", "0002_seed_muscles.sql");
+  const file = path.join(process.cwd(), "../../packages/db/drizzle", "0002_seed_muscles.sql");
   const sql = await readFile(file, "utf8");
 
   return [...sql.matchAll(/\(\s*'([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'\s*\)/g)].map(

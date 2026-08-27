@@ -1,9 +1,8 @@
 import { asc, eq } from "drizzle-orm";
 
-import type { DbClient } from "@/db";
-import { bodyweightLogs, exercises, sets, workoutSessions } from "@/db/schema";
-import { estimateOneRepMax } from "@/lib/math";
-import "@tanstack/react-start/server-only";
+import type { DbClient } from "../index";
+import { bodyweightLogs, exercises, sets, workoutSessions } from "../schema";
+import { estimateOneRepMax } from "@setwise/domain/math";
 
 /**
  * Every set the user has ever logged, flattened.

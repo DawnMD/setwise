@@ -1,6 +1,6 @@
 import { BODY_BACK_SVG, BODY_FRONT_SVG } from "@/lib/body-svg.generated";
-import type { VolumeBand } from "@/lib/math";
-import type { MuscleSlug } from "@/lib/muscles";
+import type { VolumeBand } from "@setwise/domain/math";
+import type { MuscleSlug } from "@setwise/domain/muscles";
 
 const BAND_COLOR: Record<VolumeBand, string> = {
   none: "var(--band-none)",

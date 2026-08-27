@@ -7,8 +7,8 @@ import {
   BODYWEIGHT_STEP,
   bodyweightKg,
   type BodyweightLogInput,
-} from "@/db/validators";
-import { formatWeight, formatWhen, parseIsoDay, toIsoDay } from "@/lib/format";
+} from "@setwise/domain/validators";
+import { formatWeight, formatWhen, parseIsoDay, toIsoDay } from "@setwise/domain/format";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";

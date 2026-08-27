@@ -1,18 +1,23 @@
 import { config } from "dotenv";
 
-import { openToolingDatabase } from "../../db/tooling";
+import { openToolingDatabase } from "@setwise/db/tooling";
 
 config({ path: ".env.local", quiet: true });
 
 export type TestDatabase = ReturnType<typeof openToolingDatabase>;
 
 export function openTestDatabase(): TestDatabase {
-  const raw = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL;
-  if (!raw) {
+  const pooledUrl = process.env.DATABASE_URL;
+  const directUrl = process.env.DATABASE_URL_UNPOOLED;
+  if (!pooledUrl && !directUrl) {
     throw new Error("Set DATABASE_URL_UNPOOLED or DATABASE_URL in .env.local");
   }
 
-  return openToolingDatabase(raw);
+  return openToolingDatabase({
+    pooledUrl: pooledUrl ?? directUrl!,
+    directUrl,
+    driver: process.env.DATABASE_DRIVER === "pg" ? "pg" : "neon",
+  });
 }
 
 let shared: TestDatabase | undefined;

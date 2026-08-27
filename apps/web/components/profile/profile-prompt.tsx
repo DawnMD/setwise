@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { UserRoundCog } from "lucide-react";
 
-import { toIsoDay } from "@/lib/format";
-import { PROFILE_FIELD_LABELS, PROMPT_DISMISSAL_DAYS } from "@/lib/nutrition";
+import { toIsoDay } from "@setwise/domain/format";
+import { PROFILE_FIELD_LABELS, PROMPT_DISMISSAL_DAYS } from "@setwise/domain/nutrition";
 import { putProfileSummary } from "@/lib/cache";
 import { orpc } from "@/lib/orpc";
 import { queries } from "@/lib/queries";

@@ -4,18 +4,18 @@ import { useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import * as React from "react";
 
-import type { CreateSetInput, UpdateSetInput } from "@/db/validators";
+import type { CreateSetInput, UpdateSetInput } from "@setwise/domain/validators";
 import { useCriticalData } from "@/hooks/use-critical-data";
 import { useLazyMount } from "@/hooks/use-lazy-mount";
 import { useRestRunning, useRestTimer } from "@/hooks/use-rest-timer";
 import { useWakeLock } from "@/hooks/use-wake-lock";
 import { afterWrite, clearActiveSession, markSessionFinished, putSet } from "@/lib/cache";
-import { formatWeight } from "@/lib/format";
-import { newId } from "@/lib/ids";
+import { formatWeight } from "@setwise/domain/format";
+import { newId } from "@setwise/domain/ids";
 import { orpc } from "@/lib/orpc";
 import { endSpan, startSpan } from "@/lib/perf";
 import { queries } from "@/lib/queries";
-import type { Targets } from "@/lib/targets";
+import type { Targets } from "@setwise/domain/targets";
 import {
   AlertDialog,
   AlertDialogAction,

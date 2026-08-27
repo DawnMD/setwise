@@ -1,4 +1,4 @@
-import type { MuscleSlug } from "../muscles";
+import type { MuscleSlug } from "@setwise/domain/muscles";
 
 export type MovementPattern =
   | "squat"

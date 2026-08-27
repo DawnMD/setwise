@@ -1,9 +1,8 @@
 import { and, asc, countDistinct, eq, sql } from "drizzle-orm";
 
-import type { DbClient } from "@/db";
-import { exercises, routineDays, routineExercises, routines, workoutSessions } from "@/db/schema";
-import type { ActivityKind } from "@/lib/activity";
-import "@tanstack/react-start/server-only";
+import type { DbClient } from "../index";
+import { exercises, routineDays, routineExercises, routines, workoutSessions } from "../schema";
+import type { ActivityKind } from "@setwise/domain/activity";
 
 export type RoutineSummary = {
   id: string;

@@ -1,5 +1,5 @@
-import { describeLoading, loadBar } from "@/lib/plates";
-import { formatWeight } from "@/lib/format";
+import { describeLoading, loadBar } from "@setwise/domain/plates";
+import { formatWeight } from "@setwise/domain/format";
 
 /**
  * What to put on the bar.

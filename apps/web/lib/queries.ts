@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import type { StatWindow } from "@/db/validators";
-import type { MuscleSlug } from "./muscles";
+import type { StatWindow } from "@setwise/domain/validators";
+import type { MuscleSlug } from "@setwise/domain/muscles";
 import { orpc } from "./orpc";
 import { STALE } from "./stale";
 

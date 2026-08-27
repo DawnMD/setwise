@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { formatWeight, formatWhen, parseIsoDay } from "@/lib/format";
+import { formatWeight, formatWhen, parseIsoDay } from "@setwise/domain/format";
 import { Button } from "@/components/ui/button";
 
 import type { WeighIn } from "./bodyweight-sheet";

@@ -19,7 +19,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { MUSCLES, type MuscleSlug } from "../lib/muscles";
+import { MUSCLES, type MuscleSlug } from "@setwise/domain/muscles";
 
 type Point = [number, number];
 

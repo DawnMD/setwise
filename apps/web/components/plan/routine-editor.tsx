@@ -4,15 +4,15 @@ import { useNavigate } from "@tanstack/react-router";
 import { BedDouble, ChevronDown, ChevronUp, MoreVertical, Play, Plus } from "lucide-react";
 import * as React from "react";
 
-import type { RoutineDetail } from "@/server/queries/plan";
+import type { RoutineDetail } from "@setwise/db/queries/plan";
 import { useCriticalData } from "@/hooks/use-critical-data";
 import { useLazyMount } from "@/hooks/use-lazy-mount";
 import { useTimeZone } from "@/hooks/use-time-zone";
 import { cacheKeys, markStale, patchRoutineDetail } from "@/lib/cache";
-import { newId } from "@/lib/ids";
+import { newId } from "@setwise/domain/ids";
 import { orpc } from "@/lib/orpc";
 import { queries } from "@/lib/queries";
-import { describeTargets, type Targets } from "@/lib/targets";
+import { describeTargets, type Targets } from "@setwise/domain/targets";
 import { LogRestDialog, type RestLogTarget } from "@/components/logger/log-rest-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {

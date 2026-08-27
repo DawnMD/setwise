@@ -1,10 +1,10 @@
 import * as React from "react";
 
-import { WEIGHT_MAX } from "@/db/validators";
+import { WEIGHT_MAX } from "@setwise/domain/validators";
 import { cn } from "@/lib/utils";
-import { formatDelta, formatWeight, formatWhen } from "@/lib/format";
-import { type Ghost, overloadDelta } from "@/lib/overload";
-import { DEFAULT_BAR_KG } from "@/lib/plates";
+import { formatDelta, formatWeight, formatWhen } from "@setwise/domain/format";
+import { type Ghost, overloadDelta } from "@setwise/domain/overload";
+import { DEFAULT_BAR_KG } from "@setwise/domain/plates";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {

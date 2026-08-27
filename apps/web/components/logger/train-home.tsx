@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { BedDouble } from "lucide-react";
 import * as React from "react";
 
-import { formatWeight, formatWhen } from "@/lib/format";
+import { formatWeight, formatWhen } from "@setwise/domain/format";
 import { queries } from "@/lib/queries";
 import { useCriticalData } from "@/hooks/use-critical-data";
 import { useStartWorkout } from "@/hooks/use-start-workout";

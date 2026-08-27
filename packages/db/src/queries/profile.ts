@@ -1,11 +1,10 @@
 import { eq, sql } from "drizzle-orm";
 
-import type { DbClient } from "@/db";
-import { userProfiles, type UserProfile } from "@/db/schema";
-import type { ProfilePatch } from "@/db/validators";
-import { BODYWEIGHT_TREND_DAYS } from "@/lib/math";
-import { bodyTargets, promptDismissedUntil, type BodyTargets } from "@/lib/nutrition";
-import "@tanstack/react-start/server-only";
+import type { DbClient } from "../index";
+import { userProfiles, type UserProfile } from "../schema";
+import type { ProfilePatch } from "@setwise/domain/validators";
+import { BODYWEIGHT_TREND_DAYS } from "@setwise/domain/math";
+import { bodyTargets, promptDismissedUntil, type BodyTargets } from "@setwise/domain/nutrition";
 
 /** An unwritten profile and an all-null profile mean the same thing to every reader. */
 const EMPTY_PROFILE: ProfileInputsRow = {

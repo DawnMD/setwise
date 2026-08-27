@@ -1,8 +1,8 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import type { ProfileSummary } from "@/server/queries/profile";
-import type { RoutineDetail } from "@/server/queries/plan";
-import type { SessionDetail, SessionExercise, SetRow } from "@/server/queries/session";
+import type { ProfileSummary } from "@setwise/db/queries/profile";
+import type { RoutineDetail } from "@setwise/db/queries/plan";
+import type { SessionDetail, SessionExercise, SetRow } from "@setwise/db/queries/session";
 import { PATCH_CACHE } from "./flags";
 import { orpc } from "./orpc";
 import { queries } from "./queries";

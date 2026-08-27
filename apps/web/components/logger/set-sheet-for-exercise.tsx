@@ -1,4 +1,4 @@
-import { ghostForPosition } from "@/lib/overload";
+import { ghostForPosition } from "@setwise/domain/overload";
 
 import { SetSheet, type SetDraft } from "./set-sheet";
 import type { LoggerExercise, LoggerLastPerformance, LoggerSet } from "./types";

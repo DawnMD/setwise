@@ -1,7 +1,7 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
-import { formatDuration } from "@/lib/format";
+import { formatDuration } from "@setwise/domain/format";
 import {
   REST_PRESETS,
   useRestSnapshot,

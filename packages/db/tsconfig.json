@@ -1,0 +1,5 @@
+{
+  "extends": "@setwise/typescript-config/node",
+  "include": ["src", "scripts", "drizzle.config.ts", "tests"],
+  "exclude": ["node_modules", "drizzle"]
+}

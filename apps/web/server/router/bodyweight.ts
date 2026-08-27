@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-import { bodyweightLogInput, isoDay, statWindow, timeZone } from "@/db/validators";
+import { bodyweightLogInput, isoDay, statWindow, timeZone } from "@setwise/domain/validators";
 import { protectedProcedure } from "../orpc";
-import { bodyweightSeries, logBodyweight, removeBodyweight } from "../queries/bodyweight";
-import { profileSummary } from "../queries/profile";
+import { bodyweightSeries, logBodyweight, removeBodyweight } from "@setwise/db/queries/bodyweight";
+import { profileSummary } from "@setwise/db/queries/profile";
 import "@tanstack/react-start/server-only";
 
 const bodyweightProcedure = protectedProcedure.errors({

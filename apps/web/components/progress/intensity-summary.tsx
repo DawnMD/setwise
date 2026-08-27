@@ -1,4 +1,4 @@
-import { formatPercent, formatRpe } from "@/lib/format";
+import { formatPercent, formatRpe } from "@setwise/domain/format";
 
 export type IntensitySummaryData = {
   avgRelativeIntensity: number | null;

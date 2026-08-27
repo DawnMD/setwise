@@ -2,11 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Scale } from "lucide-react";
 import * as React from "react";
 
-import type { StatWindow } from "@/db/validators";
-import { formatDelta, formatTonnage, formatWeight, toIsoDay } from "@/lib/format";
-import type { ProfileSummary } from "@/server/queries/profile";
+import type { StatWindow } from "@setwise/domain/validators";
+import { formatDelta, formatTonnage, formatWeight, toIsoDay } from "@setwise/domain/format";
+import type { ProfileSummary } from "@setwise/db/queries/profile";
 import { afterWrite, putProfileSummary } from "@/lib/cache";
-import { BODYWEIGHT_TREND_DAYS } from "@/lib/math";
+import { BODYWEIGHT_TREND_DAYS } from "@setwise/domain/math";
 import { orpc } from "@/lib/orpc";
 import { queries } from "@/lib/queries";
 import { useLazyMount } from "@/hooks/use-lazy-mount";

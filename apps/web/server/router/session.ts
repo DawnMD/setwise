@@ -1,15 +1,21 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
-import { sets, workoutSessions, type WorkoutSession } from "@/db/schema";
-import { createSetInput, sessionStartInput, timeZone, updateSetInput, uuid } from "@/db/validators";
+import { sets, workoutSessions, type WorkoutSession } from "@setwise/db/schema";
+import {
+  createSetInput,
+  sessionStartInput,
+  timeZone,
+  updateSetInput,
+  uuid,
+} from "@setwise/domain/validators";
 import { protectedProcedure } from "../orpc";
-import { findDay } from "../queries/plan";
+import { findDay } from "@setwise/db/queries/plan";
 import {
   recordSessionVolumeRecords,
   recordSetPersonalRecords,
   type SessionVolumeRecord,
-} from "../queries/prs";
+} from "@setwise/db/queries/prs";
 import {
   createSet,
   findSession,
@@ -21,7 +27,7 @@ import {
   startSession,
   updateSet,
   type SetWriteResult,
-} from "../queries/session";
+} from "@setwise/db/queries/session";
 import "@tanstack/react-start/server-only";
 
 /**

@@ -1,10 +1,15 @@
 import { and, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { exerciseMuscles, exercises, muscles } from "@/db/schema";
-import { syncMuscles } from "@/db/sync-muscles";
-import { customExerciseInput, PRIMARY_FACTOR, SECONDARY_FACTOR, uuid } from "@/db/validators";
-import { MUSCLE_SLUGS, muscleBySlug } from "@/lib/muscles";
+import { exerciseMuscles, exercises, muscles } from "@setwise/db/schema";
+import { syncMuscles } from "@setwise/db/sync-muscles";
+import {
+  customExerciseInput,
+  PRIMARY_FACTOR,
+  SECONDARY_FACTOR,
+  uuid,
+} from "@setwise/domain/validators";
+import { MUSCLE_SLUGS, muscleBySlug } from "@setwise/domain/muscles";
 import { protectedProcedure, publicProcedure } from "../orpc";
 import "@tanstack/react-start/server-only";
 

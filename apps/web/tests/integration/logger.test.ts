@@ -3,13 +3,13 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import * as schema from "../../db/schema";
-import { estimateOneRepMax } from "../../lib/math";
-import { overloadDelta } from "../../lib/overload";
-import { DEFAULT_BAR_KG, loadBar } from "../../lib/plates";
-import { exportSetsCsv } from "../../server/queries/export";
-import { recordSetPersonalRecords } from "../../server/queries/prs";
-import { createSet, lastPerformances, updateSet } from "../../server/queries/session";
+import * as schema from "@setwise/db/schema";
+import { estimateOneRepMax } from "@setwise/domain/math";
+import { overloadDelta } from "@setwise/domain/overload";
+import { DEFAULT_BAR_KG, loadBar } from "@setwise/domain/plates";
+import { exportSetsCsv } from "@setwise/db/queries/export";
+import { recordSetPersonalRecords } from "@setwise/db/queries/prs";
+import { createSet, lastPerformances, updateSet } from "@setwise/db/queries/session";
 import { openTestDatabase } from "./database";
 
 const { client, db } = openTestDatabase();
