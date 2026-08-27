@@ -1,0 +1,35 @@
+{
+  "name": "@setwise/domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./activity": "./src/activity.ts",
+    "./format": "./src/format.ts",
+    "./ids": "./src/ids.ts",
+    "./math": "./src/math.ts",
+    "./muscles": "./src/muscles.ts",
+    "./nutrition": "./src/nutrition.ts",
+    "./overload": "./src/overload.ts",
+    "./plates": "./src/plates.ts",
+    "./targets": "./src/targets.ts",
+    "./validators": "./src/validators.ts",
+    "./windows": "./src/windows.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@setwise/eslint-config": "workspace:*",
+    "@setwise/typescript-config": "workspace:*",
+    "eslint": "^9",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}
