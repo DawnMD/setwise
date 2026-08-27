@@ -1,0 +1,35 @@
+{
+  "name": "@setwise/api-contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./bodyweight": "./src/bodyweight.ts",
+    "./catalogue": "./src/catalogue.ts",
+    "./dto": "./src/dto.ts",
+    "./home": "./src/home.ts",
+    "./plan": "./src/plan.ts",
+    "./profile": "./src/profile.ts",
+    "./session": "./src/session.ts",
+    "./stats": "./src/stats.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@orpc/contract": "^1.15.0",
+    "@setwise/domain": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@setwise/eslint-config": "workspace:*",
+    "@setwise/typescript-config": "workspace:*",
+    "eslint": "^9",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

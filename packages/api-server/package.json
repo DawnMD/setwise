@@ -1,0 +1,31 @@
+{
+  "name": "@setwise/api-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./export": "./src/export.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@orpc/server": "^1.15.0",
+    "@setwise/api-contract": "workspace:*",
+    "@setwise/db": "workspace:*",
+    "@setwise/domain": "workspace:*",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@setwise/eslint-config": "workspace:*",
+    "@setwise/typescript-config": "workspace:*",
+    "@types/node": "^20",
+    "eslint": "^9",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

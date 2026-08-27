@@ -172,6 +172,102 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@20.19.43)(vite@8.1.5(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
 
+  packages/api-client:
+    dependencies:
+      '@orpc/client':
+        specifier: ^1.15.0
+        version: 1.15.0
+      '@orpc/tanstack-query':
+        specifier: ^1.15.0
+        version: 1.15.0(@orpc/client@1.15.0)(@tanstack/query-core@5.101.4)
+      '@setwise/api-contract':
+        specifier: workspace:*
+        version: link:../api-contract
+      '@setwise/domain':
+        specifier: workspace:*
+        version: link:../domain
+    devDependencies:
+      '@setwise/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@setwise/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      eslint:
+        specifier: ^9
+        version: 9.39.5(jiti@2.7.0)(supports-color@7.2.0)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@20.19.43)(vite@8.1.5(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
+
+  packages/api-contract:
+    dependencies:
+      '@orpc/contract':
+        specifier: ^1.15.0
+        version: 1.15.0
+      '@setwise/domain':
+        specifier: workspace:*
+        version: link:../domain
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@setwise/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@setwise/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      eslint:
+        specifier: ^9
+        version: 9.39.5(jiti@2.7.0)(supports-color@7.2.0)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@20.19.43)(vite@8.1.5(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
+
+  packages/api-server:
+    dependencies:
+      '@orpc/server':
+        specifier: ^1.15.0
+        version: 1.15.0(crossws@0.4.12(srvx@0.11.22))(ws@8.21.3(bufferutil@4.1.0))
+      '@setwise/api-contract':
+        specifier: workspace:*
+        version: link:../api-contract
+      '@setwise/db':
+        specifier: workspace:*
+        version: link:../db
+      '@setwise/domain':
+        specifier: workspace:*
+        version: link:../domain
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@neondatabase/serverless@1.1.0)(@types/pg@8.23.1)(kysely@0.29.5)(pg@8.23.0)
+    devDependencies:
+      '@setwise/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@setwise/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.43
+      eslint:
+        specifier: ^9
+        version: 9.39.5(jiti@2.7.0)(supports-color@7.2.0)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@20.19.43)(vite@8.1.5(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
+
   packages/db:
     dependencies:
       '@neondatabase/serverless':

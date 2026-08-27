@@ -1,0 +1,29 @@
+{
+  "name": "@setwise/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./stale": "./src/stale.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@orpc/client": "^1.15.0",
+    "@orpc/tanstack-query": "^1.15.0",
+    "@setwise/api-contract": "workspace:*",
+    "@setwise/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "@setwise/eslint-config": "workspace:*",
+    "@setwise/typescript-config": "workspace:*",
+    "eslint": "^9",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

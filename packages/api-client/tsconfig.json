@@ -1,0 +1,8 @@
+{
+  "extends": "@setwise/typescript-config/base",
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"]
+  },
+  "include": ["src", "tests"],
+  "exclude": ["node_modules"]
+}
