@@ -12,6 +12,8 @@ This is a Turborepo workspace. The web application is one package in it.
 apps/
   web/                  TanStack Start UI, API host, Better Auth, Vercel deployment
 packages/
+  domain/               platform-neutral validation, calculations and formatting
+  db/                   Drizzle schema, queries, migrations and seed tooling
   eslint-config/        base, web and react-native presets, plus the dependency matrix
   typescript-config/    base, web, react-native and node compiler presets
 scripts/
@@ -20,9 +22,9 @@ docs/
   monorepo/             migration phase records
 ```
 
-`apps/web` currently owns everything: UI, API procedures, database schema, and domain rules.
-Later migration phases extract `packages/domain`, `packages/db`, `packages/api-contract`,
-`packages/api-server`, and `packages/api-client`, leaving `apps/web` as a deployment adapter.
+`packages/domain` owns reusable business rules and `packages/db` owns persistence. Later migration
+phases extract `packages/api-contract`, `packages/api-server`, and `packages/api-client`, leaving
+`apps/web` as a deployment adapter.
 The API is permanently hosted by `apps/web`; there is no `apps/api`.
 
 ## Dependency rules
@@ -72,8 +74,8 @@ feature UI renders in the browser and fetches through oRPC and TanStack Query.
 ```bash
 pnpm install
 cp apps/web/.env.example apps/web/.env.local
-pnpm --filter @setwise/web db:migrate
-pnpm --filter @setwise/web db:seed
+pnpm --filter @setwise/db db:migrate
+pnpm --filter @setwise/db db:seed
 pnpm dev:web
 ```
 
@@ -97,8 +99,8 @@ Run these from the repository root. Turbo fans each one out to the packages that
 Formatting is deliberately a root task rather than a per-package one: a single Prettier pass
 already covers every workspace, and the configuration lives at the root.
 
-Package-scoped scripts — database migrations, Drizzle Studio, bundle budgets — are documented in
-[`apps/web/README.md`](apps/web/README.md) and run through `pnpm --filter @setwise/web <script>`.
+Database commands run through `pnpm --filter @setwise/db <script>`; web-only commands run through
+`pnpm --filter @setwise/web <script>`. See [`apps/web/README.md`](apps/web/README.md).
 
 ## Workout write model
 
@@ -119,7 +121,7 @@ an offline workout store.
 ## Project invariants
 
 - All stored weights are kilograms; unit preference is display-only.
-- `apps/web/lib/muscles.ts` defines the eighteen muscle regions used by schema rows, SVG paths, and
+- `packages/domain/src/muscles.ts` defines the eighteen muscle regions used by schema rows, SVG paths, and
   pickers.
 - Application colours use `--overload`, `--pr`, and `--band-*`; shadcn owns the core theme tokens.
 - Mid-workout controls retain the custom touch-sized variants.
