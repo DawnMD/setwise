@@ -78,10 +78,10 @@ jobs:
         run: pnpm turbo run db:check
 
       - name: Apply database migrations
-        run: pnpm --filter @setwise/web db:migrate
+        run: pnpm --filter @setwise/db db:migrate
 
       - name: Seed exercise catalogue
-        run: pnpm --filter @setwise/web db:seed
+        run: pnpm --filter @setwise/db db:seed
 
       # `build` runs `vite build && tsc --noEmit`, so this also type-checks.
       - name: Build production server
