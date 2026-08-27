@@ -4,36 +4,16 @@ import { createRouterClient } from "@orpc/server";
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { createApiRouter, memoizeSessionResolver } from "@setwise/api-server";
 import * as schema from "@setwise/db/schema";
 import { openSharedTestDatabase } from "./database";
 import { getRoutineDetail, listRoutines, startableDays } from "@setwise/db/queries/plan";
 import { getSessionDetail, recentSessions } from "@setwise/db/queries/session";
-import { createSessionResolver } from "../../server/orpc";
-import { router } from "../../server/router";
 
 const authState = vi.hoisted(() => ({ userId: "" }));
 
-// Procedures reach for the app's own database, which always speaks Neon's
-// WebSocket protocol. CI runs against a plain Postgres service with no Neon
-// proxy in front of it, so the router is handed the test connection instead.
-vi.mock("../../db", async () => {
-  const [{ openSharedTestDatabase }, schema] = await Promise.all([
-    import("./database"),
-    import("@setwise/db/schema"),
-  ]);
-
-  return { db: openSharedTestDatabase().db, schema };
-});
-
-vi.mock("../../lib/auth", () => ({
-  auth: {
-    api: {
-      getSession: vi.fn(async () => ({ user: { id: authState.userId } })),
-    },
-  },
-}));
-
 const { client, db } = openSharedTestDatabase();
+const router = createApiRouter({ db });
 const userId = `test-rest-${randomUUID()}`;
 const otherUserId = `test-rest-other-${randomUUID()}`;
 // A fresh context per call, the way a request gets one. The session resolver
@@ -42,7 +22,10 @@ const otherUserId = `test-rest-other-${randomUUID()}`;
 const api = createRouterClient(router, {
   context: () => {
     const headers = new Headers();
-    return { headers, getSession: createSessionResolver(headers) };
+    return {
+      headers,
+      getPrincipal: memoizeSessionResolver(async () => ({ userId: authState.userId })),
+    };
   },
 });
 const timeZone = "UTC";

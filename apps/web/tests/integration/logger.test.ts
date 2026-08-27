@@ -7,7 +7,7 @@ import * as schema from "@setwise/db/schema";
 import { estimateOneRepMax } from "@setwise/domain/math";
 import { overloadDelta } from "@setwise/domain/overload";
 import { DEFAULT_BAR_KG, loadBar } from "@setwise/domain/plates";
-import { exportSetsCsv } from "@setwise/db/queries/export";
+import { exportSetsCsv } from "@setwise/api-server/export";
 import { recordSetPersonalRecords } from "@setwise/db/queries/prs";
 import { createSet, lastPerformances, updateSet } from "@setwise/db/queries/session";
 import { openTestDatabase } from "./database";

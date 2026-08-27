@@ -11,30 +11,4 @@
  * query factories would pull the whole oRPC client into the entry chunk to
  * read a constant.
  */
-export const STALE = {
-  /**
-   * The Home summary. Short, like the open workout it leads with: this is the
-   * screen someone lands on after a workout finished in another tab, and the
-   * first thing it says is whether one is still running.
-   */
-  home: 15_000,
-  /** The exercise catalogue changes on deploy, not during a workout. */
-  catalogue: 5 * 60_000,
-  /** Volume, intensity and historical bodyweight: yesterday's numbers are settled. */
-  stats: 5 * 60_000,
-  /** Routine lists and rotation. Edited by hand, and rarely. */
-  plans: 2 * 60_000,
-  /** Whether a workout is open. Short, because the answer decides where a tap goes. */
-  activeSession: 15_000,
-  /**
-   * An open workout's own detail. Every write patches it from the server's
-   * response, so a refetch can only ever confirm what is already on screen.
-   */
-  openSession: Infinity,
-  /** What was lifted last time. Cannot change while this session is open. */
-  lastPerformance: Infinity,
-  /** Targets and the trend weight, both patched by the writes that move them. */
-  profile: 5 * 60_000,
-  /** The authenticated route's own server guard. Matches the session cookie cache. */
-  authRoute: 5 * 60_000,
-} as const;
+export { STALE } from "@setwise/api-client";

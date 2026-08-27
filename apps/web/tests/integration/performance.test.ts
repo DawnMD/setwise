@@ -4,35 +4,15 @@ import { createRouterClient } from "@orpc/server";
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { createApiRouter, memoizeSessionResolver } from "@setwise/api-server";
 import * as schema from "@setwise/db/schema";
 import { openSharedTestDatabase } from "./database";
-import { createSessionResolver } from "../../server/orpc";
 import { getSessionDetail, startSession } from "@setwise/db/queries/session";
-import { router } from "../../server/router";
 
 const authState = vi.hoisted(() => ({ userId: "", resolutions: 0 }));
 
-vi.mock("../../db", async () => {
-  const [{ openSharedTestDatabase }, schema] = await Promise.all([
-    import("./database"),
-    import("@setwise/db/schema"),
-  ]);
-
-  return { db: openSharedTestDatabase().db, schema };
-});
-
-vi.mock("../../lib/auth", () => ({
-  auth: {
-    api: {
-      getSession: vi.fn(async () => {
-        authState.resolutions += 1;
-        return { user: { id: authState.userId } };
-      }),
-    },
-  },
-}));
-
 const { client, db } = openSharedTestDatabase();
+const router = createApiRouter({ db });
 const userId = `test-perf-${randomUUID()}`;
 
 /**
@@ -44,7 +24,13 @@ const userId = `test-perf-${randomUUID()}`;
  */
 function batchContext() {
   const headers = new Headers();
-  return { headers, getSession: createSessionResolver(headers) };
+  return {
+    headers,
+    getPrincipal: memoizeSessionResolver(async () => {
+      authState.resolutions += 1;
+      return { userId: authState.userId };
+    }),
+  };
 }
 
 describe("request and query economy", () => {

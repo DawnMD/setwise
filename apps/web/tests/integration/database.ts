@@ -23,9 +23,9 @@ export function openTestDatabase(): TestDatabase {
 let shared: TestDatabase | undefined;
 
 /**
- * The database handed to the app once a test mocks `@/db`. A test that drives
- * the router needs the router to read and write through the same connection it
- * asserts on, and a single instance keeps one `client.end()` enough to close it.
+ * The database injected into an API router under test. The router must read and
+ * write through the same connection the test asserts on, and a single instance
+ * keeps one `client.end()` enough to close it.
  */
 export function openSharedTestDatabase(): TestDatabase {
   shared ??= openTestDatabase();

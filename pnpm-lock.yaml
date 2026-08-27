@@ -41,9 +41,12 @@ importers:
       '@orpc/server':
         specifier: ^1.15.0
         version: 1.15.0(crossws@0.4.12(srvx@0.11.22))(ws@8.21.3(bufferutil@4.1.0))
-      '@orpc/tanstack-query':
-        specifier: ^1.15.0
-        version: 1.15.0(@orpc/client@1.15.0)(@tanstack/query-core@5.101.4)
+      '@setwise/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
+      '@setwise/api-server':
+        specifier: workspace:*
+        version: link:../../packages/api-server
       '@setwise/db':
         specifier: workspace:*
         version: link:../../packages/db

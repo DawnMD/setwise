@@ -8,7 +8,6 @@
     ".": "./src/index.ts",
     "./instrument": "./src/instrument.ts",
     "./queries/bodyweight": "./src/queries/bodyweight.ts",
-    "./queries/export": "./src/queries/export.ts",
     "./queries/home": "./src/queries/home.ts",
     "./queries/plan": "./src/queries/plan.ts",
     "./queries/profile": "./src/queries/profile.ts",

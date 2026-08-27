@@ -3,8 +3,7 @@ import { BatchHandlerPlugin } from "@orpc/server/plugins";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { reportColdStart } from "@/server/metrics";
-import { createSessionResolver } from "@/server/orpc";
-import { router } from "@/server/router";
+import { createPrincipalResolver, router } from "@/server/api";
 import { createTimings, runWithTimings, serverTimingHeader } from "@/server/timing";
 
 /**
@@ -31,7 +30,7 @@ async function handle(request: Request) {
         headers: request.headers,
         // One resolver per request. Every procedure in a batch shares it, so a
         // five-query screen resolves the session once.
-        getSession: createSessionResolver(request.headers),
+        getPrincipal: createPrincipalResolver(request.headers),
       },
     }),
   );

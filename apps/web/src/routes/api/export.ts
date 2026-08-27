@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { exportBodyweightCsv, exportSetsCsv } from "@setwise/api-server/export";
 import { db } from "@/db";
 import { auth } from "@/lib/auth";
-import { exportBodyweightCsv, exportSetsCsv } from "@setwise/db/queries/export";
 
 const DATASETS = {
   sets: { export: exportSetsCsv, slug: "sets" },
