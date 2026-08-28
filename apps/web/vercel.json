@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm check:region && pnpm db:migrate && pnpm build && pnpm check:bundle",
+  "buildCommand": "cd ../.. && pnpm turbo run build --filter=@setwise/web",
   "framework": "tanstack-start",
+  "ignoreCommand": "npx turbo-ignore --fallback=HEAD^1",
   "regions": ["sin1"]
 }
