@@ -9,8 +9,8 @@ this directory with `pnpm <script>`.
 
 The TanStack framework shell lives in `src/`: file routes are in `src/routes`, router setup is in
 `src/router.tsx`, and global styles are in `src/styles.css`. Reusable application code sits in the
-sibling `components`, `hooks`, `lib`, `db`, and `server` directories. The `@/*` alias
-resolves from `apps/web`, not from the repository root.
+sibling `components`, `hooks`, and `lib` directories. The `db` and `server` directories contain
+web-runtime adapters only. The `@/*` alias resolves from `apps/web`, not from the repository root.
 
 The small `db` directory is the runtime adapter that resolves web environment variables and wires
 Vercel lifecycle/timing hooks. Schema, queries, migrations, and seeds live in `packages/db`;
@@ -57,9 +57,15 @@ that for you.
 ## Deployment
 
 Vercel deploys this directory with the `tanstack-start` framework preset. The Vercel project's
-**Root Directory must be set to `apps/web`** — `vercel.json` moved here during the Turborepo
-migration, and its build command resolves against this package. Nitro selects its Vercel output
-during the build, so no custom output directory is needed.
+**Root Directory must be set to `apps/web`**. `vercel.json` returns to the repository root and runs
+the pinned workspace Turbo build with `--filter=@setwise/web`. Nitro selects its Vercel output
+during the build, so no custom output directory is needed. The ignored-build command uses
+`turbo-ignore`; keep Vercel's automatic "skip unaffected projects" setting enabled as the preferred
+path so mobile-only changes never allocate a web build.
+
+Database migrations are an explicit release operation and are not part of the cacheable Turbo
+build. Apply `pnpm --filter @setwise/db db:migrate` against the deployment database before promoting
+the corresponding web release.
 
 Keep Vercel's automatically exposed system environment variables enabled so Better Auth can trust
 preview, branch, and production hosts without a separate auth URL for every deployment.

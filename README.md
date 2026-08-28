@@ -14,6 +14,9 @@ apps/
 packages/
   domain/               platform-neutral validation, calculations and formatting
   db/                   Drizzle schema, queries, migrations and seed tooling
+  api-contract/         oRPC procedures, DTO schemas and typed errors
+  api-server/           procedure implementations and server orchestration
+  api-client/           shared web/native oRPC transport
   eslint-config/        base, web and react-native presets, plus the dependency matrix
   typescript-config/    base, web, react-native and node compiler presets
 scripts/
@@ -22,9 +25,10 @@ docs/
   monorepo/             migration phase records
 ```
 
-`packages/domain` owns reusable business rules and `packages/db` owns persistence. Later migration
-phases extract `packages/api-contract`, `packages/api-server`, and `packages/api-client`, leaving
-`apps/web` as a deployment adapter.
+`packages/domain` owns reusable business rules, `packages/db` owns persistence,
+`packages/api-contract` owns the wire shapes, `packages/api-server` implements them, and
+`packages/api-client` provides the shared transport. `apps/web` composes those packages with HTTP,
+Better Auth, environment, and Vercel adapters.
 The API is permanently hosted by `apps/web`; there is no `apps/api`.
 
 ## Dependency rules
