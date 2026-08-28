@@ -2,9 +2,25 @@ import { RPCHandler } from "@orpc/server/fetch";
 import { BatchHandlerPlugin } from "@orpc/server/plugins";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { reportColdStart } from "@/server/metrics";
-import { createPrincipalResolver, router } from "@/server/api";
-import { createTimings, runWithTimings, serverTimingHeader } from "@/server/timing";
+import { createApiRouter, memoizeSessionResolver } from "@setwise/api-server";
+import { db } from "@/db";
+import { auth } from "@/lib/auth";
+import { recordProcedureLatency, reportColdStart } from "@/server/metrics";
+import {
+  addTiming,
+  createTimings,
+  measure,
+  runWithTimings,
+  serverTimingHeader,
+} from "@/server/timing";
+
+const router = createApiRouter({
+  db,
+  recordTiming(procedure, durationMs) {
+    addTiming("handler", durationMs);
+    recordProcedureLatency(procedure, durationMs);
+  },
+});
 
 /**
  * The batch plugin unpacks `/api/rpc/__batch__` into the individual operations
@@ -22,15 +38,21 @@ async function handle(request: Request) {
   reportColdStart();
 
   const timings = createTimings();
+  const getPrincipal = memoizeSessionResolver(async () => {
+    const session = await measure("session", () =>
+      auth.api.getSession({ headers: request.headers }),
+    );
+    return session ? { userId: session.user.id } : null;
+  });
 
   const { response } = await runWithTimings(timings, () =>
     handler.handle(request, {
       prefix: "/api/rpc",
       context: {
         headers: request.headers,
-        // One resolver per request. Every procedure in a batch shares it, so a
-        // five-query screen resolves the session once.
-        getPrincipal: createPrincipalResolver(request.headers),
+        // One promise per HTTP request. Every operation in a read batch shares
+        // it, so Better Auth resolves the cookie once.
+        getPrincipal,
       },
     }),
   );
