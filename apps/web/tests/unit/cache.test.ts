@@ -4,14 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 import { afterWrite, cacheKeys, clearActiveSession, putSet, removeSet } from "../../lib/cache";
 import { queries } from "../../lib/queries";
 import type { StatWindow } from "@setwise/domain/validators";
-import type { BodyweightSeries } from "@setwise/db/queries/bodyweight";
-import type { SessionDetail, SetRow } from "@setwise/db/queries/session";
+import type { BodyweightSeriesDto, SessionDetailDto, WorkoutSetDto } from "@setwise/api-contract";
 
 const SESSION_ID = "11111111-1111-4111-8111-111111111111";
 const BENCH = "22222222-2222-4222-8222-222222222222";
 const SQUAT = "33333333-3333-4333-8333-333333333333";
 
-function makeSet(overrides: Partial<SetRow> = {}): SetRow {
+function makeSet(overrides: Partial<WorkoutSetDto> = {}): WorkoutSetDto {
   return {
     id: "44444444-4444-4444-8444-444444444444",
     sessionId: SESSION_ID,
@@ -26,7 +25,7 @@ function makeSet(overrides: Partial<SetRow> = {}): SetRow {
   };
 }
 
-function makeDetail(): SessionDetail {
+function makeDetail(): SessionDetailDto {
   return {
     id: SESSION_ID,
     kind: "workout",
@@ -44,7 +43,7 @@ function makeDetail(): SessionDetail {
 function makeBodyweightSeries(
   window: StatWindow,
   trendNow: number,
-): BodyweightSeries & {
+): BodyweightSeriesDto & {
   window: StatWindow;
 } {
   return {
@@ -91,7 +90,7 @@ describe("cache policy", () => {
     afterWrite.setSaved(client);
     await vi.waitFor(() => expect(client.isFetching()).toBe(0));
 
-    const detail = client.getQueryData(key) as SessionDetail;
+    const detail = client.getQueryData(key) as SessionDetailDto;
     expect(detail.sets).toHaveLength(1);
     expect(detail.sets[0].weight).toBe(100);
 
@@ -109,7 +108,7 @@ describe("cache policy", () => {
     putSet(client, makeSet(), null);
     putSet(client, makeSet({ weight: 102.5 }), null);
 
-    const detail = client.getQueryData(key) as SessionDetail;
+    const detail = client.getQueryData(key) as SessionDetailDto;
     expect(detail.sets).toHaveLength(1);
     expect(detail.sets[0].weight).toBe(102.5);
   });
@@ -126,13 +125,13 @@ describe("cache policy", () => {
     });
     putSet(client, squatSet, { id: SQUAT, name: "Back squat", equipment: "barbell" });
 
-    expect((client.getQueryData(key) as SessionDetail).exercises.map((e) => e.id)).toEqual([
+    expect((client.getQueryData(key) as SessionDetailDto).exercises.map((e) => e.id)).toEqual([
       BENCH,
       SQUAT,
     ]);
 
     removeSet(client, SESSION_ID, squatSet.id);
-    const after = client.getQueryData(key) as SessionDetail;
+    const after = client.getQueryData(key) as SessionDetailDto;
     expect(after.sets).toHaveLength(0);
     // Bench had no sets either, so neither survives: an exercise with no sets is
     // not part of the session's history, which is how the server reads it back.

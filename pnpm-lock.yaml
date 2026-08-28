@@ -44,6 +44,9 @@ importers:
       '@setwise/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@setwise/api-contract':
+        specifier: workspace:*
+        version: link:../../packages/api-contract
       '@setwise/api-server':
         specifier: workspace:*
         version: link:../../packages/api-server

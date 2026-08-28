@@ -1,8 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import type { ProfileSummary } from "@setwise/db/queries/profile";
-import type { RoutineDetail } from "@setwise/db/queries/plan";
-import type { SessionDetail, SessionExercise, SetRow } from "@setwise/db/queries/session";
+import type {
+  ProfileSummaryDto,
+  RoutineDetailDto,
+  SessionDetailDto,
+  SessionExerciseDto,
+  WorkoutSetDto,
+} from "@setwise/api-contract";
 import { PATCH_CACHE } from "./flags";
 import { orpc } from "./orpc";
 import { queries } from "./queries";
@@ -91,7 +95,7 @@ export function clearAccountCache(queryClient: QueryClient): void {
 /* Session detail                                                             */
 /* -------------------------------------------------------------------------- */
 
-const bySequence = (a: SetRow, b: SetRow) => {
+const bySequence = (a: WorkoutSetDto, b: WorkoutSetDto) => {
   const byTime = new Date(a.performedAt).getTime() - new Date(b.performedAt).getTime();
   return byTime !== 0 ? byTime : a.setIndex - b.setIndex;
 };
@@ -121,7 +125,7 @@ function patchOrRefetch<T>(
 function patchSession(
   queryClient: QueryClient,
   sessionId: string,
-  patch: (detail: SessionDetail) => SessionDetail,
+  patch: (detail: SessionDetailDto) => SessionDetailDto,
 ): void {
   patchOrRefetch(queryClient, queries.sessionDetail(sessionId), patch);
 }
@@ -139,8 +143,8 @@ function patchSession(
  */
 export function putSet(
   queryClient: QueryClient,
-  set: SetRow,
-  exercise: SessionExercise | null,
+  set: WorkoutSetDto,
+  exercise: SessionExerciseDto | null,
 ): void {
   patchSession(queryClient, set.sessionId, (detail) => {
     const sets = detail.sets.filter((entry) => entry.id !== set.id);
@@ -181,7 +185,7 @@ export function markSessionFinished(
 }
 
 /** Seeds a detail cache before navigating to the screen that reads it. */
-export function seedSessionDetail(queryClient: QueryClient, detail: SessionDetail): void {
+export function seedSessionDetail(queryClient: QueryClient, detail: SessionDetailDto): void {
   if (!PATCH_CACHE) return;
   queryClient.setQueryData(queries.sessionDetail(detail.id).queryKey, detail);
 }
@@ -214,7 +218,7 @@ export function clearActiveSession(queryClient: QueryClient): void {
 export function putProfileSummary(
   queryClient: QueryClient,
   timeZone: string,
-  summary: ProfileSummary,
+  summary: ProfileSummaryDto,
 ): void {
   if (!PATCH_CACHE) {
     void queryClient.invalidateQueries({ queryKey: cacheKeys.profile() });
@@ -228,12 +232,12 @@ export function putProfileSummary(
 export function patchRoutineDetail(
   queryClient: QueryClient,
   routineId: string,
-  patch: (detail: RoutineDetail) => RoutineDetail,
+  patch: (detail: RoutineDetailDto) => RoutineDetailDto,
 ): void {
   patchOrRefetch(queryClient, queries.routineDetail(routineId), patch);
 }
 
-export function seedRoutineDetail(queryClient: QueryClient, detail: RoutineDetail): void {
+export function seedRoutineDetail(queryClient: QueryClient, detail: RoutineDetailDto): void {
   if (!PATCH_CACHE) return;
   queryClient.setQueryData(queries.routineDetail(detail.id).queryKey, detail);
 }

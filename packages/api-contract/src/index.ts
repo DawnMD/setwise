@@ -22,3 +22,4 @@ export type AppContract = typeof appContract;
 export type ContractRouterClient = ORPCContractRouterClient<typeof appContract>;
 
 export * from "./dto";
+export type { HomeSummaryDto } from "./home";

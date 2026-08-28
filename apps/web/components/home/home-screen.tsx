@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { BedDouble, ChevronRight, Settings } from "lucide-react";
 import * as React from "react";
 
-import type { HomeSummary } from "@setwise/db/queries/home";
+import type { HomeSummaryDto } from "@setwise/api-contract";
 import { formatTonnageValue, formatWeight, formatWhen, parseIsoDay } from "@setwise/domain/format";
 import { queries } from "@/lib/queries";
 import { useCriticalData } from "@/hooks/use-critical-data";
@@ -93,7 +93,7 @@ function Today({
   summary,
   onLogRest,
 }: {
-  summary: HomeSummary;
+  summary: HomeSummaryDto;
   onLogRest: (target: RestLogTarget) => void;
 }) {
   const { startWorkout, isPending, error } = useStartWorkout();
@@ -248,7 +248,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Week({ week }: { week: HomeSummary["week"] }) {
+function Week({ week }: { week: HomeSummaryDto["week"] }) {
   return (
     <SummaryCard title="This week" to="/progress" linkLabel="This week, on Progress">
       {week.workingSets === 0 ? (
@@ -277,7 +277,7 @@ function Week({ week }: { week: HomeSummary["week"] }) {
  * itself is beside it for scale. Both come from the seven-day mean; a raw
  * weigh-in against a raw weigh-in reports Tuesday's salt as progress.
  */
-function WeightDirection({ weight }: { weight: HomeSummary["weight"] }) {
+function WeightDirection({ weight }: { weight: HomeSummaryDto["weight"] }) {
   const change = weight.changeKg;
   const rounded = change === null ? null : Math.round(change * 10) / 10;
 
@@ -344,7 +344,7 @@ function TodaysTargets({
  * it is said in words there: an absence of colour on a silhouette is not
  * something anyone notices on the way to the gym.
  */
-function Untrained({ week }: { week: HomeSummary["week"] }) {
+function Untrained({ week }: { week: HomeSummaryDto["week"] }) {
   if (week.untrained.length === 0) return null;
 
   return (

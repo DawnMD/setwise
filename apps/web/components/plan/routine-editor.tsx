@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { BedDouble, ChevronDown, ChevronUp, MoreVertical, Play, Plus } from "lucide-react";
 import * as React from "react";
 
-import type { RoutineDetail } from "@setwise/db/queries/plan";
+import type { RoutineDetailDto } from "@setwise/api-contract";
 import { useCriticalData } from "@/hooks/use-critical-data";
 import { useLazyMount } from "@/hooks/use-lazy-mount";
 import { useTimeZone } from "@/hooks/use-time-zone";
@@ -125,7 +125,7 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
    * its inactive cache is discarded and read again on the next visit.
    */
   const patch = React.useCallback(
-    (change: (detail: RoutineDetail) => RoutineDetail) => {
+    (change: (detail: RoutineDetailDto) => RoutineDetailDto) => {
       patchRoutineDetail(queryClient, routineId, change);
       markStale(queryClient, [cacheKeys.routineList(), cacheKeys.upcomingDays()]);
     },
@@ -133,7 +133,7 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
   );
 
   const close = () => setDialog(null);
-  const patchAndClose = (change: (detail: RoutineDetail) => RoutineDetail) => {
+  const patchAndClose = (change: (detail: RoutineDetailDto) => RoutineDetailDto) => {
     patch(change);
     close();
   };
@@ -801,12 +801,12 @@ function swap<T extends { id: string } & ({ dayIndex: number } | { orderIndex: n
 
 /** Replaces one planned exercise wherever in the routine it happens to live. */
 function mapPlanned(
-  detail: RoutineDetail,
+  detail: RoutineDetailDto,
   plannedId: string,
   change: (
-    planned: RoutineDetail["days"][number]["exercises"][number],
-  ) => RoutineDetail["days"][number]["exercises"][number],
-): RoutineDetail {
+    planned: RoutineDetailDto["days"][number]["exercises"][number],
+  ) => RoutineDetailDto["days"][number]["exercises"][number],
+): RoutineDetailDto {
   return {
     ...detail,
     days: detail.days.map((day) => ({

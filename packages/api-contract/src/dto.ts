@@ -66,6 +66,8 @@ export const plannedExerciseSchema = z.object({
   targetRpe: z.number().nullable(),
 });
 
+export type PlannedExerciseDto = z.infer<typeof plannedExerciseSchema>;
+
 export const plannedDaySchema = z.object({
   id: uuid,
   name: z.string(),
@@ -150,6 +152,12 @@ export const lastPerformanceSchema = z.object({
   sets: z.array(lastPerformanceSetSchema),
 });
 
+export const sessionExerciseSchema = z.object({
+  id: uuid,
+  name: z.string(),
+  equipment: z.string().nullable(),
+});
+
 export const sessionDetailSchema = z.object({
   id: uuid,
   kind: activityKindSchema,
@@ -158,7 +166,7 @@ export const sessionDetailSchema = z.object({
   notes: z.string().nullable(),
   routineDayId: uuid.nullable(),
   plan: sessionPlanSchema.nullable(),
-  exercises: z.array(z.object({ id: uuid, name: z.string(), equipment: z.string().nullable() })),
+  exercises: z.array(sessionExerciseSchema),
   sets: z.array(workoutSetSchema),
   lastPerformances: z.record(uuid, lastPerformanceSchema.nullable()),
 });
@@ -316,5 +324,10 @@ export const exerciseHistoryPointSchema = z.object({
 
 export type RoutineDto = z.infer<typeof routineSchema>;
 export type RoutineDetailDto = z.infer<typeof routineDetailSchema>;
+export type WorkoutSetDto = z.infer<typeof workoutSetSchema>;
+export type SessionExerciseDto = z.infer<typeof sessionExerciseSchema>;
+export type LastPerformanceDto = z.infer<typeof lastPerformanceSchema>;
 export type SessionDetailDto = z.infer<typeof sessionDetailSchema>;
+export type UserProfileDto = z.infer<typeof userProfileSchema>;
 export type ProfileSummaryDto = z.infer<typeof profileSummarySchema>;
+export type BodyweightSeriesDto = z.infer<typeof bodyweightSeriesSchema>;

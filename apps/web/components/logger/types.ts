@@ -1,20 +1,20 @@
 /**
  * Shared shapes for the logger.
  *
- * Aliased from the server's query types rather than restated, so the client
- * always renders the exact rows confirmed by the server.
+ * Aliased from the shared API contract rather than server query types, so the
+ * browser and native clients render the same confirmed response shapes.
  */
 
 import type {
-  LastPerformance,
-  SessionDetail,
-  SessionExercise,
-  SetRow,
-} from "@setwise/db/queries/session";
-import type { PlannedExercise } from "@setwise/db/queries/plan";
+  LastPerformanceDto,
+  PlannedExerciseDto,
+  SessionDetailDto,
+  SessionExerciseDto,
+  WorkoutSetDto,
+} from "@setwise/api-contract";
 
-export type LoggerSet = SetRow;
-export type LoggerExercise = SessionExercise;
-export type LoggerSession = SessionDetail;
-export type LoggerPlannedExercise = PlannedExercise;
-export type LoggerLastPerformance = LastPerformance;
+export type LoggerSet = WorkoutSetDto;
+export type LoggerExercise = SessionExerciseDto;
+export type LoggerSession = SessionDetailDto;
+export type LoggerPlannedExercise = PlannedExerciseDto;
+export type LoggerLastPerformance = LastPerformanceDto;

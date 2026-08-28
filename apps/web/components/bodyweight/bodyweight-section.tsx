@@ -4,7 +4,7 @@ import * as React from "react";
 
 import type { StatWindow } from "@setwise/domain/validators";
 import { formatDelta, formatTonnage, formatWeight, toIsoDay } from "@setwise/domain/format";
-import type { ProfileSummary } from "@setwise/db/queries/profile";
+import type { ProfileSummaryDto } from "@setwise/api-contract";
 import { afterWrite, putProfileSummary } from "@/lib/cache";
 import { BODYWEIGHT_TREND_DAYS } from "@setwise/domain/math";
 import { orpc } from "@/lib/orpc";
@@ -53,7 +53,7 @@ export function BodyweightSection({ window }: { window: StatWindow }) {
    * whole series really does have to be read again — but blanking it to a
    * skeleton to say so would hide the number that was just typed.
    */
-  const afterLog = (profile: ProfileSummary) => {
+  const afterLog = (profile: ProfileSummaryDto) => {
     putProfileSummary(queryClient, timeZone, profile);
     return afterWrite.bodyweightLogged(queryClient);
   };

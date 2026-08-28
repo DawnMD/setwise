@@ -1,7 +1,7 @@
 import * as React from "react";
 
 import type { ProfilePatch } from "@setwise/domain/validators";
-import type { UserProfile } from "@setwise/db/schema";
+import type { UserProfileDto } from "@setwise/api-contract";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,7 +44,7 @@ export function ProfileSheet({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  profile: UserProfile | null;
+  profile: UserProfileDto | null;
   pending?: boolean;
   onSave: (patch: ProfilePatch) => Promise<unknown>;
 }) {
@@ -70,7 +70,7 @@ function OpenProfileSheet({
   onSave,
   onDone,
 }: {
-  profile: UserProfile | null;
+  profile: UserProfileDto | null;
   pending: boolean;
   onSave: (patch: ProfilePatch) => Promise<unknown>;
   onDone: () => void;
