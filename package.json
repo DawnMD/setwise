@@ -40,7 +40,7 @@
     "@orpc/tanstack-query": "^1.15.0",
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-router": "1.170.31",
-    "@tanstack/react-start": "1.168.48",
+    "@tanstack/react-start": "1.168.60",
     "@vercel/functions": "^3.9.5",
     "better-auth": "^1.7.1",
     "bufferutil": "^4.1.0",
