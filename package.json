@@ -42,7 +42,7 @@
     "@tanstack/react-router": "1.170.31",
     "@tanstack/react-start": "1.168.48",
     "@vercel/functions": "^3.9.5",
-    "better-auth": "^1.7.1",
+    "better-auth": "^1.7.7",
     "bufferutil": "^4.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
